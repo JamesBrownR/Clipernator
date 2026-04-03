@@ -1,1 +1,931 @@
+// ============================================================
+// CLIPBLAST: PARTY HUNTER — Systems
+// ============================================================
 
+// ── Helpers ──
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function spawnParticles(x, y, color, n=8) {
+  for (let i=0; i<n; i++) {
+    const a=Math.random()*Math.PI*2, sp=1.5+Math.random()*4;
+    gs.particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:28, maxLife:28, color, size:3+Math.random()*4 });
+  }
+}
+
+function spawnPartyParticles(x, y) {
+  const colors=['#ff69b4','#ffdd00','#00ff66','#ff4444','#88aaff','#ffffff','#ffaa00','#ff88cc'];
+  for (let i=0; i<60; i++) {
+    const a=Math.random()*Math.PI*2, sp=2+Math.random()*9;
+    gs.particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:90, maxLife:90, color:colors[i%colors.length], size:4+Math.random()*7 });
+  }
+}
+
+function angleDiff(a, b) {
+  let diff = (a - b + Math.PI) % (Math.PI * 2) - Math.PI;
+  return Math.abs(diff);
+}
+
+function baseBulletDamage() {
+  if (gs.hasQuadCake)   return 4;
+  if (gs.hasTripleCake) return 3;
+  if (gs.hasDoubleCake) return 2;
+  return 1;
+}
+
+// ── Shake Fizzle Pop hit trigger ──
+function triggerSFPHit() {
+  if (!gs.hasShakeFizzlePop) return;
+  if (gs.sfpFull) {
+    const ppos = ECS.get(gs.playerId, 'pos');
+    const shockDmg = baseBulletDamage() * 5;
+    for (const id of ECS.query('enemy', 'pos', 'hp', 'vel')) {
+      const epos = ECS.get(id, 'pos');
+      const ehp  = ECS.get(id, 'hp');
+      const evel = ECS.get(id, 'vel');
+      const dx = epos.x - ppos.x, dy = epos.y - ppos.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 400) {
+        ehp.hp -= shockDmg; ehp.hitFlash = 16;
+        const nd = dist > 1 ? dist : 1;
+        evel.vx += (dx/nd) * 12;
+        evel.vy += (dy/nd) * 12;
+        spawnParticles(epos.x, epos.y, '#ff6600', 10);
+        if (ehp.hp <= 0) {
+          spawnParticles(epos.x, epos.y, '#ff2222', 18);
+          ECS.destroyEntity(id);
+          gs.score += Math.round(10 * gs.wave); gs.waveKills++; tryDropTicket();
+          gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+          updateHUD(); checkWave();
+        }
+      }
+    }
+    spawnPartyParticles(ppos.x, ppos.y);
+    showMsg('SHOCKWAVE RELEASE!!!');
+  }
+  gs.sfpMeter = 0;
+  gs.sfpFull = false;
+}
+
+// ── Unlock glowsticks (after boss kill) ──
+function unlockGlowsticks() {
+  if (gs.hasGlowsticks) return;
+  gs.hasGlowsticks = true;
+  gs.unlockedItems.push('glowsticks');
+  showMsg('GLOWSTICKS UNLOCKED! RIGHT-CLICK TO SWING');
+  updateHUD();
+}
+
+// ── Glowstick melee attack ──
+function swingGlowsticks() {
+  if (!gs.hasGlowsticks || gs.glowCooldown > 0) return;
+  gs.glowCooldown = CFG.GLOW_COOLDOWN;
+  meleeSwingTimer = CFG.MELEE_SWING_FRAMES;
+
+  const ppos = ECS.get(gs.playerId, 'pos');
+  const enemies = ECS.query('enemy', 'pos', 'hp');
+  const meleeDmg = baseBulletDamage() * 1.5;
+
+  for (const id of enemies) {
+    const epos = ECS.get(id, 'pos');
+    const ehp  = ECS.get(id, 'hp');
+    const evel = ECS.get(id, 'vel');
+    const dx = epos.x - ppos.x;
+    const dy = epos.y - ppos.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < CFG.MELEE_RANGE && dist > 5) {
+      const enemyAngle = Math.atan2(dy, dx);
+      if (angleDiff(enemyAngle, ppos.angle) < CFG.MELEE_CONE_ANGLE) {
+        ehp.hp -= meleeDmg;
+        ehp.hitFlash = 12;
+        const knockDist = dist > 0 ? dist : 1;
+        evel.vx += (dx / knockDist) * 7;
+        evel.vy += (dy / knockDist) * 7;
+        spawnParticles(epos.x, epos.y, '#00ff88', 9);
+        if (ehp.hp <= 0) {
+          spawnParticles(epos.x, epos.y, '#ff2222', 18);
+          ECS.destroyEntity(id);
+          gs.score += Math.round(15 * gs.wave);
+          gs.waveKills++;
+          tryDropTicket();
+          gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+          updateHUD();
+          checkWave();
+        }
+      }
+    }
+  }
+  spawnParticles(ppos.x + Math.cos(ppos.angle)*38, ppos.y + Math.sin(ppos.angle)*38, '#00ff88', 14);
+}
+
+// ================================================================
+// SYSTEMS
+// ================================================================
+
+function sysPlayerMovement() {
+  const pId = gs.playerId;
+  const pos = ECS.get(pId, 'pos');
+  const vel = ECS.get(pId, 'vel');
+  const dashing = gs.dashTimer > 0;
+  const slowed  = gs.confettiSlowTimer > 0;
+  let speedMult = 1;
+  if (gs.speedBoostTimer > 0) speedMult = gs.speedBoostMult || CFG.SPEED_BOOST_MULT;
+  if (gs.sfpFull) speedMult = Math.max(speedMult, 1.3);
+  if (gs.hasTightropeBoots) speedMult = Math.max(speedMult, 1.25);
+
+  const topSpd = slowed ? CFG.PLAYER_SPEED * 0.45 : (gs.speedBoostTimer > 0 ? CFG.PLAYER_SPEED * speedMult : CFG.PLAYER_SPEED);
+
+  if (dashing) {
+    gs.dashTimer--;
+    gs.dashTrail.push({ x: pos.x, y: pos.y, life: 12, angle: pos.angle });
+    vel.vx = gs.dashVx;
+    vel.vy = gs.dashVy;
+  } else {
+    let ix = 0, iy = 0;
+    if (keys['ArrowLeft']||keys['a']||keys['A']) ix--;
+    if (keys['ArrowRight']||keys['d']||keys['D']) ix++;
+    if (keys['ArrowUp']||keys['w']||keys['W']) iy--;
+    if (keys['ArrowDown']||keys['s']||keys['S']) iy++;
+    if (ix && iy) { ix *= 0.707; iy *= 0.707; }
+    if (ix || iy) { vel.vx += ix*0.38*topSpd; vel.vy += iy*0.38*topSpd; }
+    else { vel.vx *= 0.82; vel.vy *= 0.82; }
+    const spd = Math.hypot(vel.vx, vel.vy);
+    if (spd > topSpd) { vel.vx = vel.vx/spd*topSpd; vel.vy = vel.vy/spd*topSpd; }
+  }
+
+  pos.x += vel.vx;
+  pos.y += vel.vy;
+
+  const bouncy = gs.bouncyHouse;
+  if (pos.x < CFG.WALL_PAD) { pos.x = CFG.WALL_PAD; vel.vx = bouncy ? Math.abs(vel.vx) : 0; }
+  if (pos.x > worldW - CFG.WALL_PAD) { pos.x = worldW - CFG.WALL_PAD; vel.vx = bouncy ? -Math.abs(vel.vx) : 0; }
+  if (pos.y < CFG.WALL_PAD) { pos.y = CFG.WALL_PAD; vel.vy = bouncy ? Math.abs(vel.vy) : 0; }
+  if (pos.y > worldH - CFG.WALL_PAD) { pos.y = worldH - CFG.WALL_PAD; vel.vy = bouncy ? -Math.abs(vel.vy) : 0; }
+
+  pos.angle = Math.atan2(mouse.y - pos.y, mouse.x - pos.x);
+  gs.dashTrail = gs.dashTrail.filter(t => { t.life--; return t.life > 0; });
+}
+
+function sysAI() {
+  gs.frozen = gs.partyFreezeTimer > 0;
+  const enemies = ECS.query('enemy', 'pos', 'vel', 'ai', 'physics');
+  for (const id of enemies) {
+    const type = ECS.get(id, 'enemy').type;
+    const bt = ENEMY_BTS[type];
+    if (bt) bt.tick(id, gs);
+    const pos = ECS.get(id, 'pos');
+    const vel = ECS.get(id, 'vel');
+    pos.x += vel.vx;
+    pos.y += vel.vy;
+
+    if (gs.bouncyHouse) {
+      if (pos.x < 18) { pos.x = 18; vel.vx = Math.abs(vel.vx); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
+      if (pos.x > worldW-18) { pos.x = worldW-18; vel.vx = -Math.abs(vel.vx); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
+      if (pos.y < 18) { pos.y = 18; vel.vy = Math.abs(vel.vy); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
+      if (pos.y > worldH-18) { pos.y = worldH-18; vel.vy = -Math.abs(vel.vy); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
+    } else {
+      const pp = ECS.get(gs.playerId, 'pos');
+      if (pp) pos.angle = Math.atan2(pp.y - pos.y, pp.x - pos.x);
+      pos.x = Math.max(-40, Math.min(worldW+40, pos.x));
+      pos.y = Math.max(-40, Math.min(worldH+40, pos.y));
+    }
+
+    const hp = ECS.get(id, 'hp');
+    if (hp && hp.hitFlash > 0) hp.hitFlash--;
+
+    const ai2 = ECS.get(id, 'ai');
+    const phy2 = ECS.get(id, 'physics');
+    if (ai2 && phy2) {
+      // Confused: chase nearest other enemy
+      if (ai2.confused) {
+        ai2.confuseTimer--;
+        if (ai2.confuseTimer <= 0) { ai2.confused = false; }
+        else {
+          let nearEnemy = null, nearD = 999999;
+          for (const oid of ECS.query('enemy','pos')) {
+            if (oid === id) continue;
+            const od = Math.hypot(ECS.get(oid,'pos').x - pos.x, ECS.get(oid,'pos').y - pos.y);
+            if (od < nearD) { nearD = od; nearEnemy = ECS.get(oid,'pos'); }
+          }
+          if (nearEnemy) {
+            const cdx = nearEnemy.x - pos.x, cdy = nearEnemy.y - pos.y, cd = Math.hypot(cdx,cdy)||1;
+            vel.vx = (vel.vx||0)*0.88 + (cdx/cd)*phy2.speed*0.2;
+            vel.vy = (vel.vy||0)*0.88 + (cdy/cd)*phy2.speed*0.2;
+          }
+        }
+      }
+      // Ringmaster buff
+      if (ai2.ringmasterBuffed) {
+        ai2.ringmasterBuffTimer = (ai2.ringmasterBuffTimer || 0) - 1;
+        phy2._baseSpeed = phy2._baseSpeed || phy2.speed;
+        phy2.speed = phy2._baseSpeed * 1.4;
+        if (ai2.ringmasterBuffTimer <= 0) {
+          ai2.ringmasterBuffed = false;
+          phy2.speed = phy2._baseSpeed;
+        }
+      } else if (phy2._baseSpeed) {
+        phy2.speed = phy2._baseSpeed;
+      }
+    }
+  }
+}
+
+function sysBullets() {
+  gs.bullets = gs.bullets.filter(b => {
+    if (gs.hasFunhouseDistortion) {
+      let nearest = null, nearDist = 999999;
+      for (const eid of ECS.query('enemy','pos')) {
+        const ep = ECS.get(eid,'pos');
+        const d = Math.hypot(ep.x-b.x, ep.y-b.y);
+        if (d < nearDist) { nearDist = d; nearest = ep; }
+      }
+      if (nearest && nearDist < 300) {
+        const dx = nearest.x-b.x, dy = nearest.y-b.y, dist = Math.hypot(dx,dy)||1;
+        b.vx += (dx/dist)*0.28; b.vy += (dy/dist)*0.28;
+        const spd = Math.hypot(b.vx,b.vy);
+        if (spd > CFG.BULLET_SPEED*1.1) { b.vx=b.vx/spd*CFG.BULLET_SPEED*1.1; b.vy=b.vy/spd*CFG.BULLET_SPEED*1.1; }
+      }
+    }
+    b.x += b.vx; b.y += b.vy; b.life--;
+    if (gs.bouncyHouse) {
+      let bounced = false;
+      if (b.x <= 4)         { b.x = 4;        b.vx =  Math.abs(b.vx); b.angle = Math.atan2(b.vy,b.vx); bounced=true; }
+      if (b.x >= worldW-4)  { b.x = worldW-4; b.vx = -Math.abs(b.vx); b.angle = Math.atan2(b.vy,b.vx); bounced=true; }
+      if (b.y <= 4)         { b.y = 4;        b.vy =  Math.abs(b.vy); b.angle = Math.atan2(b.vy,b.vx); bounced=true; }
+      if (b.y >= worldH-4)  { b.y = worldH-4; b.vy = -Math.abs(b.vy); b.angle = Math.atan2(b.vy,b.vx); bounced=true; }
+      if (bounced) {
+        b.bounces = (b.bounces || 0) + 1;
+        spawnParticles(b.x, b.y, '#88ffdd', 3);
+        // Mirror Maze: split on first bounce
+        if (gs.hasMirrorMaze && b.bounces === 1) {
+          const perp = Math.atan2(b.vy, b.vx) + Math.PI / 2;
+          gs.bullets.push({ x:b.x, y:b.y, vx:Math.cos(perp)*CFG.BULLET_SPEED, vy:Math.sin(perp)*CFG.BULLET_SPEED, angle:perp, life:CFG.BULLET_LIFE, damageMult: b.damageMult, isDud: b.isDud, bounces: 99 });
+        }
+      }
+      return b.life > 0 && (b.bounces || 0) <= 8;
+    }
+    return b.life > 0 && b.x > -10 && b.x < worldW+10 && b.y > -10 && b.y < worldH+10;
+  });
+}
+
+function sysBulletEnemyCollision() {
+  for (const b of gs.bullets) {
+    if (b.life <= 0) continue;
+    const enemies = ECS.query('enemy', 'pos', 'hp');
+    for (const id of enemies) {
+      // Streamer Ghost phased = invulnerable
+      const eai = ECS.get(id, 'ai');
+      if (eai && eai.phased) continue;
+
+      const epos = ECS.get(id, 'pos');
+      const ehp  = ECS.get(id, 'hp');
+      if (Math.hypot(b.x - epos.x, b.y - epos.y) < 30) {
+        if (b.isDud) { b.life = 0; spawnParticles(b.x, b.y, '#666666', 3); break; }
+        const dmg = b.damageMult || 1;
+        ehp.hp -= dmg; ehp.hitFlash = 12; b.life = 0;
+        spawnParticles(b.x, b.y, dmg > 1 ? '#ff44ff' : '#ff6644', 6);
+        // Popcorn Frenzy AOE
+        if (gs.popcornFrenzyTimer > 0) {
+          spawnParticles(b.x, b.y, '#ffdd00', 12);
+          for (const aoeId of ECS.query('enemy','pos','hp')) {
+            if (aoeId === id) continue;
+            const ap = ECS.get(aoeId,'pos');
+            if (Math.hypot(ap.x-b.x, ap.y-b.y) < 55) {
+              const ah = ECS.get(aoeId,'hp');
+              ah.hp -= dmg * 0.6; ah.hitFlash = 8;
+            }
+          }
+        }
+        if (ehp.hp <= 0) {
+          const type = ECS.get(id, 'enemy').type;
+          if (type === 'boss') handleBossDeath(id);
+          // Ricochet chain
+          if (gs.ricochetActive) {
+            let nearest = null, nearDist = 999999;
+            for (const oid of ECS.query('enemy','pos')) {
+              if (oid === id) continue;
+              const od = Math.hypot(ECS.get(oid,'pos').x - epos.x, ECS.get(oid,'pos').y - epos.y);
+              if (od < nearDist) { nearDist = od; nearest = ECS.get(oid,'pos'); }
+            }
+            if (nearest) {
+              const rd = Math.hypot(nearest.x-epos.x, nearest.y-epos.y)||1;
+              gs.bullets.push({ x:epos.x, y:epos.y, vx:(nearest.x-epos.x)/rd*CFG.BULLET_SPEED, vy:(nearest.y-epos.y)/rd*CFG.BULLET_SPEED, angle:0, life:CFG.BULLET_LIFE, damageMult: dmg, isDud:false });
+              spawnParticles(epos.x, epos.y, '#4499ff', 6);
+            }
+          }
+          spawnParticles(epos.x, epos.y, '#ff2222', 18);
+          if (gs.hasPopcornBucket && Math.random() < 0.22) {
+            gs.popcornKernels.push({ x: epos.x + (Math.random()-.5)*20, y: epos.y + (Math.random()-.5)*20 });
+          }
+          ECS.destroyEntity(id);
+          gs.score += Math.round(10 * gs.wave * (dmg > 1 ? 1.6 : 1));
+          gs.waveKills++;
+          tryDropTicket();
+          gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+          updateHUD(); checkWave();
+        }
+        break;
+      }
+    }
+  }
+  gs.bullets = gs.bullets.filter(b => b.life > 0);
+}
+
+function sysDashCollision() {
+  if (gs.dashTimer <= 0) {
+    for (const id of ECS.query('enemy', 'ai')) ECS.get(id,'ai').dashHit = false;
+    return;
+  }
+  const ppos = ECS.get(gs.playerId, 'pos');
+  for (const id of ECS.query('enemy', 'pos', 'hp', 'ai')) {
+    const epos = ECS.get(id, 'pos');
+    const ehp  = ECS.get(id, 'hp');
+    const ai   = ECS.get(id, 'ai');
+    if (!ai.dashHit && Math.hypot(ppos.x - epos.x, ppos.y - epos.y) < 32) {
+      ehp.hp -= baseBulletDamage() * 2; ehp.hitFlash = 14; ai.dashHit = true;
+      spawnParticles(epos.x, epos.y, '#ffaa00', 10);
+      if (ehp.hp <= 0) {
+        spawnParticles(epos.x, epos.y, '#ff2222', 16);
+        ECS.destroyEntity(id);
+        gs.score += 10 * gs.wave; gs.waveKills++; tryDropTicket();
+        gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+        updateHUD(); checkWave();
+      }
+    }
+  }
+}
+
+function sysEnemyPlayerCollision() {
+  // Tightrope Boots: intangible while dashing
+  if (gs.invincible > 0 || gs.frozen || (gs.dashTimer > 0 && gs.hasTightropeBoots)) return;
+  const ppos = ECS.get(gs.playerId, 'pos');
+  for (const id of ECS.query('enemy', 'pos')) {
+    const epos = ECS.get(id, 'pos');
+    if (Math.hypot(ppos.x - epos.x, ppos.y - epos.y) < 28) {
+      const contactDmg = gs.knockingPinsActive ? 8 : 20;
+      gs.health -= contactDmg; gs.invincible = CFG.INVINCIBLE_FRAMES;
+      gs.shakeX = 16; gs.shakeY = 16;
+      gs.flawlessThisWave = false;
+      triggerSFPHit();
+      spawnParticles(ppos.x, ppos.y, '#ff3333', 14);
+      updateHUD();
+      if (gs.health <= 0) { gameOver(); return; }
+    }
+  }
+}
+
+function sysEnemyBullets() {
+  const ppos = ECS.get(gs.playerId, 'pos');
+  gs.enemyBullets = gs.enemyBullets.filter(eb => {
+    if (!gs.frozen) { eb.x += eb.vx; eb.y += eb.vy; eb.life--; }
+    // Homing bullets
+    if (eb.homing) {
+      const dx = ppos.x-eb.x, dy = ppos.y-eb.y, dist = Math.hypot(dx,dy)||1;
+      eb.vx += (dx/dist) * (eb.homingStrength||0.04);
+      eb.vy += (dy/dist) * (eb.homingStrength||0.04);
+      const spd = Math.hypot(eb.vx,eb.vy);
+      if (spd > 4) { eb.vx=eb.vx/spd*4; eb.vy=eb.vy/spd*4; }
+    }
+    if (gs.bouncyHouse) {
+      let bounced = false;
+      if (eb.x <= 4)          { eb.x = 4;          eb.vx =  Math.abs(eb.vx); bounced = true; }
+      if (eb.x >= worldW - 4) { eb.x = worldW - 4; eb.vx = -Math.abs(eb.vx); bounced = true; }
+      if (eb.y <= 4)          { eb.y = 4;          eb.vy =  Math.abs(eb.vy); bounced = true; }
+      if (eb.y >= worldH - 4) { eb.y = worldH - 4; eb.vy = -Math.abs(eb.vy); bounced = true; }
+      if (bounced) { eb.bounces = (eb.bounces || 0) + 1; spawnParticles(eb.x, eb.y, '#88ffdd', 3); }
+      if (eb.life <= 0 || eb.bounces > 8) return false;
+    } else {
+      if (eb.life <= 0 || eb.x < -10 || eb.x > worldW+10 || eb.y < -10 || eb.y > worldH+10) return false;
+    }
+    if (gs.invincible <= 0 && Math.hypot(eb.x - ppos.x, eb.y - ppos.y) < 20) {
+      gs.health -= 15; gs.invincible = CFG.INVINCIBLE_FRAMES;
+      gs.shakeX = 10; gs.shakeY = 10;
+      gs.flawlessThisWave = false;
+      triggerSFPHit();
+      spawnParticles(ppos.x, ppos.y, '#ff69b4', 10);
+      updateHUD();
+      if (gs.health <= 0) { gameOver(); return false; }
+      return false;
+    }
+    return true;
+  });
+}
+
+function sysFieldItemPickup() {
+  const ppos = ECS.get(gs.playerId, 'pos');
+  for (let i = gs.fieldItems.length - 1; i >= 0; i--) {
+    const fi = gs.fieldItems[i];
+    if (Math.hypot(ppos.x - fi.x, ppos.y - fi.y) < 34) {
+      const def = ITEM_DEFS[fi.id];
+      gs.itemCooldowns[fi.id] = Date.now();
+      gs.fieldItems.splice(i, 1);
+      def.effect(gs);
+      const permanent = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles']);
+      if (!permanent.has(fi.id)) {
+        setTimeout(() => { if (gameRunning) trySpawnFieldItems(); }, def.spawnCooldown);
+      }
+    }
+  }
+}
+
+function sysPopcorn() {
+  if (!gs.hasPopcornBucket || !gs.popcornKernels) return;
+  const ppos = ECS.get(gs.playerId,'pos');
+  gs.popcornKernels = gs.popcornKernels.filter(k => {
+    if (Math.hypot(k.x-ppos.x, k.y-ppos.y) < 22) {
+      spawnParticles(k.x, k.y, '#ffdd00', 4);
+      gs._kernelsCollected = (gs._kernelsCollected||0) + 1;
+      if (gs._kernelsCollected >= 5) {
+        gs._kernelsCollected = 0;
+        gs.popcornFrenzyTimer = 240;
+        showMsg('🍿 POPCORN FRENZY! BULLETS EXPLODE!');
+        spawnPartyParticles(ppos.x, ppos.y);
+      }
+      return false;
+    }
+    return true;
+  });
+}
+
+function sysTimers() {
+  if (gs.partyFreezeTimer > 0) gs.partyFreezeTimer--;
+  if (gs.speedBoostTimer > 0)  gs.speedBoostTimer--;
+  if (gs.confettiSlowTimer > 0) gs.confettiSlowTimer--;
+  if (gs.invincible > 0) gs.invincible--;
+  if (gs.glowCooldown > 0) gs.glowCooldown--;
+
+  if (gs.reloading) {
+    // Speed up reload if cookie active
+    const reloadSpeed = gs.speedBoostTimer > 0 ? Math.max(1, Math.round(gs.speedBoostMult || 1)) : 1;
+    gs.reloadTimer -= reloadSpeed;
+    if (gs.reloadTimer <= 0) {
+      gs.reloading = false; gs.ammo = gs.maxAmmo;
+      updateHUD(); showMsg('RELOADED!');
+    }
+  }
+  if (gs.ammo === 0 && !gs.reloading) startReload();
+
+  // Cursed Candles
+  if (gs.hasCursedCandles) {
+    if (gs.candleRelightDelay > 0) {
+      gs.candleRelightDelay--;
+    } else {
+      gs.candleHpTimer = (gs.candleHpTimer || 0) + 1;
+      if (gs.candleHpTimer >= 60) {
+        gs.candleHpTimer = 0;
+        if (gs.candlesLit < 5) {
+          gs.health -= 5;
+          gs.flawlessThisWave = false;
+          if (gs.health <= 0) { gameOver(); return; }
+          gs.candlesLit = Math.min(5, gs.candlesLit + 1);
+          showMsg(gs.candlesLit === 5 ? "ALL CANDLES LIT! +10 BULLETS PER SHOT" : `CANDLE LIT! +${gs.candlesLit*2} BULLETS PER SHOT`);
+          updateHUD();
+        } else {
+          gs.health -= 5;
+          gs.flawlessThisWave = false;
+          if (gs.health <= 0) { gameOver(); return; }
+          updateHUD();
+        }
+      }
+    }
+  }
+
+  // Shake Fizzle Pop meter
+  if (gs.hasShakeFizzlePop && !gs.sfpFull) {
+    gs.sfpMeter = Math.min(gs.sfpMax, gs.sfpMeter + 1);
+    if (gs.sfpMeter >= gs.sfpMax) { gs.sfpFull = true; showMsg('SHAKE FIZZLE POP — FULLY CHARGED!!!'); }
+  }
+
+  // Dash charge regen
+  if (gs.hasDash && gs.dashCharges < gs.dashMaxCharges) {
+    gs.dashCooldownTimer++;
+    if (gs.dashCooldownTimer >= gs.dashCooldownMax) {
+      gs.dashCooldownTimer = 0; gs.dashCharges++;
+      updateHUD();
+      if (gs.dashCharges === gs.dashMaxCharges) showMsg('DASH FULLY CHARGED!');
+    }
+  }
+
+  // Particles
+  for (const p of gs.particles) { p.x += p.vx; p.y += p.vy; p.vx *= 0.91; p.vy *= 0.91; p.life--; }
+  gs.particles = gs.particles.filter(p => p.life > 0);
+
+  gs.shakeX *= 0.72;
+  gs.shakeY *= 0.72;
+  if (muzzleFlash > 0) muzzleFlash--;
+
+  // Prize wheel timers
+  if (gs.prizeEffect) {
+    gs.prizeEffect.timer--;
+    if (gs.prizeEffect.timer <= 0) {
+      gs.sugarRushActive = false;
+      gs.ricochetActive = false;
+      gs.prizeEffect = null;
+    }
+  }
+  if (gs.cursedSpinTimer > 0) {
+    gs.cursedSpinTimer--;
+    if (gs.cursedSpinTimer === 0) {
+      for (const eid of ECS.query('enemy','physics')) {
+        const ephy = ECS.get(eid,'physics');
+        if (ephy._cursedBase) { ephy.speed = ephy._cursedBase; delete ephy._cursedBase; }
+        const eai = ECS.get(eid,'ai');
+        if (eai) eai.cursedDmgBoost = false;
+      }
+    }
+  }
+
+  // Knocking Pins
+  if (gs.knockingPinsActive) {
+    gs.knockingPinsTimer--;
+    if (gs.knockingPinsTimer <= 0) {
+      gs.knockingPinsActive = false;
+      showMsg('KNOCKING PINS WORE OFF!');
+    } else {
+      const ppos = ECS.get(gs.playerId,'pos');
+      const pvel = ECS.get(gs.playerId,'vel');
+      let nearest = null, nearDist = 999999;
+      for (const eid of ECS.query('enemy','pos')) {
+        const ep = ECS.get(eid,'pos');
+        const d = Math.hypot(ep.x-ppos.x, ep.y-ppos.y);
+        if (d < nearDist) { nearDist = d; nearest = ep; }
+      }
+      if (nearest) {
+        const dx = nearest.x-ppos.x, dy = nearest.y-ppos.y, dist = Math.hypot(dx,dy)||1;
+        pvel.vx = (dx/dist) * CFG.PLAYER_SPEED * 2.2;
+        pvel.vy = (dy/dist) * CFG.PLAYER_SPEED * 2.2;
+      }
+    }
+  }
+
+  // Popcorn Frenzy timer
+  if (gs.popcornFrenzyTimer > 0) gs.popcornFrenzyTimer--;
+
+  // Clownish nose growth + blast
+  if (gs.hasClownish) {
+    gs.clownNoseTimer++;
+    gs.clownNoseSize = gs.clownNoseTimer / gs.clownNoseMax;
+    if (gs.clownNoseTimer >= gs.clownNoseMax) {
+      gs.clownNoseTimer = 0;
+      const ppos3 = ECS.get(gs.playerId, 'pos');
+      const near = ECS.query('enemy','pos').filter(id => Math.hypot(ECS.get(id,'pos').x - ppos3.x, ECS.get(id,'pos').y - ppos3.y) < 200);
+      if (near.length >= 2) {
+        for (let bi = 0; bi < 2; bi++) {
+          const ba = ppos3.angle + (bi === 0 ? -0.5 : 0.5);
+          gs.bullets.push({ x:ppos3.x, y:ppos3.y, vx:Math.cos(ba)*8, vy:Math.sin(ba)*8, life:80, maxLife:80, angle:ba, damageMult:2, isDud:false });
+        }
+        spawnPartyParticles(ppos3.x, ppos3.y);
+        showMsg('CLOWN NOSE BLAST! ENEMIES CONFUSED!');
+        for (const eid of near) {
+          const eai = ECS.get(eid,'ai');
+          if (eai) { eai.confused = true; eai.confuseTimer = 300; }
+        }
+      }
+    }
+  }
+}
+
+function sysSpawner() {
+  gs.spawnTimer++;
+  if (gs.spawnTimer >= gs.spawnInterval) { gs.spawnTimer = 0; spawnEnemy(); }
+}
+
+// ================================================================
+// MASTER UPDATE
+// ================================================================
+function update() {
+  sysPlayerMovement();
+  sysAI();
+  sysBullets();
+  sysBulletEnemyCollision();
+  sysDashCollision();
+  sysEnemyPlayerCollision();
+  sysEnemyBullets();
+  sysFieldItemPickup();
+  sysPopcorn();
+  sysTimers();
+  sysSpawner();
+}
+
+// ================================================================
+// SPAWN HELPERS
+// ================================================================
+function spawnEnemy() {
+  if (gs.bossActive) return;
+  const total = ECS.query('enemy').length;
+  if (gs.waveKills + total >= gs.waveEnemiesLeft) return;
+
+  let x, y, attempts = 0;
+  const ppos = ECS.get(gs.playerId, 'pos');
+  do {
+    const side = Math.floor(Math.random() * 4);
+    if (side===0) { x=Math.random()*worldW; y=-40; }
+    else if (side===1) { x=worldW+40; y=Math.random()*worldH; }
+    else if (side===2) { x=Math.random()*worldW; y=worldH+40; }
+    else { x=-40; y=Math.random()*worldH; }
+    attempts++;
+  } while (Math.hypot(x-ppos.x, y-ppos.y) < CFG.SAFE_SPAWN_DIST && attempts < 8);
+
+  let type = 'scissors';
+  const roll = Math.random();
+  if (gs.floor === 2) {
+    if (gs.wave >= 15) {
+      if (roll < 0.30)      type = 'ringmaster';
+      else if (roll < 0.62) type = 'cannonball';
+      else                  type = 'tightrope';
+    } else {
+      if (roll < 0.45) type = 'cannonball';
+      else             type = 'tightrope';
+    }
+  } else if (gs.wave >= 6) {
+    if (roll < 0.30) type='clown';
+    else if (roll < 0.52) type='giftBox';
+    else if (roll < 0.72) type='partyHat';
+  } else if (gs.wave >= 5) {
+    if (roll < 0.32) type='clown';
+    else if (roll < 0.58) type='partyHat';
+  } else if (gs.wave >= 4) {
+    if (roll < 0.35) type='clown';
+  }
+
+  const def = ENEMY_DEFS[type];
+  const baseHp = 1 + Math.floor(gs.wave / 2);
+  const id = ECS.createEntity();
+  ECS.add(id, 'enemy',   { type });
+  ECS.add(id, 'pos',     { x, y, angle: 0 });
+  ECS.add(id, 'vel',     { vx: 0, vy: 0 });
+  ECS.add(id, 'hp',      { hp: Math.ceil(baseHp*def.hpMult), maxHp: Math.ceil(baseHp*def.hpMult), hitFlash: 0 });
+  ECS.add(id, 'physics', { speed: (1.2 + Math.random()*0.6 + gs.wave*0.12) * def.speedMult });
+  ECS.add(id, 'ai',      { shootCooldown: 120, ambushTimer: 0, diveTimer: 0, dashHit: false });
+}
+
+function spawnBoss() {
+  const ppos = ECS.get(gs.playerId, 'pos');
+  let x = ppos.x > worldW/2 ? 120 : worldW - 120;
+  let y = ppos.y > worldH/2 ? 120 : worldH - 120;
+  const id = ECS.createEntity();
+  ECS.add(id, 'enemy',   { type: 'boss' });
+  ECS.add(id, 'pos',     { x, y, angle: 0 });
+  ECS.add(id, 'vel',     { vx: 0, vy: 0 });
+  ECS.add(id, 'hp',      { hp: CFG.BOSS_BASE_HP + gs.wave * 12, maxHp: CFG.BOSS_BASE_HP + gs.wave * 12, hitFlash: 0 });
+  ECS.add(id, 'physics', { speed: CFG.BOSS_SPEED });
+  ECS.add(id, 'ai', {
+    shootCooldown: 90, ambushTimer: 0, diveTimer: 0, dashHit: false,
+    bossPhase: BOSS_PHASE.IDLE, phaseTimer: 120,
+    spiralAngle: 0, volleyCount: 0, volleyTimer: 0,
+    slamTarget: null, slamRadius: 0, slamWarning: 0
+  });
+  gs.bossId = id;
+}
+
+// ================================================================
+// SHOOT / RELOAD / DASH
+// ================================================================
+function shoot() {
+  if (gs.ammo <= 0 || gs.reloading) return;
+  gs.ammo--; muzzleFlash = 10; updateHUD();
+  const ppos = ECS.get(gs.playerId, 'pos');
+  gs.shakeX = (Math.random()-.5)*13;
+  gs.shakeY = (Math.random()-.5)*13;
+  let doubleCount = 0;
+  const totalBullets = CFG.BULLET_COUNT + (gs.hasCursedCandles ? gs.candlesLit * 2 : 0);
+  for (let i=0; i<totalBullets; i++) {
+    const a = ppos.angle + (Math.random()-.5)*.32;
+    let damageMult = 1, isDud = false;
+    if (gs.hasQuadCake) {
+      if (Math.random() < 0.50) isDud = true;
+      else { damageMult = 4; doubleCount++; }
+    } else if (gs.hasTripleCake) {
+      if (Math.random() < 0.45) isDud = true;
+      else { damageMult = 3; doubleCount++; }
+    } else if (gs.hasDoubleCake) {
+      if (Math.random() < 0.40) isDud = true;
+      else { damageMult = 2; doubleCount++; }
+    }
+    gs.bullets.push({ x:ppos.x+Math.cos(ppos.angle)*32, y:ppos.y+Math.sin(ppos.angle)*32, vx:Math.cos(a)*CFG.BULLET_SPEED, vy:Math.sin(a)*CFG.BULLET_SPEED, angle:a, life:CFG.BULLET_LIFE, damageMult: isDud ? 1 : damageMult * (gs.sfpFull ? 1.5 : 1), isDud });
+  }
+  if (doubleCount > 0) spawnParticles(ppos.x+Math.cos(ppos.angle)*30, ppos.y+Math.sin(ppos.angle)*30, '#ff44ff', 8);
+  else spawnParticles(ppos.x+Math.cos(ppos.angle)*30, ppos.y+Math.sin(ppos.angle)*30, '#ff8800', 6);
+}
+
+function startReload() {
+  if (gs.reloading || gs.ammo === gs.maxAmmo) return;
+  gs.reloading = true; gs.reloadTimer = CFG.RELOAD_FRAMES;
+  showMsg('RELOADING...');
+}
+
+function tryDash() {
+  if (!gs.hasDash || gs.dashCharges <= 0 || gs.dashTimer > 0) return;
+  gs.dashCharges--; updateHUD();
+  const ppos = ECS.get(gs.playerId, 'pos');
+  const pvel = ECS.get(gs.playerId, 'vel');
+  const spd = Math.hypot(pvel.vx, pvel.vy);
+  if (spd > 0.3) { gs.dashVx = (pvel.vx/spd)*CFG.DASH_SPEED; gs.dashVy = (pvel.vy/spd)*CFG.DASH_SPEED; }
+  else { gs.dashVx = Math.cos(ppos.angle)*CFG.DASH_SPEED; gs.dashVy = Math.sin(ppos.angle)*CFG.DASH_SPEED; }
+  gs.dashTimer = CFG.DASH_FRAMES;
+  gs.invincible = Math.max(gs.invincible, CFG.DASH_FRAMES + 4);
+  spawnParticles(ppos.x, ppos.y, '#ffaa00', 8);
+}
+
+// ================================================================
+// WAVE / ITEM CHOICE
+// ================================================================
+function checkWave() {
+  if (gs.waveKills >= gs.waveEnemiesLeft && ECS.query('enemy').length === 0) {
+    const completed = gs.wave;
+
+    if (gs.hasFlawlessBaking && gs.flawlessThisWave) {
+      gs.maxAmmo += 2;
+      gs.ammo = Math.min(gs.ammo + 2, gs.maxAmmo);
+      updateHUD();
+      showMsg('FLAWLESS BAKING! +2 MAX AMMO!');
+      spawnPartyParticles(CFG.W/2, CFG.H/2);
+    }
+
+    gs.wave++;
+    gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
+    gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
+    gs.waveKills = 0;
+    gs.flawlessThisWave = true;
+
+    if (gs.hasCursedCandles && gs.candlesLit > 0) {
+      const ammoLost = gs.candlesLit * 2;
+      gs.maxAmmo = Math.max(CFG.MAX_AMMO, gs.maxAmmo - ammoLost);
+      gs.ammo = Math.min(gs.ammo, gs.maxAmmo);
+      gs.candlesLit = 0;
+      gs.candleHpTimer = 0;
+      gs.candleRelightDelay = 180;
+      showMsg('CANDLES SNUFFED! THEY WILL RELIGHT...');
+    }
+
+    updateHUD();
+
+    if (gs.wave === CFG.BOSS_WAVE) {
+      gs.bossActive = true;
+      spawnBoss();
+      gs.spawnInterval = Math.max(120, CFG.SPAWN_INTERVAL_BASE * 2);
+      showMsg('BOSS INCOMING — WAVE ' + gs.wave + '!');
+    } else if (completed % 3 === 0) {
+      setTimeout(() => offerItemChoice(), 300);
+    } else {
+      showMsg(`WAVE ${gs.wave} - INCOMING!`);
+      trySpawnFieldItems();
+    }
+  }
+}
+
+function trySpawnFieldItems() {
+  const now = Date.now();
+  const permanentIds = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks']);
+  for (const id of gs.unlockedItems) {
+    if (gs.fieldItems.some(fi => fi.id === id)) continue;
+    if (id === 'bouncy' && gs.bouncyHouse) continue;
+    if (id === 'dash' && gs.hasDash) continue;
+    if (id === 'doubledCake' && gs.hasDoubleCake) continue;
+    if (id === 'tripleCake' && gs.hasTripleCake) continue;
+    if (id === 'quadCake' && gs.hasQuadCake) continue;
+    if (id === 'shakeFizzlePop' && gs.hasShakeFizzlePop) continue;
+    if (id === 'flawlessBaking' && gs.hasFlawlessBaking) continue;
+    if (id === 'cursedCandles' && gs.hasCursedCandles) continue;
+    if (id === 'glowsticks') continue;
+    const def = ITEM_DEFS[id];
+    const last = gs.itemCooldowns[id] || 0;
+    if (now - last >= def.spawnCooldown || last === 0) {
+      gs.fieldItems.push({ id, x:80+Math.random()*(worldW-160), y:80+Math.random()*(worldH-160), phase:Math.random()*Math.PI*2 });
+    }
+  }
+}
+
+function offerItemChoice() {
+  gs.pendingChoice = true;
+  gameRunning = false;
+  cancelAnimationFrame(animId);
+  draw();
+
+  const choiceEl = document.getElementById('item-choice');
+  const cardsEl  = document.getElementById('item-cards');
+  cardsEl.innerHTML = '';
+
+  const itemPool = gs.floor === 2 ? FLOOR2_ITEM_IDS : ALL_ITEM_IDS;
+  let available = itemPool.filter(id => {
+    if (id === 'tripleCake' && !gs.hasDoubleCake) return false;
+    if (id === 'quadCake' && !gs.hasTripleCake) return false;
+    if (id === 'knockingPins') return true;
+    return !gs.unlockedItems.includes(id);
+  });
+
+  const offered = shuffle(available).slice(0, 3);
+
+  for (const id of offered) {
+    const def = ITEM_DEFS[id];
+    const isOwned = gs.unlockedItems.includes(id);
+    const card = document.createElement('div');
+    card.className = `item-card${isOwned ? ' already-owned' : ''}`;
+    if (id === 'doubledCake') { card.style.background='#001133'; card.style.borderColor='#4488ff'; }
+    else if (id === 'tripleCake') { card.style.background='#220022'; card.style.borderColor='#cc44ff'; }
+    else if (id === 'quadCake')   { card.style.background='#220000'; card.style.borderColor='#ff3333'; }
+    card.innerHTML = `<div class="ic-icon">${def.icon}</div><div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div><div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned ? '<br><br>[OWNED]' : ''}</div>`;
+    if (!isOwned) {
+      card.addEventListener('click', () => {
+        gs.unlockedItems.push(id);
+        def.effect(gs);
+        choiceEl.style.display = 'none';
+        gs.pendingChoice = false; gameRunning = true;
+        trySpawnFieldItems(); updateHUD(); loop();
+      });
+    }
+    cardsEl.appendChild(card);
+  }
+  choiceEl.style.display = 'flex';
+  const skipBtn = document.getElementById('skip-btn');
+  const allOfferedOwned = offered.every(id => gs.unlockedItems.includes(id));
+  skipBtn.style.display = allOfferedOwned ? 'block' : 'none';
+  skipBtn.onclick = () => {
+    choiceEl.style.display = 'none'; gs.pendingChoice = false; gameRunning = true;
+    trySpawnFieldItems(); updateHUD(); loop();
+  };
+}
+
+// ================================================================
+// TICKETS + PRIZE WHEEL
+// ================================================================
+function tryDropTicket() {
+  if (gs.floor !== 2) return;
+  if (Math.random() < 0.5 && gs.tickets < 10) {
+    gs.tickets++;
+    updateHUD();
+  }
+}
+
+function spinPrizeWheel() {
+  if (gs.floor !== 2 || gs.tickets < 3 || !gameRunning) return;
+  gs.tickets -= 3;
+  updateHUD();
+
+  const roll = Math.random();
+  let name;
+
+  if (roll < 0.18) {
+    name = "🔴 CURSED SPIN! ENEMIES ENRAGED!";
+    gs.cursedSpinTimer = 480;
+    for (const eid of ECS.query('enemy','physics','ai')) {
+      const ephy = ECS.get(eid,'physics');
+      ephy._cursedBase = ephy._cursedBase || ephy.speed;
+      ephy.speed = ephy._cursedBase * 1.5;
+      ECS.get(eid,'ai').cursedDmgBoost = true;
+    }
+    spawnParticles(ECS.get(gs.playerId,'pos').x, ECS.get(gs.playerId,'pos').y, '#ff0000', 20);
+    gs.prizeEffect = { name, timer: 480 };
+  } else if (roll < 0.36) {
+    name = "🟡 SUGAR RUSH! 3x SPEED!";
+    gs.sugarRushActive = true;
+    gs.speedBoostTimer = 600;
+    gs.speedBoostMult = 3;
+    gs.prizeEffect = { name, timer: 600 };
+  } else if (roll < 0.52) {
+    name = "🟢 BIG WINNER! FULL HEAL!";
+    gs.health = gs.maxHealth;
+    gs.invincible = 300;
+    spawnPartyParticles(ECS.get(gs.playerId,'pos').x, ECS.get(gs.playerId,'pos').y);
+    gs.prizeEffect = { name, timer: 180 };
+    updateHUD();
+  } else if (roll < 0.68) {
+    name = "🔵 RICOCHET! CHAIN BULLETS!";
+    gs.ricochetActive = true;
+    gs.prizeEffect = { name, timer: 600 };
+  } else if (roll < 0.84) {
+    name = "🟣 SPOTLIGHT! ENEMIES FROZEN!";
+    gs.partyFreezeTimer = 180;
+    spawnPartyParticles(ECS.get(gs.playerId,'pos').x, ECS.get(gs.playerId,'pos').y);
+    gs.prizeEffect = { name, timer: 180 };
+  } else {
+    name = "⚪ DUD. YOU GOT SCAMMED.";
+    gs.prizeEffect = { name, timer: 180 };
+  }
+
+  showMsg(name);
+}
+
+// ================================================================
+// BOSS KILL HANDLER
+// ================================================================
+function handleBossDeath(id) {
+  if (gs.bossId !== id) return;
+  gs.bossActive = false;
+  gs.bossId = null;
+  gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
+
+  gameRunning = false;
+  cancelAnimationFrame(animId);
+
+  const ft = document.getElementById('floor-transition');
+  document.getElementById('floor-hud').textContent = 'FLOOR 1 CLEARED';
+  ft.querySelector('h2').innerHTML = '⬇️ DESCENDING TO<br>FLOOR 2 ⬇️';
+  ft.style.display = 'flex';
+}
