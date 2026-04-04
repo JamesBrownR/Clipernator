@@ -258,7 +258,7 @@ const BT_PARTYHAT = new BTSelector(
     const spd = Math.hypot(vel.vx, vel.vy);
     if (spd > phy.speed) { vel.vx = vel.vx/spd*phy.speed; vel.vy = vel.vy/spd*phy.speed; }
     if (ai.diveTimer > 70 && dist < 140) {
-      phy.speed = Math.min(phy.speed * 1.5, 5.5);
+      phy.speed = Math.min(phy.speed * 1.5, 2.8);
       ai.diveTimer = -150;
       spawnParticles(pos.x, pos.y, '#ffdd00', 8);
     }
@@ -388,7 +388,7 @@ const BT_BOSS = new BTSelector(
         const arms = phase2 ? 4 : 3;
         for (let arm = 0; arm < arms; arm++) {
           const a = ai.spiralAngle + (arm / arms) * Math.PI * 2;
-          const spd2 = phase2 ? 4.5 : 3.5;
+          const spd2 = phase2 ? 2.2 : 1.8;
           gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*spd2, vy: Math.sin(a)*spd2, life: 140, maxLife: 140, color: '#cc00ff' });
         }
         ai.spiralAngle += phase2 ? 0.18 : 0.14;
@@ -407,7 +407,7 @@ const BT_BOSS = new BTSelector(
         for (let i = 0; i < count; i++) {
           const spread = phase2 ? 0.55 : 0.45;
           const a = aim + (i / (count - 1) - 0.5) * spread * 2;
-          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*5.5, vy: Math.sin(a)*5.5, life: 110, maxLife: 110, color: '#ff44ff' });
+          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*2.8, vy: Math.sin(a)*2.8, life: 110, maxLife: 110, color: '#ff44ff' });
         }
         spawnParticles(pos.x, pos.y, '#ff00ff', 10);
         ai.volleyCount--;
@@ -486,7 +486,7 @@ const BT_BALLOON_WITCH = new BTSelector(
     if (ai.shootCooldown <= 0) {
       ai.shootCooldown = 150;
       const aim = Math.atan2(dy,dx);
-      gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(aim)*2.5, vy:Math.sin(aim)*2.5, life:200, maxLife:200, color:'#9944ff', homing:true, homingStrength:0.04 });
+      gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(aim)*1.5, vy:Math.sin(aim)*1.5, life:200, maxLife:200, color:'#9944ff', homing:true, homingStrength:0.04 });
       spawnParticles(pos.x, pos.y, '#9944ff', 5);
     }
     return BT.RUNNING;
