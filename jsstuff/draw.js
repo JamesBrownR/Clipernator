@@ -247,27 +247,7 @@ function drawJuggler(epos, ehp, ai, frozen) {
   ctx.fillRect(x-bw/2, y-46, bw*(ehp.hp/ehp.maxHp), 6);
 }
 
-function drawTightrope(epos, ehp, frozen) {
-  const {x,y} = epos;
-  const t = Date.now()/200;
-  ctx.save(); ctx.translate(x,y);
-  if (frozen) { ctx.globalAlpha=0.7; ctx.shadowColor='#aaccff'; }
-  else { ctx.shadowColor='#00ccff'; ctx.shadowBlur=14; }
-  ctx.strokeStyle = frozen ? '#aaddff' : '#00aacc';
-  ctx.lineWidth=3; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(-22, Math.sin(t)*3); ctx.lineTo(22, -Math.sin(t)*3); ctx.stroke();
-  ctx.fillStyle = frozen ? '#4488cc' : '#0088cc';
-  ctx.fillRect(-6, -8, 12, 16);
-  ctx.fillStyle = frozen ? '#88aacc' : '#ffcc99';
-  ctx.beginPath(); ctx.arc(0,-14,8,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle = frozen ? '#aaddff' : '#00ffff';
-  ctx.shadowColor = frozen ? '#aaccff' : '#00ffff'; ctx.shadowBlur=8;
-  ctx.font='10px sans-serif'; ctx.textAlign='center'; ctx.fillText('★',0,1);
-  ctx.restore();
-  const bw=32;
-  ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2,y-34,bw,5);
-  ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#00aacc'; ctx.fillRect(x-bw/2,y-34,bw*(ehp.hp/ehp.maxHp),5);
-}
+
 
 // ============================================================
 // PLAYER DRAW — split body + gun sprites
@@ -473,10 +453,23 @@ function draw() {
   for(const b of gs.bullets) drawBullet(b);
 
   // Enemy bullets
-  for(const eb of gs.enemyBullets) {
+ for(const eb of gs.enemyBullets) {
     ctx.save(); ctx.globalAlpha=eb.life/eb.maxLife;
-    ctx.fillStyle=eb.color; ctx.shadowColor=eb.color; ctx.shadowBlur=8;
-    ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,Math.PI*2); ctx.fill(); ctx.restore();
+    if (eb.isTear) {
+      // Teardrop shape — elongated in direction of travel
+      const tearAngle = Math.atan2(eb.vy, eb.vx);
+      ctx.translate(eb.x, eb.y); ctx.rotate(tearAngle + Math.PI/2);
+      ctx.fillStyle='#44aaff'; ctx.shadowColor='#44aaff'; ctx.shadowBlur=10;
+      ctx.beginPath();
+      ctx.moveTo(0, -6);
+      ctx.bezierCurveTo(4, -2, 4, 4, 0, 6);
+      ctx.bezierCurveTo(-4, 4, -4, -2, 0, -6);
+      ctx.fill();
+    } else {
+      ctx.fillStyle=eb.color; ctx.shadowColor=eb.color; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
   }
 
   // Enemies
