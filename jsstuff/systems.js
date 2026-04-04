@@ -1,8 +1,12 @@
 // ============================================================
 // CLIPBLAST: PARTY HUNTER — Systems
+// All sys* functions, update(), spawn helpers,
+// shoot/reload/dash, wave/item logic, tickets/prize wheel
 // ============================================================
 
-// ── Helpers ──
+// ================================================================
+// HELPERS
+// ================================================================
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -12,18 +16,18 @@ function shuffle(arr) {
   return a;
 }
 
-function spawnParticles(x, y, color, n=8) {
-  for (let i=0; i<n; i++) {
-    const a=Math.random()*Math.PI*2, sp=1.5+Math.random()*4;
-    gs.particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:28, maxLife:28, color, size:3+Math.random()*4 });
+function spawnParticles(x, y, color, n = 8) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 4;
+    gs.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 28, maxLife: 28, color, size: 3 + Math.random() * 4 });
   }
 }
 
 function spawnPartyParticles(x, y) {
-  const colors=['#ff69b4','#ffdd00','#00ff66','#ff4444','#88aaff','#ffffff','#ffaa00','#ff88cc'];
-  for (let i=0; i<60; i++) {
-    const a=Math.random()*Math.PI*2, sp=2+Math.random()*9;
-    gs.particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:90, maxLife:90, color:colors[i%colors.length], size:4+Math.random()*7 });
+  const colors = ['#ff69b4','#ffdd00','#00ff66','#ff4444','#88aaff','#ffffff','#ffaa00','#ff88cc'];
+  for (let i = 0; i < 60; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 9;
+    gs.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 90, maxLife: 90, color: colors[i % colors.length], size: 4 + Math.random() * 7 });
   }
 }
 
@@ -39,7 +43,11 @@ function baseBulletDamage() {
   return 1;
 }
 
-// ── Shake Fizzle Pop hit trigger ──
+// ================================================================
+// ITEM-TRIGGERED HELPERS
+// ================================================================
+
+// Shake Fizzle Pop: called whenever player takes a hit
 function triggerSFPHit() {
   if (!gs.hasShakeFizzlePop) return;
   if (gs.sfpFull) {
@@ -54,13 +62,15 @@ function triggerSFPHit() {
       if (dist < 400) {
         ehp.hp -= shockDmg; ehp.hitFlash = 16;
         const nd = dist > 1 ? dist : 1;
-        evel.vx += (dx/nd) * 12;
-        evel.vy += (dy/nd) * 12;
+        evel.vx += (dx / nd) * 12;
+        evel.vy += (dy / nd) * 12;
         spawnParticles(epos.x, epos.y, '#ff6600', 10);
         if (ehp.hp <= 0) {
           spawnParticles(epos.x, epos.y, '#ff2222', 18);
           ECS.destroyEntity(id);
-          gs.score += Math.round(10 * gs.wave); gs.waveKills++; tryDropTicket();
+          gs.score += Math.round(10 * gs.wave);
+          gs.waveKills++;
+          tryDropTicket();
           gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
           updateHUD(); checkWave();
         }
@@ -73,7 +83,7 @@ function triggerSFPHit() {
   gs.sfpFull = false;
 }
 
-// ── Unlock glowsticks (after boss kill) ──
+// Unlock glowsticks on floor transition
 function unlockGlowsticks() {
   if (gs.hasGlowsticks) return;
   gs.hasGlowsticks = true;
@@ -82,28 +92,25 @@ function unlockGlowsticks() {
   updateHUD();
 }
 
-// ── Glowstick melee attack ──
+// Glowstick melee attack
 function swingGlowsticks() {
   if (!gs.hasGlowsticks || gs.glowCooldown > 0) return;
   gs.glowCooldown = CFG.GLOW_COOLDOWN;
   meleeSwingTimer = CFG.MELEE_SWING_FRAMES;
 
   const ppos = ECS.get(gs.playerId, 'pos');
-  const enemies = ECS.query('enemy', 'pos', 'hp');
   const meleeDmg = baseBulletDamage() * 1.5;
 
-  for (const id of enemies) {
+  for (const id of ECS.query('enemy', 'pos', 'hp')) {
     const epos = ECS.get(id, 'pos');
     const ehp  = ECS.get(id, 'hp');
     const evel = ECS.get(id, 'vel');
-    const dx = epos.x - ppos.x;
-    const dy = epos.y - ppos.y;
+    const dx = epos.x - ppos.x, dy = epos.y - ppos.y;
     const dist = Math.hypot(dx, dy);
     if (dist < CFG.MELEE_RANGE && dist > 5) {
       const enemyAngle = Math.atan2(dy, dx);
       if (angleDiff(enemyAngle, ppos.angle) < CFG.MELEE_CONE_ANGLE) {
-        ehp.hp -= meleeDmg;
-        ehp.hitFlash = 12;
+        ehp.hp -= meleeDmg; ehp.hitFlash = 12;
         const knockDist = dist > 0 ? dist : 1;
         evel.vx += (dx / knockDist) * 7;
         evel.vy += (dy / knockDist) * 7;
@@ -115,31 +122,32 @@ function swingGlowsticks() {
           gs.waveKills++;
           tryDropTicket();
           gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-          updateHUD();
-          checkWave();
+          updateHUD(); checkWave();
         }
       }
     }
   }
-  spawnParticles(ppos.x + Math.cos(ppos.angle)*38, ppos.y + Math.sin(ppos.angle)*38, '#00ff88', 14);
+  spawnParticles(ppos.x + Math.cos(ppos.angle) * 38, ppos.y + Math.sin(ppos.angle) * 38, '#00ff88', 14);
 }
 
 // ================================================================
-// SYSTEMS
+// SYSTEM 1: Player Movement
 // ================================================================
-
 function sysPlayerMovement() {
   const pId = gs.playerId;
   const pos = ECS.get(pId, 'pos');
   const vel = ECS.get(pId, 'vel');
   const dashing = gs.dashTimer > 0;
   const slowed  = gs.confettiSlowTimer > 0;
+
   let speedMult = 1;
   if (gs.speedBoostTimer > 0) speedMult = gs.speedBoostMult || CFG.SPEED_BOOST_MULT;
   if (gs.sfpFull) speedMult = Math.max(speedMult, 1.3);
   if (gs.hasTightropeBoots) speedMult = Math.max(speedMult, 1.25);
 
-  const topSpd = slowed ? CFG.PLAYER_SPEED * 0.45 : (gs.speedBoostTimer > 0 ? CFG.PLAYER_SPEED * speedMult : CFG.PLAYER_SPEED);
+  const topSpd = slowed
+    ? CFG.PLAYER_SPEED * 0.45
+    : (gs.speedBoostTimer > 0 ? CFG.PLAYER_SPEED * speedMult : CFG.PLAYER_SPEED);
 
   if (dashing) {
     gs.dashTimer--;
@@ -148,30 +156,33 @@ function sysPlayerMovement() {
     vel.vy = gs.dashVy;
   } else {
     let ix = 0, iy = 0;
-    if (keys['ArrowLeft']||keys['a']||keys['A']) ix--;
-    if (keys['ArrowRight']||keys['d']||keys['D']) ix++;
-    if (keys['ArrowUp']||keys['w']||keys['W']) iy--;
-    if (keys['ArrowDown']||keys['s']||keys['S']) iy++;
+    if (keys['ArrowLeft']  || keys['a'] || keys['A']) ix--;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) ix++;
+    if (keys['ArrowUp']    || keys['w'] || keys['W']) iy--;
+    if (keys['ArrowDown']  || keys['s'] || keys['S']) iy++;
     if (ix && iy) { ix *= 0.707; iy *= 0.707; }
-    if (ix || iy) { vel.vx += ix*0.38*topSpd; vel.vy += iy*0.38*topSpd; }
+    if (ix || iy) { vel.vx += ix * 0.38 * topSpd; vel.vy += iy * 0.38 * topSpd; }
     else { vel.vx *= 0.82; vel.vy *= 0.82; }
     const spd = Math.hypot(vel.vx, vel.vy);
-    if (spd > topSpd) { vel.vx = vel.vx/spd*topSpd; vel.vy = vel.vy/spd*topSpd; }
+    if (spd > topSpd) { vel.vx = vel.vx / spd * topSpd; vel.vy = vel.vy / spd * topSpd; }
   }
 
   pos.x += vel.vx;
   pos.y += vel.vy;
 
   const bouncy = gs.bouncyHouse;
-  if (pos.x < CFG.WALL_PAD) { pos.x = CFG.WALL_PAD; vel.vx = bouncy ? Math.abs(vel.vx) : 0; }
+  if (pos.x < CFG.WALL_PAD)          { pos.x = CFG.WALL_PAD;          vel.vx = bouncy ? Math.abs(vel.vx)  : 0; }
   if (pos.x > worldW - CFG.WALL_PAD) { pos.x = worldW - CFG.WALL_PAD; vel.vx = bouncy ? -Math.abs(vel.vx) : 0; }
-  if (pos.y < CFG.WALL_PAD) { pos.y = CFG.WALL_PAD; vel.vy = bouncy ? Math.abs(vel.vy) : 0; }
+  if (pos.y < CFG.WALL_PAD)          { pos.y = CFG.WALL_PAD;          vel.vy = bouncy ? Math.abs(vel.vy)  : 0; }
   if (pos.y > worldH - CFG.WALL_PAD) { pos.y = worldH - CFG.WALL_PAD; vel.vy = bouncy ? -Math.abs(vel.vy) : 0; }
 
   pos.angle = Math.atan2(mouse.y - pos.y, mouse.x - pos.x);
   gs.dashTrail = gs.dashTrail.filter(t => { t.life--; return t.life > 0; });
 }
 
+// ================================================================
+// SYSTEM 2: AI (Behavior Trees)
+// ================================================================
 function sysAI() {
   gs.frozen = gs.partyFreezeTimer > 0;
   const enemies = ECS.query('enemy', 'pos', 'vel', 'ai', 'physics');
@@ -179,36 +190,37 @@ function sysAI() {
     const type = ECS.get(id, 'enemy').type;
     const bt = ENEMY_BTS[type];
     if (bt) bt.tick(id, gs);
+
     const pos = ECS.get(id, 'pos');
     const vel = ECS.get(id, 'vel');
     pos.x += vel.vx;
     pos.y += vel.vy;
 
     if (gs.bouncyHouse) {
-      if (pos.x < 18) { pos.x = 18; vel.vx = Math.abs(vel.vx); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
-      if (pos.x > worldW-18) { pos.x = worldW-18; vel.vx = -Math.abs(vel.vx); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
-      if (pos.y < 18) { pos.y = 18; vel.vy = Math.abs(vel.vy); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
-      if (pos.y > worldH-18) { pos.y = worldH-18; vel.vy = -Math.abs(vel.vy); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
+      if (pos.x < 18)          { pos.x = 18;          vel.vx =  Math.abs(vel.vx); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
+      if (pos.x > worldW - 18) { pos.x = worldW - 18; vel.vx = -Math.abs(vel.vx); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
+      if (pos.y < 18)          { pos.y = 18;          vel.vy =  Math.abs(vel.vy); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
+      if (pos.y > worldH - 18) { pos.y = worldH - 18; vel.vy = -Math.abs(vel.vy); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
     } else {
       const pp = ECS.get(gs.playerId, 'pos');
       if (pp) pos.angle = Math.atan2(pp.y - pos.y, pp.x - pos.x);
-      pos.x = Math.max(-40, Math.min(worldW+40, pos.x));
-      pos.y = Math.max(-40, Math.min(worldH+40, pos.y));
+      pos.x = Math.max(-40, Math.min(worldW + 40, pos.x));
+      pos.y = Math.max(-40, Math.min(worldH + 40, pos.y));
     }
 
     const hp = ECS.get(id, 'hp');
     if (hp && hp.hitFlash > 0) hp.hitFlash--;
 
-    const ai2 = ECS.get(id, 'ai');
+    const ai2  = ECS.get(id, 'ai');
     const phy2 = ECS.get(id, 'physics');
     if (ai2 && phy2) {
-      // Confused: chase nearest other enemy
+      // Confused: chase nearest other enemy instead of player
       if (ai2.confused) {
         ai2.confuseTimer--;
         if (ai2.confuseTimer <= 0) { ai2.confused = false; }
         else {
           let nearEnemy = null, nearD = 999999;
-          for (const oid of ECS.query('enemy','pos')) {
+          for (const oid of ECS.query('enemy', 'pos')) {
             if (oid === id) continue;
             const od = Math.hypot(ECS.get(oid,'pos').x - pos.x, ECS.get(oid,'pos').y - pos.y);
             if (od < nearD) { nearD = od; nearEnemy = ECS.get(oid,'pos'); }
@@ -220,7 +232,7 @@ function sysAI() {
           }
         }
       }
-      // Ringmaster buff
+      // Ringmaster aura speed buff
       if (ai2.ringmasterBuffed) {
         ai2.ringmasterBuffTimer = (ai2.ringmasterBuffTimer || 0) - 1;
         phy2._baseSpeed = phy2._baseSpeed || phy2.speed;
@@ -236,36 +248,48 @@ function sysAI() {
   }
 }
 
+// ================================================================
+// SYSTEM 3: Bullet Movement + Bouncing
+// ================================================================
 function sysBullets() {
   gs.bullets = gs.bullets.filter(b => {
+    // Funhouse Distortion: nudge toward nearest enemy
     if (gs.hasFunhouseDistortion) {
       let nearest = null, nearDist = 999999;
       for (const eid of ECS.query('enemy','pos')) {
         const ep = ECS.get(eid,'pos');
-        const d = Math.hypot(ep.x-b.x, ep.y-b.y);
+        const d = Math.hypot(ep.x - b.x, ep.y - b.y);
         if (d < nearDist) { nearDist = d; nearest = ep; }
       }
       if (nearest && nearDist < 300) {
-        const dx = nearest.x-b.x, dy = nearest.y-b.y, dist = Math.hypot(dx,dy)||1;
+        const dx = nearest.x - b.x, dy = nearest.y - b.y, dist = Math.hypot(dx,dy)||1;
         b.vx += (dx/dist)*0.28; b.vy += (dy/dist)*0.28;
         const spd = Math.hypot(b.vx,b.vy);
         if (spd > CFG.BULLET_SPEED*1.1) { b.vx=b.vx/spd*CFG.BULLET_SPEED*1.1; b.vy=b.vy/spd*CFG.BULLET_SPEED*1.1; }
       }
     }
+
     b.x += b.vx; b.y += b.vy; b.life--;
+
     if (gs.bouncyHouse) {
       let bounced = false;
-      if (b.x <= 4)         { b.x = 4;        b.vx =  Math.abs(b.vx); b.angle = Math.atan2(b.vy,b.vx); bounced=true; }
-      if (b.x >= worldW-4)  { b.x = worldW-4; b.vx = -Math.abs(b.vx); b.angle = Math.atan2(b.vy,b.vx); bounced=true; }
-      if (b.y <= 4)         { b.y = 4;        b.vy =  Math.abs(b.vy); b.angle = Math.atan2(b.vy,b.vx); bounced=true; }
-      if (b.y >= worldH-4)  { b.y = worldH-4; b.vy = -Math.abs(b.vy); b.angle = Math.atan2(b.vy,b.vx); bounced=true; }
+      if (b.x <= 4)         { b.x = 4;         b.vx =  Math.abs(b.vx); b.angle = Math.atan2(b.vy,b.vx); bounced = true; }
+      if (b.x >= worldW-4)  { b.x = worldW-4;  b.vx = -Math.abs(b.vx); b.angle = Math.atan2(b.vy,b.vx); bounced = true; }
+      if (b.y <= 4)         { b.y = 4;         b.vy =  Math.abs(b.vy); b.angle = Math.atan2(b.vy,b.vx); bounced = true; }
+      if (b.y >= worldH-4)  { b.y = worldH-4;  b.vy = -Math.abs(b.vy); b.angle = Math.atan2(b.vy,b.vx); bounced = true; }
       if (bounced) {
         b.bounces = (b.bounces || 0) + 1;
         spawnParticles(b.x, b.y, '#88ffdd', 3);
         // Mirror Maze: split on first bounce
         if (gs.hasMirrorMaze && b.bounces === 1) {
           const perp = Math.atan2(b.vy, b.vx) + Math.PI / 2;
-          gs.bullets.push({ x:b.x, y:b.y, vx:Math.cos(perp)*CFG.BULLET_SPEED, vy:Math.sin(perp)*CFG.BULLET_SPEED, angle:perp, life:CFG.BULLET_LIFE, damageMult: b.damageMult, isDud: b.isDud, bounces: 99 });
+          gs.bullets.push({
+            x: b.x, y: b.y,
+            vx: Math.cos(perp)*CFG.BULLET_SPEED, vy: Math.sin(perp)*CFG.BULLET_SPEED,
+            angle: perp, life: CFG.BULLET_LIFE,
+            damageMult: b.damageMult, isDud: b.isDud,
+            bounces: 99 // prevent further splits
+          });
         }
       }
       return b.life > 0 && (b.bounces || 0) <= 8;
@@ -274,11 +298,13 @@ function sysBullets() {
   });
 }
 
+// ================================================================
+// SYSTEM 4: Bullet → Enemy Collision
+// ================================================================
 function sysBulletEnemyCollision() {
   for (const b of gs.bullets) {
     if (b.life <= 0) continue;
-    const enemies = ECS.query('enemy', 'pos', 'hp');
-    for (const id of enemies) {
+    for (const id of ECS.query('enemy', 'pos', 'hp')) {
       // Streamer Ghost phased = invulnerable
       const eai = ECS.get(id, 'ai');
       if (eai && eai.phased) continue;
@@ -290,22 +316,25 @@ function sysBulletEnemyCollision() {
         const dmg = b.damageMult || 1;
         ehp.hp -= dmg; ehp.hitFlash = 12; b.life = 0;
         spawnParticles(b.x, b.y, dmg > 1 ? '#ff44ff' : '#ff6644', 6);
-        // Popcorn Frenzy AOE
+
+        // Popcorn Frenzy: AOE explosion
         if (gs.popcornFrenzyTimer > 0) {
           spawnParticles(b.x, b.y, '#ffdd00', 12);
           for (const aoeId of ECS.query('enemy','pos','hp')) {
             if (aoeId === id) continue;
             const ap = ECS.get(aoeId,'pos');
-            if (Math.hypot(ap.x-b.x, ap.y-b.y) < 55) {
+            if (Math.hypot(ap.x - b.x, ap.y - b.y) < 55) {
               const ah = ECS.get(aoeId,'hp');
               ah.hp -= dmg * 0.6; ah.hitFlash = 8;
             }
           }
         }
+
         if (ehp.hp <= 0) {
           const type = ECS.get(id, 'enemy').type;
           if (type === 'boss') handleBossDeath(id);
-          // Ricochet chain
+
+          // Ricochet: chain to nearest surviving enemy
           if (gs.ricochetActive) {
             let nearest = null, nearDist = 999999;
             for (const oid of ECS.query('enemy','pos')) {
@@ -314,11 +343,12 @@ function sysBulletEnemyCollision() {
               if (od < nearDist) { nearDist = od; nearest = ECS.get(oid,'pos'); }
             }
             if (nearest) {
-              const rd = Math.hypot(nearest.x-epos.x, nearest.y-epos.y)||1;
-              gs.bullets.push({ x:epos.x, y:epos.y, vx:(nearest.x-epos.x)/rd*CFG.BULLET_SPEED, vy:(nearest.y-epos.y)/rd*CFG.BULLET_SPEED, angle:0, life:CFG.BULLET_LIFE, damageMult: dmg, isDud:false });
+              const rd = Math.hypot(nearest.x - epos.x, nearest.y - epos.y)||1;
+              gs.bullets.push({ x:epos.x, y:epos.y, vx:(nearest.x-epos.x)/rd*CFG.BULLET_SPEED, vy:(nearest.y-epos.y)/rd*CFG.BULLET_SPEED, angle:0, life:CFG.BULLET_LIFE, damageMult: dmg, isDud: false });
               spawnParticles(epos.x, epos.y, '#4499ff', 6);
             }
           }
+
           spawnParticles(epos.x, epos.y, '#ff2222', 18);
           if (gs.hasPopcornBucket && Math.random() < 0.22) {
             gs.popcornKernels.push({ x: epos.x + (Math.random()-.5)*20, y: epos.y + (Math.random()-.5)*20 });
@@ -337,6 +367,9 @@ function sysBulletEnemyCollision() {
   gs.bullets = gs.bullets.filter(b => b.life > 0);
 }
 
+// ================================================================
+// SYSTEM 5: Dash → Enemy Collision
+// ================================================================
 function sysDashCollision() {
   if (gs.dashTimer <= 0) {
     for (const id of ECS.query('enemy', 'ai')) ECS.get(id,'ai').dashHit = false;
@@ -361,6 +394,9 @@ function sysDashCollision() {
   }
 }
 
+// ================================================================
+// SYSTEM 6: Enemy → Player Collision
+// ================================================================
 function sysEnemyPlayerCollision() {
   // Tightrope Boots: intangible while dashing
   if (gs.invincible > 0 || gs.frozen || (gs.dashTimer > 0 && gs.hasTightropeBoots)) return;
@@ -380,18 +416,23 @@ function sysEnemyPlayerCollision() {
   }
 }
 
+// ================================================================
+// SYSTEM 7: Enemy Bullets
+// ================================================================
 function sysEnemyBullets() {
   const ppos = ECS.get(gs.playerId, 'pos');
   gs.enemyBullets = gs.enemyBullets.filter(eb => {
     if (!gs.frozen) { eb.x += eb.vx; eb.y += eb.vy; eb.life--; }
+
     // Homing bullets
     if (eb.homing) {
-      const dx = ppos.x-eb.x, dy = ppos.y-eb.y, dist = Math.hypot(dx,dy)||1;
+      const dx = ppos.x - eb.x, dy = ppos.y - eb.y, dist = Math.hypot(dx,dy)||1;
       eb.vx += (dx/dist) * (eb.homingStrength||0.04);
       eb.vy += (dy/dist) * (eb.homingStrength||0.04);
       const spd = Math.hypot(eb.vx,eb.vy);
       if (spd > 4) { eb.vx=eb.vx/spd*4; eb.vy=eb.vy/spd*4; }
     }
+
     if (gs.bouncyHouse) {
       let bounced = false;
       if (eb.x <= 4)          { eb.x = 4;          eb.vx =  Math.abs(eb.vx); bounced = true; }
@@ -403,6 +444,7 @@ function sysEnemyBullets() {
     } else {
       if (eb.life <= 0 || eb.x < -10 || eb.x > worldW+10 || eb.y < -10 || eb.y > worldH+10) return false;
     }
+
     if (gs.invincible <= 0 && Math.hypot(eb.x - ppos.x, eb.y - ppos.y) < 20) {
       gs.health -= 15; gs.invincible = CFG.INVINCIBLE_FRAMES;
       gs.shakeX = 10; gs.shakeY = 10;
@@ -417,6 +459,9 @@ function sysEnemyBullets() {
   });
 }
 
+// ================================================================
+// SYSTEM 8: Field Item Pickup
+// ================================================================
 function sysFieldItemPickup() {
   const ppos = ECS.get(gs.playerId, 'pos');
   for (let i = gs.fieldItems.length - 1; i >= 0; i--) {
@@ -426,7 +471,7 @@ function sysFieldItemPickup() {
       gs.itemCooldowns[fi.id] = Date.now();
       gs.fieldItems.splice(i, 1);
       def.effect(gs);
-      const permanent = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles']);
+      const permanent = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks']);
       if (!permanent.has(fi.id)) {
         setTimeout(() => { if (gameRunning) trySpawnFieldItems(); }, def.spawnCooldown);
       }
@@ -434,11 +479,14 @@ function sysFieldItemPickup() {
   }
 }
 
+// ================================================================
+// SYSTEM 9: Popcorn Kernel Pickup
+// ================================================================
 function sysPopcorn() {
   if (!gs.hasPopcornBucket || !gs.popcornKernels) return;
   const ppos = ECS.get(gs.playerId,'pos');
   gs.popcornKernels = gs.popcornKernels.filter(k => {
-    if (Math.hypot(k.x-ppos.x, k.y-ppos.y) < 22) {
+    if (Math.hypot(k.x - ppos.x, k.y - ppos.y) < 22) {
       spawnParticles(k.x, k.y, '#ffdd00', 4);
       gs._kernelsCollected = (gs._kernelsCollected||0) + 1;
       if (gs._kernelsCollected >= 5) {
@@ -453,6 +501,9 @@ function sysPopcorn() {
   });
 }
 
+// ================================================================
+// SYSTEM 10: Timers
+// ================================================================
 function sysTimers() {
   if (gs.partyFreezeTimer > 0) gs.partyFreezeTimer--;
   if (gs.speedBoostTimer > 0)  gs.speedBoostTimer--;
@@ -460,8 +511,8 @@ function sysTimers() {
   if (gs.invincible > 0) gs.invincible--;
   if (gs.glowCooldown > 0) gs.glowCooldown--;
 
+  // Reload (sped up by cookie)
   if (gs.reloading) {
-    // Speed up reload if cookie active
     const reloadSpeed = gs.speedBoostTimer > 0 ? Math.max(1, Math.round(gs.speedBoostMult || 1)) : 1;
     gs.reloadTimer -= reloadSpeed;
     if (gs.reloadTimer <= 0) {
@@ -471,7 +522,7 @@ function sysTimers() {
   }
   if (gs.ammo === 0 && !gs.reloading) startReload();
 
-  // Cursed Candles
+  // Cursed Candles: drain HP, light candles one per second
   if (gs.hasCursedCandles) {
     if (gs.candleRelightDelay > 0) {
       gs.candleRelightDelay--;
@@ -479,19 +530,16 @@ function sysTimers() {
       gs.candleHpTimer = (gs.candleHpTimer || 0) + 1;
       if (gs.candleHpTimer >= 60) {
         gs.candleHpTimer = 0;
+        gs.health -= 5;
+        gs.flawlessThisWave = false;
+        if (gs.health <= 0) { gameOver(); return; }
         if (gs.candlesLit < 5) {
-          gs.health -= 5;
-          gs.flawlessThisWave = false;
-          if (gs.health <= 0) { gameOver(); return; }
           gs.candlesLit = Math.min(5, gs.candlesLit + 1);
-          showMsg(gs.candlesLit === 5 ? "ALL CANDLES LIT! +10 BULLETS PER SHOT" : `CANDLE LIT! +${gs.candlesLit*2} BULLETS PER SHOT`);
-          updateHUD();
-        } else {
-          gs.health -= 5;
-          gs.flawlessThisWave = false;
-          if (gs.health <= 0) { gameOver(); return; }
-          updateHUD();
+          showMsg(gs.candlesLit === 5
+            ? "ALL CANDLES LIT! +10 BULLETS PER SHOT"
+            : `CANDLE LIT! +${gs.candlesLit * 2} BULLETS PER SHOT`);
         }
+        updateHUD();
       }
     }
   }
@@ -520,15 +568,17 @@ function sysTimers() {
   gs.shakeY *= 0.72;
   if (muzzleFlash > 0) muzzleFlash--;
 
-  // Prize wheel timers
+  // Prize wheel effect timers
   if (gs.prizeEffect) {
     gs.prizeEffect.timer--;
     if (gs.prizeEffect.timer <= 0) {
       gs.sugarRushActive = false;
-      gs.ricochetActive = false;
-      gs.prizeEffect = null;
+      gs.ricochetActive  = false;
+      gs.prizeEffect     = null;
     }
   }
+
+  // Cursed spin: restore enemy speeds when done
   if (gs.cursedSpinTimer > 0) {
     gs.cursedSpinTimer--;
     if (gs.cursedSpinTimer === 0) {
@@ -541,7 +591,7 @@ function sysTimers() {
     }
   }
 
-  // Knocking Pins
+  // Knocking Pins: auto-charge nearest enemy while active
   if (gs.knockingPinsActive) {
     gs.knockingPinsTimer--;
     if (gs.knockingPinsTimer <= 0) {
@@ -553,29 +603,32 @@ function sysTimers() {
       let nearest = null, nearDist = 999999;
       for (const eid of ECS.query('enemy','pos')) {
         const ep = ECS.get(eid,'pos');
-        const d = Math.hypot(ep.x-ppos.x, ep.y-ppos.y);
+        const d = Math.hypot(ep.x - ppos.x, ep.y - ppos.y);
         if (d < nearDist) { nearDist = d; nearest = ep; }
       }
       if (nearest) {
-        const dx = nearest.x-ppos.x, dy = nearest.y-ppos.y, dist = Math.hypot(dx,dy)||1;
+        const dx = nearest.x - ppos.x, dy = nearest.y - ppos.y, dist = Math.hypot(dx,dy)||1;
         pvel.vx = (dx/dist) * CFG.PLAYER_SPEED * 2.2;
         pvel.vy = (dy/dist) * CFG.PLAYER_SPEED * 2.2;
       }
     }
   }
 
-  // Popcorn Frenzy timer
+  // Popcorn Frenzy countdown
   if (gs.popcornFrenzyTimer > 0) gs.popcornFrenzyTimer--;
 
-  // Clownish nose growth + blast
+  // Clownish nose growth + confuse blast
   if (gs.hasClownish) {
     gs.clownNoseTimer++;
     gs.clownNoseSize = gs.clownNoseTimer / gs.clownNoseMax;
     if (gs.clownNoseTimer >= gs.clownNoseMax) {
       gs.clownNoseTimer = 0;
       const ppos3 = ECS.get(gs.playerId, 'pos');
-      const near = ECS.query('enemy','pos').filter(id => Math.hypot(ECS.get(id,'pos').x - ppos3.x, ECS.get(id,'pos').y - ppos3.y) < 200);
+      const near = ECS.query('enemy','pos').filter(id =>
+        Math.hypot(ECS.get(id,'pos').x - ppos3.x, ECS.get(id,'pos').y - ppos3.y) < 200
+      );
       if (near.length >= 2) {
+        // Fire two player bullets outward (hits enemies)
         for (let bi = 0; bi < 2; bi++) {
           const ba = ppos3.angle + (bi === 0 ? -0.5 : 0.5);
           gs.bullets.push({ x:ppos3.x, y:ppos3.y, vx:Math.cos(ba)*8, vy:Math.sin(ba)*8, life:80, maxLife:80, angle:ba, damageMult:2, isDud:false });
@@ -591,6 +644,9 @@ function sysTimers() {
   }
 }
 
+// ================================================================
+// SYSTEM 11: Spawner
+// ================================================================
 function sysSpawner() {
   gs.spawnTimer++;
   if (gs.spawnTimer >= gs.spawnInterval) { gs.spawnTimer = 0; spawnEnemy(); }
@@ -625,15 +681,16 @@ function spawnEnemy() {
   const ppos = ECS.get(gs.playerId, 'pos');
   do {
     const side = Math.floor(Math.random() * 4);
-    if (side===0) { x=Math.random()*worldW; y=-40; }
-    else if (side===1) { x=worldW+40; y=Math.random()*worldH; }
-    else if (side===2) { x=Math.random()*worldW; y=worldH+40; }
-    else { x=-40; y=Math.random()*worldH; }
+    if      (side === 0) { x = Math.random() * worldW; y = -40; }
+    else if (side === 1) { x = worldW + 40;             y = Math.random() * worldH; }
+    else if (side === 2) { x = Math.random() * worldW; y = worldH + 40; }
+    else                 { x = -40;                     y = Math.random() * worldH; }
     attempts++;
-  } while (Math.hypot(x-ppos.x, y-ppos.y) < CFG.SAFE_SPAWN_DIST && attempts < 8);
+  } while (Math.hypot(x - ppos.x, y - ppos.y) < CFG.SAFE_SPAWN_DIST && attempts < 8);
 
   let type = 'scissors';
   const roll = Math.random();
+
   if (gs.floor === 2) {
     if (gs.wave >= 15) {
       if (roll < 0.30)      type = 'ringmaster';
@@ -644,31 +701,31 @@ function spawnEnemy() {
       else             type = 'tightrope';
     }
   } else if (gs.wave >= 6) {
-    if (roll < 0.30) type='clown';
-    else if (roll < 0.52) type='giftBox';
-    else if (roll < 0.72) type='partyHat';
+    if (roll < 0.30)      type = 'clown';
+    else if (roll < 0.52) type = 'giftBox';
+    else if (roll < 0.72) type = 'partyHat';
   } else if (gs.wave >= 5) {
-    if (roll < 0.32) type='clown';
-    else if (roll < 0.58) type='partyHat';
+    if (roll < 0.32)      type = 'clown';
+    else if (roll < 0.58) type = 'partyHat';
   } else if (gs.wave >= 4) {
-    if (roll < 0.35) type='clown';
+    if (roll < 0.35) type = 'clown';
   }
 
-  const def = ENEMY_DEFS[type];
+  const def    = ENEMY_DEFS[type];
   const baseHp = 1 + Math.floor(gs.wave / 2);
-  const id = ECS.createEntity();
+  const id     = ECS.createEntity();
   ECS.add(id, 'enemy',   { type });
   ECS.add(id, 'pos',     { x, y, angle: 0 });
   ECS.add(id, 'vel',     { vx: 0, vy: 0 });
-  ECS.add(id, 'hp',      { hp: Math.ceil(baseHp*def.hpMult), maxHp: Math.ceil(baseHp*def.hpMult), hitFlash: 0 });
-  ECS.add(id, 'physics', { speed: (1.2 + Math.random()*0.6 + gs.wave*0.12) * def.speedMult });
+  ECS.add(id, 'hp',      { hp: Math.ceil(baseHp * def.hpMult), maxHp: Math.ceil(baseHp * def.hpMult), hitFlash: 0 });
+  ECS.add(id, 'physics', { speed: (1.2 + Math.random() * 0.6 + gs.wave * 0.12) * def.speedMult });
   ECS.add(id, 'ai',      { shootCooldown: 120, ambushTimer: 0, diveTimer: 0, dashHit: false });
 }
 
 function spawnBoss() {
   const ppos = ECS.get(gs.playerId, 'pos');
-  let x = ppos.x > worldW/2 ? 120 : worldW - 120;
-  let y = ppos.y > worldH/2 ? 120 : worldH - 120;
+  const x = ppos.x > worldW / 2 ? 120 : worldW - 120;
+  const y = ppos.y > worldH / 2 ? 120 : worldH - 120;
   const id = ECS.createEntity();
   ECS.add(id, 'enemy',   { type: 'boss' });
   ECS.add(id, 'pos',     { x, y, angle: 0 });
@@ -691,32 +748,39 @@ function shoot() {
   if (gs.ammo <= 0 || gs.reloading) return;
   gs.ammo--; muzzleFlash = 10; updateHUD();
   const ppos = ECS.get(gs.playerId, 'pos');
-  gs.shakeX = (Math.random()-.5)*13;
-  gs.shakeY = (Math.random()-.5)*13;
+  gs.shakeX = (Math.random() - .5) * 13;
+  gs.shakeY = (Math.random() - .5) * 13;
   let doubleCount = 0;
   const totalBullets = CFG.BULLET_COUNT + (gs.hasCursedCandles ? gs.candlesLit * 2 : 0);
-  for (let i=0; i<totalBullets; i++) {
-    const a = ppos.angle + (Math.random()-.5)*.32;
+  for (let i = 0; i < totalBullets; i++) {
+    const a = ppos.angle + (Math.random() - .5) * .32;
     let damageMult = 1, isDud = false;
     if (gs.hasQuadCake) {
-      if (Math.random() < 0.50) isDud = true;
-      else { damageMult = 4; doubleCount++; }
+      if (Math.random() < 0.50) isDud = true; else { damageMult = 4; doubleCount++; }
     } else if (gs.hasTripleCake) {
-      if (Math.random() < 0.45) isDud = true;
-      else { damageMult = 3; doubleCount++; }
+      if (Math.random() < 0.45) isDud = true; else { damageMult = 3; doubleCount++; }
     } else if (gs.hasDoubleCake) {
-      if (Math.random() < 0.40) isDud = true;
-      else { damageMult = 2; doubleCount++; }
+      if (Math.random() < 0.40) isDud = true; else { damageMult = 2; doubleCount++; }
     }
-    gs.bullets.push({ x:ppos.x+Math.cos(ppos.angle)*32, y:ppos.y+Math.sin(ppos.angle)*32, vx:Math.cos(a)*CFG.BULLET_SPEED, vy:Math.sin(a)*CFG.BULLET_SPEED, angle:a, life:CFG.BULLET_LIFE, damageMult: isDud ? 1 : damageMult * (gs.sfpFull ? 1.5 : 1), isDud });
+    gs.bullets.push({
+      x: ppos.x + Math.cos(ppos.angle) * 32,
+      y: ppos.y + Math.sin(ppos.angle) * 32,
+      vx: Math.cos(a) * CFG.BULLET_SPEED,
+      vy: Math.sin(a) * CFG.BULLET_SPEED,
+      angle: a, life: CFG.BULLET_LIFE,
+      damageMult: isDud ? 1 : damageMult * (gs.sfpFull ? 1.5 : 1),
+      isDud
+    });
   }
-  if (doubleCount > 0) spawnParticles(ppos.x+Math.cos(ppos.angle)*30, ppos.y+Math.sin(ppos.angle)*30, '#ff44ff', 8);
-  else spawnParticles(ppos.x+Math.cos(ppos.angle)*30, ppos.y+Math.sin(ppos.angle)*30, '#ff8800', 6);
+  const mx = ppos.x + Math.cos(ppos.angle) * 30;
+  const my = ppos.y + Math.sin(ppos.angle) * 30;
+  spawnParticles(mx, my, doubleCount > 0 ? '#ff44ff' : '#ff8800', doubleCount > 0 ? 8 : 6);
 }
 
 function startReload() {
   if (gs.reloading || gs.ammo === gs.maxAmmo) return;
-  gs.reloading = true; gs.reloadTimer = CFG.RELOAD_FRAMES;
+  gs.reloading = true;
+  gs.reloadTimer = CFG.RELOAD_FRAMES;
   showMsg('RELOADING...');
 }
 
@@ -726,8 +790,13 @@ function tryDash() {
   const ppos = ECS.get(gs.playerId, 'pos');
   const pvel = ECS.get(gs.playerId, 'vel');
   const spd = Math.hypot(pvel.vx, pvel.vy);
-  if (spd > 0.3) { gs.dashVx = (pvel.vx/spd)*CFG.DASH_SPEED; gs.dashVy = (pvel.vy/spd)*CFG.DASH_SPEED; }
-  else { gs.dashVx = Math.cos(ppos.angle)*CFG.DASH_SPEED; gs.dashVy = Math.sin(ppos.angle)*CFG.DASH_SPEED; }
+  if (spd > 0.3) {
+    gs.dashVx = (pvel.vx / spd) * CFG.DASH_SPEED;
+    gs.dashVy = (pvel.vy / spd) * CFG.DASH_SPEED;
+  } else {
+    gs.dashVx = Math.cos(ppos.angle) * CFG.DASH_SPEED;
+    gs.dashVy = Math.sin(ppos.angle) * CFG.DASH_SPEED;
+  }
   gs.dashTimer = CFG.DASH_FRAMES;
   gs.invincible = Math.max(gs.invincible, CFG.DASH_FRAMES + 4);
   spawnParticles(ppos.x, ppos.y, '#ffaa00', 8);
@@ -745,7 +814,7 @@ function checkWave() {
       gs.ammo = Math.min(gs.ammo + 2, gs.maxAmmo);
       updateHUD();
       showMsg('FLAWLESS BAKING! +2 MAX AMMO!');
-      spawnPartyParticles(CFG.W/2, CFG.H/2);
+      spawnPartyParticles(CFG.W / 2, CFG.H / 2);
     }
 
     gs.wave++;
@@ -782,22 +851,22 @@ function checkWave() {
 
 function trySpawnFieldItems() {
   const now = Date.now();
-  const permanentIds = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks']);
+  const permanent = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks']);
   for (const id of gs.unlockedItems) {
     if (gs.fieldItems.some(fi => fi.id === id)) continue;
-    if (id === 'bouncy' && gs.bouncyHouse) continue;
-    if (id === 'dash' && gs.hasDash) continue;
-    if (id === 'doubledCake' && gs.hasDoubleCake) continue;
-    if (id === 'tripleCake' && gs.hasTripleCake) continue;
-    if (id === 'quadCake' && gs.hasQuadCake) continue;
-    if (id === 'shakeFizzlePop' && gs.hasShakeFizzlePop) continue;
-    if (id === 'flawlessBaking' && gs.hasFlawlessBaking) continue;
-    if (id === 'cursedCandles' && gs.hasCursedCandles) continue;
+    if (id === 'bouncy'          && gs.bouncyHouse)        continue;
+    if (id === 'dash'            && gs.hasDash)            continue;
+    if (id === 'doubledCake'     && gs.hasDoubleCake)      continue;
+    if (id === 'tripleCake'      && gs.hasTripleCake)      continue;
+    if (id === 'quadCake'        && gs.hasQuadCake)        continue;
+    if (id === 'shakeFizzlePop'  && gs.hasShakeFizzlePop)  continue;
+    if (id === 'flawlessBaking'  && gs.hasFlawlessBaking)  continue;
+    if (id === 'cursedCandles'   && gs.hasCursedCandles)   continue;
     if (id === 'glowsticks') continue;
     const def = ITEM_DEFS[id];
     const last = gs.itemCooldowns[id] || 0;
     if (now - last >= def.spawnCooldown || last === 0) {
-      gs.fieldItems.push({ id, x:80+Math.random()*(worldW-160), y:80+Math.random()*(worldH-160), phase:Math.random()*Math.PI*2 });
+      gs.fieldItems.push({ id, x: 80 + Math.random() * (worldW - 160), y: 80 + Math.random() * (worldH - 160), phase: Math.random() * Math.PI * 2 });
     }
   }
 }
@@ -815,8 +884,8 @@ function offerItemChoice() {
   const itemPool = gs.floor === 2 ? FLOOR2_ITEM_IDS : ALL_ITEM_IDS;
   let available = itemPool.filter(id => {
     if (id === 'tripleCake' && !gs.hasDoubleCake) return false;
-    if (id === 'quadCake' && !gs.hasTripleCake) return false;
-    if (id === 'knockingPins') return true;
+    if (id === 'quadCake'   && !gs.hasTripleCake) return false;
+    if (id === 'knockingPins') return true; // consumable, always offerable
     return !gs.unlockedItems.includes(id);
   });
 
@@ -830,7 +899,11 @@ function offerItemChoice() {
     if (id === 'doubledCake') { card.style.background='#001133'; card.style.borderColor='#4488ff'; }
     else if (id === 'tripleCake') { card.style.background='#220022'; card.style.borderColor='#cc44ff'; }
     else if (id === 'quadCake')   { card.style.background='#220000'; card.style.borderColor='#ff3333'; }
-    card.innerHTML = `<div class="ic-icon">${def.icon}</div><div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div><div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned ? '<br><br>[OWNED]' : ''}</div>`;
+    card.innerHTML = `
+      <div class="ic-icon">${def.icon}</div>
+      <div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div>
+      <div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned ? '<br><br>[OWNED]' : ''}</div>
+    `;
     if (!isOwned) {
       card.addEventListener('click', () => {
         gs.unlockedItems.push(id);
@@ -842,10 +915,11 @@ function offerItemChoice() {
     }
     cardsEl.appendChild(card);
   }
+
   choiceEl.style.display = 'flex';
   const skipBtn = document.getElementById('skip-btn');
-  const allOfferedOwned = offered.every(id => gs.unlockedItems.includes(id));
-  skipBtn.style.display = allOfferedOwned ? 'block' : 'none';
+  const allOwned = offered.every(id => gs.unlockedItems.includes(id));
+  skipBtn.style.display = allOwned ? 'block' : 'none';
   skipBtn.onclick = () => {
     choiceEl.style.display = 'none'; gs.pendingChoice = false; gameRunning = true;
     trySpawnFieldItems(); updateHUD(); loop();
@@ -886,7 +960,7 @@ function spinPrizeWheel() {
     name = "🟡 SUGAR RUSH! 3x SPEED!";
     gs.sugarRushActive = true;
     gs.speedBoostTimer = 600;
-    gs.speedBoostMult = 3;
+    gs.speedBoostMult  = 3;
     gs.prizeEffect = { name, timer: 600 };
   } else if (roll < 0.52) {
     name = "🟢 BIG WINNER! FULL HEAL!";
@@ -918,7 +992,7 @@ function spinPrizeWheel() {
 function handleBossDeath(id) {
   if (gs.bossId !== id) return;
   gs.bossActive = false;
-  gs.bossId = null;
+  gs.bossId     = null;
   gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
 
   gameRunning = false;
