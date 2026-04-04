@@ -348,6 +348,7 @@ document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('floor-btn').addEventListener('click', () => {
   document.getElementById('floor-transition').style.display = 'none';
   gs.floor = 2;
+   worldW = 1050;
   worldH = 690;
   renderScale = CFG.W / worldW;
   unlockGlowsticks();
