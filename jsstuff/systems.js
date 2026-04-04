@@ -45,11 +45,10 @@ function baseBulletDamage() {
 
 // Returns world position of gun muzzle tip for bullet spawn / muzzle flash
 function gunMuzzlePos() {
-  const ppos = ECS.get(gs.playerId, 'pos');
-  const tipDist = 10 + (124 * 0.68); // GUN_DIST + (GUN_W * (1 - GRIP_RATIO))
+  const tipDist = 90 * 0.68; // GUN_W * (1 - GRIP_RATIO) = distance from grip to muzzle tip
   return {
-    x: ppos.x + Math.cos(gunAngle) * tipDist,
-    y: ppos.y + Math.sin(gunAngle) * tipDist,
+    x: gunX + Math.cos(gunAngle) * tipDist,
+    y: gunY + Math.sin(gunAngle) * tipDist,
   };
 }
 
