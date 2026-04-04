@@ -190,9 +190,21 @@ function sysPlayerMovement() {
   if (moveSpd > 0.5) {
     playerMoveAngle = Math.atan2(vel.vy, vel.vx);
   }
-  // pos.angle is kept in sync with gun for systems that read it (bullets, melee etc.)
-  pos.angle = Math.atan2(mouse.y - pos.y, mouse.x - pos.x);
+ // Update gun floating position — moves toward mouse, clamped to MAX_HOLD_DIST from player
+  const MAX_HOLD_DIST = 20;
+  const mdx = mouse.x - pos.x;
+  const mdy = mouse.y - pos.y;
+  const mouseDist = Math.hypot(mdx, mdy) || 1;
+  const holdDist = Math.min(mouseDist, MAX_HOLD_DIST);
+  const targetGunX = pos.x + (mdx / mouseDist) * holdDist;
+  const targetGunY = pos.y + (mdy / mouseDist) * holdDist;
 
+  // Smooth lerp so gun floats naturally
+  gunX += (targetGunX - gunX) * 0.18;
+  gunY += (targetGunY - gunY) * 0.18;
+
+  // Gun angle points from gun's actual position toward mouse
+  gunAngle = Math.atan2(mouse.y - gunY, mouse.x - gunX);
   // Update gun angle to face mouse (smooth follow with slight lag)
   const targetGunAngle = Math.atan2(mouse.y - pos.y, mouse.x - pos.x);
   // Smooth interpolation — gun lags ~10% behind mouse per frame for feel
