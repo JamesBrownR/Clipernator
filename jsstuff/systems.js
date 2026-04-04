@@ -190,7 +190,7 @@ function sysPlayerMovement() {
     playerMoveAngle = Math.atan2(vel.vy, vel.vx);
   }
  // Update gun floating position — moves toward mouse, clamped to MAX_HOLD_DIST from player
-  const MAX_HOLD_DIST = 20;
+  const MAX_HOLD_DIST = 50;
   const mdx = mouse.x - pos.x;
   const mdy = mouse.y - pos.y;
   const mouseDist = Math.hypot(mdx, mdy) || 1;
