@@ -46,9 +46,9 @@ let renderScale = 1.0;
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
-// Player body sprite (Clipernator paperclip)
+// Player body sprite (Clippy paperclip)
 const playerImg = new Image();
-playerImg.src = '/Clipernator/sprites/Clipernator.png';
+playerImg.src = '/Clipernator/sprites/Clippy.png';
 
 // Shotgun sprite — follows mouse aim independently of body
 const shotgunImg = new Image();
