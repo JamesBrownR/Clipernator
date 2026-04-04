@@ -775,7 +775,8 @@ const ENEMY_BTS = {
 // ================================================================
 const ENEMY_DEFS = {
   scissors:       { hpMult: 1.0, speedMult: 1.0,  size: 28, color: '#cc2222' },
-  clown:          { hpMult: 1.3, speedMult: 0.95, size: 32, color: '#ff44aa' },
+ mask:    { hpMult: 1.1, speedMult: 1.05, size: 28, color: '#44aaff' },
+  juggler: { hpMult: 2.0, speedMult: 0.55, size: 36, color: '#ffdd00' },
   giftBox:        { hpMult: 2.2, speedMult: 0.6,  size: 34, color: '#ffaa00' },
   partyHat:       { hpMult: 0.8, speedMult: 1.4,  size: 26, color: '#ffdd00' },
   boss:           { hpMult: 1,   speedMult: 0.4,  size: 55, color: '#9900cc' },
