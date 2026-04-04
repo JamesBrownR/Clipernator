@@ -9,7 +9,7 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const playerImg = new Image();
 playerImg.src = 'player.png'; // or whatever your image path is
-
+ 
 let gameRunning = false;
 let animId = null;
 let msgTimeout = null;
