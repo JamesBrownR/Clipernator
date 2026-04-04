@@ -290,7 +290,7 @@ function sysAI() {
     const hp = ECS.get(id, 'hp');
     if (hp && hp.hitFlash > 0) hp.hitFlash--;
 
-    const ai2  = ECS.get(id, 'ai');
+  
     const phy2 = ECS.get(id, 'physics');
     if (ai2 && phy2) {
       if (ai2.confused) {
