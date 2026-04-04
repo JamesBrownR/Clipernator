@@ -43,11 +43,22 @@ function baseBulletDamage() {
   return 1;
 }
 
+// Returns world position of gun muzzle tip for bullet spawn / muzzle flash
+function gunMuzzlePos() {
+  const ppos = ECS.get(gs.playerId, 'pos');
+  // Gun tip is (GUN_DIST + GUN_W * 0.62) along gunAngle from player center
+  // GUN_DIST = 12, GUN_W = 72, so tip ~= 12 + 44.6 = ~57px out
+  const tipDist = 57;
+  return {
+    x: ppos.x + Math.cos(gunAngle) * tipDist,
+    y: ppos.y + Math.sin(gunAngle) * tipDist,
+  };
+}
+
 // ================================================================
 // ITEM-TRIGGERED HELPERS
 // ================================================================
 
-// Shake Fizzle Pop: called whenever player takes a hit
 function triggerSFPHit() {
   if (!gs.hasShakeFizzlePop) return;
   if (gs.sfpFull) {
@@ -83,7 +94,6 @@ function triggerSFPHit() {
   gs.sfpFull = false;
 }
 
-// Unlock glowsticks on floor transition
 function unlockGlowsticks() {
   if (gs.hasGlowsticks) return;
   gs.hasGlowsticks = true;
@@ -92,7 +102,6 @@ function unlockGlowsticks() {
   updateHUD();
 }
 
-// Glowstick melee attack
 function swingGlowsticks() {
   if (!gs.hasGlowsticks || gs.glowCooldown > 0) return;
   gs.glowCooldown = CFG.GLOW_COOLDOWN;
@@ -109,7 +118,8 @@ function swingGlowsticks() {
     const dist = Math.hypot(dx, dy);
     if (dist < CFG.MELEE_RANGE && dist > 5) {
       const enemyAngle = Math.atan2(dy, dx);
-      if (angleDiff(enemyAngle, ppos.angle) < CFG.MELEE_CONE_ANGLE) {
+      // Swing arc uses gunAngle instead of pos.angle so it matches the visual
+      if (angleDiff(enemyAngle, gunAngle) < CFG.MELEE_CONE_ANGLE) {
         ehp.hp -= meleeDmg; ehp.hitFlash = 12;
         const knockDist = dist > 0 ? dist : 1;
         evel.vx += (dx / knockDist) * 7;
@@ -127,7 +137,8 @@ function swingGlowsticks() {
       }
     }
   }
-  spawnParticles(ppos.x + Math.cos(ppos.angle) * 38, ppos.y + Math.sin(ppos.angle) * 38, '#00ff88', 14);
+  const muzzle = gunMuzzlePos();
+  spawnParticles(muzzle.x, muzzle.y, '#00ff88', 14);
 }
 
 // ================================================================
@@ -151,7 +162,7 @@ function sysPlayerMovement() {
 
   if (dashing) {
     gs.dashTimer--;
-    gs.dashTrail.push({ x: pos.x, y: pos.y, life: 12, angle: pos.angle });
+    gs.dashTrail.push({ x: pos.x, y: pos.y, life: 12, angle: playerMoveAngle });
     vel.vx = gs.dashVx;
     vel.vy = gs.dashVy;
   } else {
@@ -176,7 +187,23 @@ function sysPlayerMovement() {
   if (pos.y < CFG.WALL_PAD)          { pos.y = CFG.WALL_PAD;          vel.vy = bouncy ? Math.abs(vel.vy)  : 0; }
   if (pos.y > worldH - CFG.WALL_PAD) { pos.y = worldH - CFG.WALL_PAD; vel.vy = bouncy ? -Math.abs(vel.vy) : 0; }
 
+  // Update body facing angle from movement velocity
+  const moveSpd = Math.hypot(vel.vx, vel.vy);
+  if (moveSpd > 0.5) {
+    playerMoveAngle = Math.atan2(vel.vy, vel.vx);
+  }
+  // pos.angle is kept in sync with gun for systems that read it (bullets, melee etc.)
   pos.angle = Math.atan2(mouse.y - pos.y, mouse.x - pos.x);
+
+  // Update gun angle to face mouse (smooth follow with slight lag)
+  const targetGunAngle = Math.atan2(mouse.y - pos.y, mouse.x - pos.x);
+  // Smooth interpolation — gun lags ~10% behind mouse per frame for feel
+  let da = targetGunAngle - gunAngle;
+  // Wrap difference to [-π, π]
+  while (da > Math.PI)  da -= Math.PI * 2;
+  while (da < -Math.PI) da += Math.PI * 2;
+  gunAngle += da * 0.25; // 0.25 = slight lag; set to 1.0 for instant
+
   gs.dashTrail = gs.dashTrail.filter(t => { t.life--; return t.life > 0; });
 }
 
@@ -214,7 +241,6 @@ function sysAI() {
     const ai2  = ECS.get(id, 'ai');
     const phy2 = ECS.get(id, 'physics');
     if (ai2 && phy2) {
-      // Confused: chase nearest other enemy instead of player
       if (ai2.confused) {
         ai2.confuseTimer--;
         if (ai2.confuseTimer <= 0) { ai2.confused = false; }
@@ -232,7 +258,6 @@ function sysAI() {
           }
         }
       }
-      // Ringmaster aura speed buff
       if (ai2.ringmasterBuffed) {
         ai2.ringmasterBuffTimer = (ai2.ringmasterBuffTimer || 0) - 1;
         phy2._baseSpeed = phy2._baseSpeed || phy2.speed;
@@ -253,7 +278,6 @@ function sysAI() {
 // ================================================================
 function sysBullets() {
   gs.bullets = gs.bullets.filter(b => {
-    // Funhouse Distortion: nudge toward nearest enemy
     if (gs.hasFunhouseDistortion) {
       let nearest = null, nearDist = 999999;
       for (const eid of ECS.query('enemy','pos')) {
@@ -280,7 +304,6 @@ function sysBullets() {
       if (bounced) {
         b.bounces = (b.bounces || 0) + 1;
         spawnParticles(b.x, b.y, '#88ffdd', 3);
-        // Mirror Maze: split on first bounce
         if (gs.hasMirrorMaze && b.bounces === 1) {
           const perp = Math.atan2(b.vy, b.vx) + Math.PI / 2;
           gs.bullets.push({
@@ -288,7 +311,7 @@ function sysBullets() {
             vx: Math.cos(perp)*CFG.BULLET_SPEED, vy: Math.sin(perp)*CFG.BULLET_SPEED,
             angle: perp, life: CFG.BULLET_LIFE,
             damageMult: b.damageMult, isDud: b.isDud,
-            bounces: 99 // prevent further splits
+            bounces: 99
           });
         }
       }
@@ -305,7 +328,6 @@ function sysBulletEnemyCollision() {
   for (const b of gs.bullets) {
     if (b.life <= 0) continue;
     for (const id of ECS.query('enemy', 'pos', 'hp')) {
-      // Streamer Ghost phased = invulnerable
       const eai = ECS.get(id, 'ai');
       if (eai && eai.phased) continue;
 
@@ -317,7 +339,6 @@ function sysBulletEnemyCollision() {
         ehp.hp -= dmg; ehp.hitFlash = 12; b.life = 0;
         spawnParticles(b.x, b.y, dmg > 1 ? '#ff44ff' : '#ff6644', 6);
 
-        // Popcorn Frenzy: AOE explosion
         if (gs.popcornFrenzyTimer > 0) {
           spawnParticles(b.x, b.y, '#ffdd00', 12);
           for (const aoeId of ECS.query('enemy','pos','hp')) {
@@ -334,7 +355,6 @@ function sysBulletEnemyCollision() {
           const type = ECS.get(id, 'enemy').type;
           if (type === 'boss') handleBossDeath(id);
 
-          // Ricochet: chain to nearest surviving enemy
           if (gs.ricochetActive) {
             let nearest = null, nearDist = 999999;
             for (const oid of ECS.query('enemy','pos')) {
@@ -376,12 +396,17 @@ function sysDashCollision() {
     return;
   }
   const ppos = ECS.get(gs.playerId, 'pos');
+  const pvel = ECS.get(gs.playerId, 'vel');
+  // Dash damage scales with current player speed
+  const dashSpd = Math.hypot(pvel.vx, pvel.vy);
+  const speedScale = Math.max(1, dashSpd / CFG.DASH_SPEED);
   for (const id of ECS.query('enemy', 'pos', 'hp', 'ai')) {
     const epos = ECS.get(id, 'pos');
     const ehp  = ECS.get(id, 'hp');
     const ai   = ECS.get(id, 'ai');
     if (!ai.dashHit && Math.hypot(ppos.x - epos.x, ppos.y - epos.y) < 32) {
-      ehp.hp -= baseBulletDamage() * 2; ehp.hitFlash = 14; ai.dashHit = true;
+      const dashDmg = baseBulletDamage() * 2 * speedScale;
+      ehp.hp -= dashDmg; ehp.hitFlash = 14; ai.dashHit = true;
       spawnParticles(epos.x, epos.y, '#ffaa00', 10);
       if (ehp.hp <= 0) {
         spawnParticles(epos.x, epos.y, '#ff2222', 16);
@@ -398,7 +423,6 @@ function sysDashCollision() {
 // SYSTEM 6: Enemy → Player Collision
 // ================================================================
 function sysEnemyPlayerCollision() {
-  // Tightrope Boots: intangible while dashing
   if (gs.invincible > 0 || gs.frozen || (gs.dashTimer > 0 && gs.hasTightropeBoots)) return;
   const ppos = ECS.get(gs.playerId, 'pos');
   for (const id of ECS.query('enemy', 'pos')) {
@@ -424,7 +448,6 @@ function sysEnemyBullets() {
   gs.enemyBullets = gs.enemyBullets.filter(eb => {
     if (!gs.frozen) { eb.x += eb.vx; eb.y += eb.vy; eb.life--; }
 
-    // Homing bullets
     if (eb.homing) {
       const dx = ppos.x - eb.x, dy = ppos.y - eb.y, dist = Math.hypot(dx,dy)||1;
       eb.vx += (dx/dist) * (eb.homingStrength||0.04);
@@ -511,7 +534,6 @@ function sysTimers() {
   if (gs.invincible > 0) gs.invincible--;
   if (gs.glowCooldown > 0) gs.glowCooldown--;
 
-  // Reload (sped up by cookie)
   if (gs.reloading) {
     const reloadSpeed = gs.speedBoostTimer > 0 ? Math.max(1, Math.round(gs.speedBoostMult || 1)) : 1;
     gs.reloadTimer -= reloadSpeed;
@@ -522,7 +544,6 @@ function sysTimers() {
   }
   if (gs.ammo === 0 && !gs.reloading) startReload();
 
-  // Cursed Candles: drain HP, light candles one per second
   if (gs.hasCursedCandles) {
     if (gs.candleRelightDelay > 0) {
       gs.candleRelightDelay--;
@@ -544,13 +565,11 @@ function sysTimers() {
     }
   }
 
-  // Shake Fizzle Pop meter
   if (gs.hasShakeFizzlePop && !gs.sfpFull) {
     gs.sfpMeter = Math.min(gs.sfpMax, gs.sfpMeter + 1);
     if (gs.sfpMeter >= gs.sfpMax) { gs.sfpFull = true; showMsg('SHAKE FIZZLE POP — FULLY CHARGED!!!'); }
   }
 
-  // Dash charge regen
   if (gs.hasDash && gs.dashCharges < gs.dashMaxCharges) {
     gs.dashCooldownTimer++;
     if (gs.dashCooldownTimer >= gs.dashCooldownMax) {
@@ -560,7 +579,6 @@ function sysTimers() {
     }
   }
 
-  // Particles
   for (const p of gs.particles) { p.x += p.vx; p.y += p.vy; p.vx *= 0.91; p.vy *= 0.91; p.life--; }
   gs.particles = gs.particles.filter(p => p.life > 0);
 
@@ -568,7 +586,6 @@ function sysTimers() {
   gs.shakeY *= 0.72;
   if (muzzleFlash > 0) muzzleFlash--;
 
-  // Prize wheel effect timers
   if (gs.prizeEffect) {
     gs.prizeEffect.timer--;
     if (gs.prizeEffect.timer <= 0) {
@@ -578,7 +595,6 @@ function sysTimers() {
     }
   }
 
-  // Cursed spin: restore enemy speeds when done
   if (gs.cursedSpinTimer > 0) {
     gs.cursedSpinTimer--;
     if (gs.cursedSpinTimer === 0) {
@@ -591,7 +607,6 @@ function sysTimers() {
     }
   }
 
-  // Knocking Pins: auto-charge nearest enemy while active
   if (gs.knockingPinsActive) {
     gs.knockingPinsTimer--;
     if (gs.knockingPinsTimer <= 0) {
@@ -614,10 +629,8 @@ function sysTimers() {
     }
   }
 
-  // Popcorn Frenzy countdown
   if (gs.popcornFrenzyTimer > 0) gs.popcornFrenzyTimer--;
 
-  // Clownish nose growth + confuse blast
   if (gs.hasClownish) {
     gs.clownNoseTimer++;
     gs.clownNoseSize = gs.clownNoseTimer / gs.clownNoseMax;
@@ -628,9 +641,8 @@ function sysTimers() {
         Math.hypot(ECS.get(id,'pos').x - ppos3.x, ECS.get(id,'pos').y - ppos3.y) < 200
       );
       if (near.length >= 2) {
-        // Fire two player bullets outward (hits enemies)
         for (let bi = 0; bi < 2; bi++) {
-          const ba = ppos3.angle + (bi === 0 ? -0.5 : 0.5);
+          const ba = gunAngle + (bi === 0 ? -0.5 : 0.5);
           gs.bullets.push({ x:ppos3.x, y:ppos3.y, vx:Math.cos(ba)*8, vy:Math.sin(ba)*8, life:80, maxLife:80, angle:ba, damageMult:2, isDud:false });
         }
         spawnPartyParticles(ppos3.x, ppos3.y);
@@ -747,13 +759,22 @@ function spawnBoss() {
 function shoot() {
   if (gs.ammo <= 0 || gs.reloading) return;
   gs.ammo--; muzzleFlash = 10; updateHUD();
+
+  // Recoil kick
+  gunRecoil = 1.0;
+
   const ppos = ECS.get(gs.playerId, 'pos');
   gs.shakeX = (Math.random() - .5) * 13;
   gs.shakeY = (Math.random() - .5) * 13;
+
+  // Spawn bullets from muzzle tip position
+  const muzzle = gunMuzzlePos();
+
   let doubleCount = 0;
   const totalBullets = CFG.BULLET_COUNT + (gs.hasCursedCandles ? gs.candlesLit * 2 : 0);
   for (let i = 0; i < totalBullets; i++) {
-    const a = ppos.angle + (Math.random() - .5) * .32;
+    // Spread around gunAngle, not pos.angle
+    const a = gunAngle + (Math.random() - .5) * .32;
     let damageMult = 1, isDud = false;
     if (gs.hasQuadCake) {
       if (Math.random() < 0.50) isDud = true; else { damageMult = 4; doubleCount++; }
@@ -763,8 +784,8 @@ function shoot() {
       if (Math.random() < 0.40) isDud = true; else { damageMult = 2; doubleCount++; }
     }
     gs.bullets.push({
-      x: ppos.x + Math.cos(ppos.angle) * 32,
-      y: ppos.y + Math.sin(ppos.angle) * 32,
+      x: muzzle.x,
+      y: muzzle.y,
       vx: Math.cos(a) * CFG.BULLET_SPEED,
       vy: Math.sin(a) * CFG.BULLET_SPEED,
       angle: a, life: CFG.BULLET_LIFE,
@@ -772,9 +793,7 @@ function shoot() {
       isDud
     });
   }
-  const mx = ppos.x + Math.cos(ppos.angle) * 30;
-  const my = ppos.y + Math.sin(ppos.angle) * 30;
-  spawnParticles(mx, my, doubleCount > 0 ? '#ff44ff' : '#ff8800', doubleCount > 0 ? 8 : 6);
+  spawnParticles(muzzle.x, muzzle.y, doubleCount > 0 ? '#ff44ff' : '#ff8800', doubleCount > 0 ? 8 : 6);
 }
 
 function startReload() {
@@ -794,8 +813,9 @@ function tryDash() {
     gs.dashVx = (pvel.vx / spd) * CFG.DASH_SPEED;
     gs.dashVy = (pvel.vy / spd) * CFG.DASH_SPEED;
   } else {
-    gs.dashVx = Math.cos(ppos.angle) * CFG.DASH_SPEED;
-    gs.dashVy = Math.sin(ppos.angle) * CFG.DASH_SPEED;
+    // Dash toward mouse if standing still
+    gs.dashVx = Math.cos(gunAngle) * CFG.DASH_SPEED;
+    gs.dashVy = Math.sin(gunAngle) * CFG.DASH_SPEED;
   }
   gs.dashTimer = CFG.DASH_FRAMES;
   gs.invincible = Math.max(gs.invincible, CFG.DASH_FRAMES + 4);
@@ -885,7 +905,7 @@ function offerItemChoice() {
   let available = itemPool.filter(id => {
     if (id === 'tripleCake' && !gs.hasDoubleCake) return false;
     if (id === 'quadCake'   && !gs.hasTripleCake) return false;
-    if (id === 'knockingPins') return true; // consumable, always offerable
+    if (id === 'knockingPins') return true;
     return !gs.unlockedItems.includes(id);
   });
 
