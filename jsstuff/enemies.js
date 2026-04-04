@@ -41,36 +41,174 @@ const BT_SCISSORS = new BTSelector(
   })
 );
 
-// ── Clown: chase + 3-spread shots ──
-const BT_CLOWN = new BTSelector(
+// ── Floor 1: Mask ──
+const BT_MASK = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
-    const pos = ECS.get(id, 'pos');
-    const vel = ECS.get(id, 'vel');
-    const phy = ECS.get(id, 'physics');
-    const ai  = ECS.get(id, 'ai');
-    const pp  = playerPos(gs);
+    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
+    const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
-    const dx = pp.x - pos.x, dy = pp.y - pos.y;
-    const dist = Math.hypot(dx, dy) || 1;
-    vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
-    vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
-    const spd = Math.hypot(vel.vx, vel.vy);
-    if (spd > phy.speed) { vel.vx = vel.vx/spd*phy.speed; vel.vy = vel.vy/spd*phy.speed; }
-    ai.shootCooldown = (ai.shootCooldown||120) - 1;
-    if (ai.shootCooldown <= 0 && dist < 220) {
-      ai.shootCooldown = 120;
-      const aim = Math.atan2(dy, dx);
-      for (const sa of [-0.22, 0, 0.22]) {
-        const a = aim + sa;
-        gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*4.5, vy: Math.sin(a)*4.5, life: 90, maxLife: 90, color: '#ff69b4' });
+
+    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
+
+    ai.maskState = ai.maskState || 'SMILE';
+    ai.maskTimer = (ai.maskTimer ?? 180) - 1;
+    ai.shootCooldown = (ai.shootCooldown || 0);
+
+    if (ai.maskState === 'SMILE') {
+      // Chase player while smiling
+      vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
+      vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
+      const spd = Math.hypot(vel.vx, vel.vy);
+      if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
+      if (ai.maskTimer <= 0) {
+        ai.maskState = 'CRY';
+        ai.maskTimer = 140;
+        ai.cryBurst = 5; // number of cry bursts
+        ai.cryBurstTimer = 0;
+        vel.vx *= 0.3; vel.vy *= 0.3;
       }
-      for (let ci = 0; ci < 8; ci++) {
-        const a = Math.random()*Math.PI*2;
-        gs.particles.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*2, vy:Math.sin(a)*2, life:18, maxLife:18, color:'#ff69b4', size:3 });
+    } else {
+      // Crying state — slow drift, fire tear bursts
+      vel.vx *= 0.94; vel.vy *= 0.94;
+      ai.cryBurstTimer = (ai.cryBurstTimer||0) - 1;
+      if (ai.cryBurstTimer <= 0 && ai.cryBurst > 0) {
+        ai.cryBurst--;
+        ai.cryBurstTimer = 22;
+        // Fire 3 tears in a spread, with downward gravity flag
+        const aim = Math.atan2(dy, dx);
+        for (const sa of [-0.28, 0, 0.28]) {
+          const a = aim + sa;
+          gs.enemyBullets.push({
+            x: pos.x, y: pos.y,
+            vx: Math.cos(a) * 2.2,  // half speed
+            vy: Math.sin(a) * 2.2,
+            life: 160, maxLife: 160,
+            color: '#44aaff',
+            isTear: true,           // gravity flag
+            gravity: 0.045          // curves downward each frame
+          });
+        }
+        spawnParticles(pos.x, pos.y, '#44aaff', 5);
       }
-      showMsg('WATCH OUT! CLOWN CONFETTI!');
+      if (ai.maskTimer <= 0) {
+        ai.maskState = 'SMILE';
+        ai.maskTimer = 150 + Math.random()*60;
+      }
     }
+    return BT.RUNNING;
+  })
+);
+
+// ── Floor 2: Juggler ──
+const BT_JUGGLER = new BTSelector(
+  new BTAction((id, gs) => {
+    if (gs.frozen) return BT.RUNNING;
+    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
+    const ai = ECS.get(id,'ai'), pp = playerPos(gs);
+    if (!pp || !pos || !vel) return BT.FAILURE;
+
+    // Init juggler state
+    if (!ai.juggleBalls)    ai.juggleBalls    = 6;
+    if (!ai.juggleMax)      ai.juggleMax      = 6;
+    if (!ai.juggleSlots)    ai.juggleSlots    = []; // array of {type:'ball'|'enemy', id?}
+    if (!ai.regenTimer)     ai.regenTimer     = 0;
+    if (!ai.throwCooldown)  ai.throwCooldown  = 60;
+    if (!ai.sphereAngle)    ai.sphereAngle    = 0;
+
+    // Fill slots with balls up to juggleBalls count
+    while (ai.juggleSlots.filter(s=>s.type==='ball').length < ai.juggleBalls &&
+           ai.juggleSlots.length < ai.juggleMax) {
+      ai.juggleSlots.push({ type:'ball', phase: Math.random()*Math.PI*2 });
+    }
+
+    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
+
+    // Slow drift toward player
+    vel.vx = (vel.vx||0)*0.9 + (dx/dist)*phy.speed*0.12;
+    vel.vy = (vel.vy||0)*0.9 + (dy/dist)*phy.speed*0.12;
+    const spd = Math.hypot(vel.vx,vel.vy);
+    if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
+
+    // Roll sphere angle based on movement
+    ai.sphereAngle += vel.vx * 0.06;
+
+    // Capture nearby enemies into juggle slots
+    if (ai.juggleSlots.length < ai.juggleMax) {
+      for (const eid of ECS.query('enemy','pos','ai')) {
+        if (eid === id) continue;
+        const eai = ECS.get(eid,'ai');
+        if (eai.juggled) continue;
+        const epos = ECS.get(eid,'pos');
+        if (Math.hypot(epos.x-pos.x, epos.y-pos.y) < 44) {
+          eai.juggled = true;
+          eai.juggledBy = id;
+          ai.juggleSlots.push({ type:'enemy', id: eid, phase: Math.random()*Math.PI*2 });
+          spawnParticles(epos.x, epos.y, '#ffdd00', 12);
+          showMsg('JUGGLER CAPTURED AN ENEMY!');
+          break;
+        }
+      }
+    }
+
+    // Position juggled enemies above juggler
+    const t = Date.now() / 400;
+    for (let i = 0; i < ai.juggleSlots.length; i++) {
+      const slot = ai.juggleSlots[i];
+      const slotAngle = (i / ai.juggleMax) * Math.PI * 2;
+      const arcX = Math.cos(slotAngle + t) * 28;
+      const arcY = -38 + Math.sin(slotAngle * 2 + t) * 18; // figure-8 arc above
+      if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
+        const epos = ECS.get(slot.id,'pos');
+        epos.x = pos.x + arcX;
+        epos.y = pos.y + arcY;
+      }
+    }
+
+    // Throw at player when close enough
+    ai.throwCooldown--;
+    if (ai.throwCooldown <= 0 && dist < 200 && ai.juggleSlots.length > 0) {
+      ai.throwCooldown = 55;
+      const slot = ai.juggleSlots.shift();
+      if (slot.type === 'ball') {
+        const throwSpd = 4.5;
+        gs.enemyBullets.push({
+          x: pos.x, y: pos.y - 38,
+          vx: (dx/dist)*throwSpd, vy: (dy/dist)*throwSpd - 1.5,
+          life: 150, maxLife: 150,
+          color: '#ffdd00',
+          isJuggleBall: true
+        });
+      } else if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
+        const eai = ECS.get(slot.id,'ai');
+        eai.juggled = false;
+        eai.juggledBy = null;
+        // If cannonball, trigger charge immediately
+        const etype = ECS.get(slot.id,'enemy').type;
+        if (etype === 'cannonball') {
+          eai.chargeState = 'TELEGRAPH';
+          eai.chargeTimer = 20;
+          eai.chargeTarget = { x: pp.x, y: pp.y };
+        }
+        spawnParticles(pos.x, pos.y - 38, '#ff8800', 8);
+      }
+    }
+
+    // Regen balls over time when slots are empty
+    if (ai.juggleBalls < ai.juggleMax) {
+      ai.regenTimer++;
+      if (ai.regenTimer >= 540) { // ~9 seconds
+        ai.regenTimer = 0;
+        ai.juggleBalls++;
+      }
+    }
+
+    // Clean up dead juggled enemies from slots
+    ai.juggleSlots = ai.juggleSlots.filter(s => {
+      if (s.type === 'enemy' && !ECS.has(s.id,'pos')) return false;
+      return true;
+    });
+
     return BT.RUNNING;
   })
 );
@@ -618,7 +756,7 @@ const BT_TIGHTROPE = new BTSelector(
 // ================================================================
 const ENEMY_BTS = {
   scissors:       BT_SCISSORS,
-  clown:          BT_CLOWN,
+ mask:           BT_MASK, 
   giftBox:        BT_GIFTBOX,
   partyHat:       BT_PARTYHAT,
   boss:           BT_BOSS,
