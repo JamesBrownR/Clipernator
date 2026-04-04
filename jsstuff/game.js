@@ -77,9 +77,7 @@ let gs = {};
 
 function initGameState() {
   ECS.clear();
-  worldW = CFG.W;
-  worldH = CFG.H;
-  renderScale = 1.0;
+ 
 
   gs = {
     score: 0, wave: 1,
