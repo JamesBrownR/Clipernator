@@ -716,40 +716,7 @@ const BT_RINGMASTER = new BTSelector(
   })
 );
 
-// ── Carnival: Tightrope Walker ──
-const BT_TIGHTROPE = new BTSelector(
-  new BTAction((id, gs) => {
-    if (gs.frozen) return BT.RUNNING;
-    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
-    const ai = ECS.get(id,'ai');
-    if (!pos || !vel) return BT.FAILURE;
 
-    ai.moveDir = ai.moveDir ?? (Math.random() < 0.5 ? 'H' : 'V');
-    ai.stepTimer = (ai.stepTimer ?? 0) - 1;
-    ai.moveSign = ai.moveSign ?? (Math.random() < 0.5 ? 1 : -1);
-
-    if (ai.moveDir === 'H') { vel.vx = phy.speed * ai.moveSign; vel.vy = 0; }
-    else { vel.vx = 0; vel.vy = phy.speed * ai.moveSign; }
-
-    const atEdge = pos.x < 50 || pos.x > worldW-50 || pos.y < 50 || pos.y > worldH-50;
-    if (atEdge || ai.stepTimer <= 0) {
-      const bulletCount = 12;
-      for (let i = 0; i < bulletCount; i++) {
-        const a = (i / bulletCount) * Math.PI * 2;
-        gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*3.5, vy:Math.sin(a)*3.5, life:100, maxLife:100, color:'#00ccff' });
-      }
-      spawnParticles(pos.x, pos.y, '#00ccff', 10);
-      ai.moveDir = ai.moveDir === 'H' ? 'V' : 'H';
-      ai.moveSign = Math.random() < 0.5 ? 1 : -1;
-      ai.stepTimer = 80 + Math.random()*60;
-      if (pos.x < 50)        pos.x = 55;
-      if (pos.x > worldW-50) pos.x = worldW-55;
-      if (pos.y < 50)        pos.y = 55;
-      if (pos.y > worldH-50) pos.y = worldH-55;
-    }
-    return BT.RUNNING;
-  })
-);
 
 // ================================================================
 // ENEMY BT MAP
@@ -767,7 +734,7 @@ const ENEMY_BTS = {
   boss2:          BT_BOSS2,
   cannonball:     BT_CANNONBALL,
   ringmaster:     BT_RINGMASTER,
-  tightrope:      BT_TIGHTROPE,
+   juggler:        BT_JUGGLER, 
 };
 
 // ================================================================
@@ -776,7 +743,7 @@ const ENEMY_BTS = {
 const ENEMY_DEFS = {
   scissors:       { hpMult: 1.0, speedMult: 1.0,  size: 28, color: '#cc2222' },
  mask:    { hpMult: 1.1, speedMult: 1.05, size: 28, color: '#44aaff' },
-  juggler: { hpMult: 2.0, speedMult: 0.55, size: 36, color: '#ffdd00' },
+ 
   giftBox:        { hpMult: 2.2, speedMult: 0.6,  size: 34, color: '#ffaa00' },
   partyHat:       { hpMult: 0.8, speedMult: 1.4,  size: 26, color: '#ffdd00' },
   boss:           { hpMult: 1,   speedMult: 0.4,  size: 55, color: '#9900cc' },
@@ -787,5 +754,5 @@ const ENEMY_DEFS = {
   boss2:          { hpMult: 1,   speedMult: 0.45, size: 60, color: '#ff2200' },
   cannonball:     { hpMult: 1.6, speedMult: 0.5,  size: 30, color: '#ff6600' },
   ringmaster:     { hpMult: 1.2, speedMult: 0.7,  size: 32, color: '#cc0044' },
-  tightrope:      { hpMult: 0.8, speedMult: 1.1,  size: 24, color: '#00ccff' },
+   juggler: { hpMult: 2.0, speedMult: 0.55, size: 36, color: '#ffdd00' },
 };
