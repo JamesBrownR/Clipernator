@@ -61,3 +61,5 @@ shotgunImg.src = '/Clipernator/sprites/Shotgun.png';
 let gunAngle = 0;
 let gunRecoil = 0;
 let playerMoveAngle = 0; // angle body faces — updated in sysPlayerMovement
+let gunX = 0;   
+let gunY = 0; 
