@@ -185,9 +185,21 @@ function sysPlayerMovement() {
   if (pos.y > worldH - CFG.WALL_PAD) { pos.y = worldH - CFG.WALL_PAD; vel.vy = bouncy ? -Math.abs(vel.vy) : 0; }
 
   // Update body facing angle from movement velocity
-  const moveSpd = Math.hypot(vel.vx, vel.vy);
+const moveSpd = Math.hypot(vel.vx, vel.vy);
   if (moveSpd > 0.5) {
     playerMoveAngle = Math.atan2(vel.vy, vel.vx);
+  } else {
+    // Slowly turn body to face aim direction when standing still
+    let da = gunAngle - playerMoveAngle;
+    while (da > Math.PI)  da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    playerMoveAngle += da * 0.04; // 0.04 = slow lazy turn
+  } 
+  
+  if (moveSpd > 0.5) {
+    playerBobTimer += moveSpd * 0.08; // faster movement = faster bob
+  } else {
+    playerBobTimer *= 0.85; // decay when stopping
   }
  // Update gun floating position — moves toward mouse, clamped to MAX_HOLD_DIST from player
   const MAX_HOLD_DIST = 50;
