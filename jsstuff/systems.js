@@ -235,6 +235,37 @@ function sysAI() {
   gs.frozen = gs.partyFreezeTimer > 0;
   const enemies = ECS.query('enemy', 'pos', 'vel', 'ai', 'physics');
   for (const id of enemies) {
+
+    const ai2 = ECS.get(id,'ai');
+    // Skip BT tick for juggled enemies — juggler controls their position
+    if (ai2 && ai2.juggled) {
+      // Still allow shooting if they're a shooter type
+      const type = ECS.get(id,'enemy').type;
+      if (type === 'mask') {
+        // juggled mask still cries toward player
+        const pos2 = ECS.get(id,'pos');
+        const pp2 = playerPos(gs);
+        if (pp2 && ai2.shootCooldown !== undefined) {
+          ai2.shootCooldown = (ai2.shootCooldown||120) - 1;
+          if (ai2.shootCooldown <= 0) {
+            ai2.shootCooldown = 90;
+            const adx = pp2.x-pos2.x, ady = pp2.y-pos2.y;
+            const aim = Math.atan2(ady,adx);
+            gs.enemyBullets.push({
+              x:pos2.x, y:pos2.y,
+              vx:Math.cos(aim)*2.0, vy:Math.sin(aim)*2.0,
+              life:140, maxLife:140, color:'#44aaff',
+              isTear:true, gravity:0.045
+            });
+          }
+        }
+      }
+      // Still update hit flash
+      const hp2 = ECS.get(id,'hp');
+      if (hp2 && hp2.hitFlash > 0) hp2.hitFlash--;
+      continue; // skip normal BT
+    }
+    
     const type = ECS.get(id, 'enemy').type;
     const bt = ENEMY_BTS[type];
     if (bt) bt.tick(id, gs);
@@ -468,6 +499,10 @@ function sysEnemyBullets() {
   const ppos = ECS.get(gs.playerId, 'pos');
   gs.enemyBullets = gs.enemyBullets.filter(eb => {
     if (!gs.frozen) { eb.x += eb.vx; eb.y += eb.vy; eb.life--; }
+    // Tear gravity
+    if (eb.isTear && eb.gravity) {
+      eb.vy += eb.gravity;
+    }
 
     if (eb.homing) {
       const dx = ppos.x - eb.x, dy = ppos.y - eb.y, dist = Math.hypot(dx,dy)||1;
@@ -728,20 +763,20 @@ function spawnEnemy() {
     if (gs.wave >= 15) {
       if (roll < 0.30)      type = 'ringmaster';
       else if (roll < 0.62) type = 'cannonball';
-      else                  type = 'tightrope';
+      else                  type = 'juggler';
     } else {
       if (roll < 0.45) type = 'cannonball';
-      else             type = 'tightrope';
+      else             type = 'juggler';
     }
   } else if (gs.wave >= 6) {
-    if (roll < 0.30)      type = 'clown';
+    if (roll < 0.30)      type = 'mask';
     else if (roll < 0.52) type = 'giftBox';
     else if (roll < 0.72) type = 'partyHat';
   } else if (gs.wave >= 5) {
-    if (roll < 0.32)      type = 'clown';
+    if (roll < 0.32)      type = 'mask';
     else if (roll < 0.58) type = 'partyHat';
   } else if (gs.wave >= 4) {
-    if (roll < 0.35) type = 'clown';
+    if (roll < 0.35) type = 'mask';
   }
 
   const def    = ENEMY_DEFS[type];
