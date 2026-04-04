@@ -169,10 +169,16 @@ function drawTightrope(epos, ehp, frozen) {
   ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#00aacc'; ctx.fillRect(x-bw/2,y-34,bw*(ehp.hp/ehp.maxHp),5);
 }
 
+// ============================================================
+// PLAYER DRAW — split body + gun sprites
+// Body faces movement direction (playerMoveAngle)
+// Gun faces mouse (gunAngle) with recoil and flip
+// ============================================================
 function drawPlayer() {
   const ppos = ECS.get(gs.playerId, 'pos');
-  let {x, y, angle} = ppos;
+  let {x, y} = ppos;
 
+  // Shake while SFP charging
   if (gs.hasShakeFizzlePop && !gs.sfpFull) {
     const ratio = gs.sfpMeter / gs.sfpMax;
     const shake = ratio * 5;
@@ -180,8 +186,9 @@ function drawPlayer() {
     y += (Math.random() - 0.5) * shake;
   }
 
-  if (gs.invincible > 0 && Math.floor(gs.invincible/5)%2===0) ctx.globalAlpha = 0.35;
+  const blinking = gs.invincible > 0 && Math.floor(gs.invincible / 5) % 2 === 0;
 
+  // ── SFP aura ──
   if (gs.hasShakeFizzlePop) {
     const ratio = gs.sfpFull ? 1 : gs.sfpMeter / gs.sfpMax;
     ctx.save();
@@ -190,21 +197,63 @@ function drawPlayer() {
     ctx.fillStyle = gs.sfpFull ? '#ff8800' : '#ff2200';
     ctx.shadowColor = gs.sfpFull ? '#ffaa00' : '#ff0000';
     ctx.shadowBlur = 20 + ratio * 20;
-    ctx.beginPath(); ctx.arc(0, 0, 32, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, 32, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
-    ctx.globalAlpha = 1;
   }
 
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-  ctx.scale(1, -1);
+  // ── Gun draw params ──
+  // The shotgun image is 1024x1024, gun points RIGHT (muzzle at right edge).
+  // We draw it scaled to ~72x32. Pivot is at ~38% from left = the grip/trigger area.
+  const GUN_W = 72;
+  const GUN_H = 28;
+  const GRIP_OFFSET_X = GUN_W * 0.38; // pivot point from left edge of gun image
+  const GRIP_OFFSET_Y = GUN_H * 0.55; // pivot point from top edge (slightly below center)
+  // Gun hovers ~12px from player center toward aim direction
+  const GUN_DIST = 12;
+  const recoilDist = gunRecoil * 6; // recoil pushes gun back along aim
+
+  const gx = x + Math.cos(gunAngle) * (GUN_DIST - recoilDist);
+  const gy = y + Math.sin(gunAngle) * (GUN_DIST - recoilDist);
+
+  // Flip gun vertically when aiming left (so it doesn't go upside-down)
+  const aimingLeft = Math.cos(gunAngle) < 0;
+
+  // ── Draw body BEHIND gun when gun is above player, in front when below ──
+  // We do: body first, then gun on top always (simpler and looks fine for top-down)
+
+  // ── BODY ──
   if (playerImg.complete && playerImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(playerMoveAngle + Math.PI / 2); // sprite is vertical so +90°
+    ctx.scale(1, -1); // original flip
+    if (blinking) ctx.globalAlpha = 0.35;
     ctx.drawImage(playerImg, -28, -28, 56, 56);
+    ctx.restore();
   }
-  ctx.restore();
 
-  // Clownish nose
+  // ── GUN ──
+  if (shotgunImg.complete && shotgunImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.translate(gx, gy);
+    ctx.rotate(gunAngle);
+    if (aimingLeft) ctx.scale(1, -1); // flip vertically to avoid upside-down
+    if (blinking) ctx.globalAlpha = 0.35;
+    // Draw gun with pivot at grip position
+    ctx.drawImage(
+      shotgunImg,
+      -GRIP_OFFSET_X,       // left of pivot
+      -GRIP_OFFSET_Y,       // above pivot
+      GUN_W,
+      GUN_H
+    );
+    ctx.restore();
+  }
+
+  // Decay recoil
+  if (gunRecoil > 0) gunRecoil = Math.max(0, gunRecoil - 0.08);
+
+  // ── Clownish nose ──
   if (gs.hasClownish && gs.clownNoseSize > 0) {
     const noseR = 4 + gs.clownNoseSize * 14;
     ctx.save();
@@ -219,7 +268,7 @@ function drawPlayer() {
 
   ctx.globalAlpha = 1;
 
-  // Orbiting candles
+  // ── Orbiting candles ──
   if (gs.hasCursedCandles) {
     const t = Date.now() / 1200;
     const orbitR = 44;
@@ -352,12 +401,15 @@ function draw() {
     ctx.restore();
   }
 
-  // Muzzle flash
+  // Muzzle flash — positioned at gun tip
   if (muzzleFlash > 0) {
-    const ppos=ECS.get(gs.playerId,'pos');
+    // Gun tip is ~(GUN_W - GRIP_OFFSET_X) ahead along gunAngle from gun center
+    const tipDist = 12 + (72 * 0.62); // GUN_DIST + (GUN_W * 0.62)
+    const mx = ECS.get(gs.playerId,'pos').x + Math.cos(gunAngle) * tipDist;
+    const my = ECS.get(gs.playerId,'pos').y + Math.sin(gunAngle) * tipDist;
     ctx.save(); ctx.globalAlpha=muzzleFlash/10;
     ctx.fillStyle='#ffcc44'; ctx.shadowColor='#ffaa00'; ctx.shadowBlur=40;
-    ctx.beginPath(); ctx.arc(ppos.x+Math.cos(ppos.angle)*32, ppos.y+Math.sin(ppos.angle)*32, 22,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx, my, 22, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   }
 
@@ -455,7 +507,7 @@ function draw() {
     const progress = meleeSwingTimer / CFG.MELEE_SWING_FRAMES;
     ctx.save();
     ctx.translate(ppos.x, ppos.y);
-    ctx.rotate(ppos.angle + (progress * 2.8 - 1.4));
+    ctx.rotate(gunAngle + (progress * 2.8 - 1.4)); // swing arc follows gun angle
     ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 30;
     ctx.fillStyle = '#00ff88';
     ctx.fillRect(32, -9, 38, 18);
@@ -467,7 +519,7 @@ function draw() {
 
   ctx.restore();
 
-  // Boss slam overlays (drawn after ctx.restore so they stay in canvas space)
+  // Boss slam overlays
   for (const id of ECS.query('enemy')) {
     const type = ECS.get(id, 'enemy').type;
     if (type !== 'boss') continue;
