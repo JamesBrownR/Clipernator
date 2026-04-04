@@ -178,7 +178,6 @@ function drawPlayer() {
   const ppos = ECS.get(gs.playerId, 'pos');
   let {x, y} = ppos;
 
-  // Shake while SFP charging
   if (gs.hasShakeFizzlePop && !gs.sfpFull) {
     const ratio = gs.sfpMeter / gs.sfpMax;
     const shake = ratio * 5;
@@ -201,34 +200,47 @@ function drawPlayer() {
     ctx.restore();
   }
 
-  // ── Gun draw params ──
-  // The shotgun image is 1024x1024, gun points RIGHT (muzzle at right edge).
-  // We draw it scaled to ~72x32. Pivot is at ~38% from left = the grip/trigger area.
-  const GUN_W = 72;
-  const GUN_H = 28;
-  const GRIP_OFFSET_X = GUN_W * 0.38; // pivot point from left edge of gun image
-  const GRIP_OFFSET_Y = GUN_H * 0.55; // pivot point from top edge (slightly below center)
-  // Gun hovers ~12px from player center toward aim direction
-  const GUN_DIST = 12;
-  const recoilDist = gunRecoil * 6; // recoil pushes gun back along aim
+  // ── Gun constants ──
+  // Shotgun content is ~4.6:1 aspect ratio, muzzle RIGHT, stock LEFT
+  // Grip/trigger is ~32% from the left of the content = pivot point
+  const GUN_W = 124;
+  const GUN_H = 27;                    // 124 / 4.6 ≈ 27
+  const GRIP_X = GUN_W * 0.32;        // pivot from left edge: where the trigger/grip is
+  const GRIP_Y = GUN_H * 0.6;         // pivot slightly below center (gun sits lower)
+  const GUN_DIST = 10;                 // how far gun center floats from player center
+  const recoilDist = gunRecoil * 8;
 
+  // Gun pivot position in world space
   const gx = x + Math.cos(gunAngle) * (GUN_DIST - recoilDist);
   const gy = y + Math.sin(gunAngle) * (GUN_DIST - recoilDist);
 
-  // Flip gun vertically when aiming left (so it doesn't go upside-down)
+  // When aiming left, flip the gun vertically so it doesn't go upside-down
   const aimingLeft = Math.cos(gunAngle) < 0;
 
-  // ── Draw body BEHIND gun when gun is above player, in front when below ──
-  // We do: body first, then gun on top always (simpler and looks fine for top-down)
-
   // ── BODY ──
+  // Always drawn upright. Flips horizontally when moving left.
+  // Uses playerMoveAngle only to decide left/right flip — never rotates.
   if (playerImg.complete && playerImg.naturalWidth > 0) {
+    // Body sprite content is ~276x579 in a 1024x1024 canvas
+    // Content center X ≈ (207+483)/2 = 345, center Y ≈ (204+783)/2 = 493
+    // We draw it centered on player position, upright
+    const BODY_W = 36;
+    const BODY_H = 56;  // portrait — taller than wide
+
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(playerMoveAngle + Math.PI / 2); // sprite is vertical so +90°
-    ctx.scale(1, -1); // original flip
     if (blinking) ctx.globalAlpha = 0.35;
-    ctx.drawImage(playerImg, -28, -28, 56, 56);
+
+    // Flip horizontally when moving left
+    const movingLeft = Math.cos(playerMoveAngle) < 0;
+    if (movingLeft) ctx.scale(-1, 1);
+
+    // Draw centered, slightly offset up so feet are at player collision center
+    ctx.drawImage(playerImg,
+      207, 204, 276, 579,           // source: just the content area
+      -BODY_W / 2, -BODY_H * 0.6,  // dest: centered X, offset Y upward
+      BODY_W, BODY_H
+    );
     ctx.restore();
   }
 
@@ -237,20 +249,19 @@ function drawPlayer() {
     ctx.save();
     ctx.translate(gx, gy);
     ctx.rotate(gunAngle);
-    if (aimingLeft) ctx.scale(1, -1); // flip vertically to avoid upside-down
+    if (aimingLeft) ctx.scale(1, -1);  // flip vertically when aiming left
     if (blinking) ctx.globalAlpha = 0.35;
+
     // Draw gun with pivot at grip position
-    ctx.drawImage(
-      shotgunImg,
-      -GRIP_OFFSET_X,       // left of pivot
-      -GRIP_OFFSET_Y,       // above pivot
-      GUN_W,
-      GUN_H
+    // Source: content area cols 56-953, rows 523-718
+    ctx.drawImage(shotgunImg,
+      56, 523, 897, 195,   // source content area
+      -GRIP_X, -GRIP_Y,    // dest: pivot at grip
+      GUN_W, GUN_H
     );
     ctx.restore();
   }
 
-  // Decay recoil
   if (gunRecoil > 0) gunRecoil = Math.max(0, gunRecoil - 0.08);
 
   // ── Clownish nose ──
@@ -404,9 +415,9 @@ function draw() {
   // Muzzle flash — positioned at gun tip
   if (muzzleFlash > 0) {
     // Gun tip is ~(GUN_W - GRIP_OFFSET_X) ahead along gunAngle from gun center
-    const tipDist = 12 + (72 * 0.62); // GUN_DIST + (GUN_W * 0.62)
-    const mx = ECS.get(gs.playerId,'pos').x + Math.cos(gunAngle) * tipDist;
-    const my = ECS.get(gs.playerId,'pos').y + Math.sin(gunAngle) * tipDist;
+   const tipDist = 10 + (124 * 0.68);
+const mx = ECS.get(gs.playerId,'pos').x + Math.cos(gunAngle) * tipDist;
+const my = ECS.get(gs.playerId,'pos').y + Math.sin(gunAngle) * tipDist;
     ctx.save(); ctx.globalAlpha=muzzleFlash/10;
     ctx.fillStyle='#ffcc44'; ctx.shadowColor='#ffaa00'; ctx.shadowBlur=40;
     ctx.beginPath(); ctx.arc(mx, my, 22, 0, Math.PI*2); ctx.fill();
