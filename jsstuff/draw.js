@@ -221,8 +221,9 @@ function drawPlayer() {
   if (playerImg.complete && playerImg.naturalWidth > 0) {
     const BODY_W = 26;
     const BODY_H = 42;
+        const bob = Math.sin(playerBobTimer) * 2.5; // ±2.5px vertical bounce
     ctx.save();
-    ctx.translate(x, y);
+      ctx.translate(x, y + bob);
     if (blinking) ctx.globalAlpha = 0.35;
     const movingLeft = Math.cos(playerMoveAngle) < 0;
     if (movingLeft) ctx.scale(-1, 1);
