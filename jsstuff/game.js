@@ -4,9 +4,7 @@
 // ============================================================
 
 // ── Global runtime variables ──
-let worldW = CFG.W;
-let worldH = CFG.H;
-let renderScale = 1.0;
+
 
 let gameRunning = false;
 let animId = null;
