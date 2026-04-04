@@ -27,20 +27,59 @@ function drawScissors(epos, ehp, frozen) {
   ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#cc0000'; ctx.fillRect(x-bw/2,y-34,bw*(ehp.hp/ehp.maxHp),5);
 }
 
-function drawClown(epos, ehp, frozen) {
-  const {x,y,angle}=epos;
-  ctx.save(); ctx.translate(x,y); ctx.rotate(angle);
-  if (frozen) { ctx.globalAlpha=0.7; ctx.shadowColor='#aaccff'; } else { ctx.shadowColor='#ff44aa'; }
-  ctx.shadowBlur=14;
-  ctx.fillStyle=frozen?'#88aaff':'#ff6699'; ctx.beginPath(); ctx.arc(0,-4,14,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle=frozen?'#ffffff':'#330011'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(0,6,8,.3,Math.PI-.3); ctx.stroke();
-  ctx.fillStyle='#000'; ctx.fillRect(-6,-8,4,5); ctx.fillRect(3,-8,4,5);
-  ctx.fillStyle='#ff0000'; ctx.beginPath(); ctx.arc(0,0,4,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle=frozen?'#aaccff':'#aa00aa'; ctx.fillRect(-15,-18,30,8);
-  ctx.fillStyle='#ffdd00'; ctx.beginPath(); ctx.moveTo(-6,-16); ctx.lineTo(0,-32); ctx.lineTo(6,-16); ctx.fill();
+function drawMask(epos, ehp, ai, frozen) {
+  const {x,y} = epos;
+  const t = Date.now()/400;
+  const isCrying = ai.maskState === 'CRY';
+
+  ctx.save(); ctx.translate(x, y);
+  if (frozen) { ctx.globalAlpha=0.7; ctx.shadowColor='#aaccff'; }
+  else { ctx.shadowColor = isCrying ? '#44aaff' : '#ffdd44'; ctx.shadowBlur = 16; }
+
+  // Mask face — oval
+  ctx.fillStyle = frozen ? '#4488cc' : (isCrying ? '#2255aa' : '#ddcc44');
+  ctx.beginPath(); ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI*2); ctx.fill();
+
+  // Eye holes
+  ctx.fillStyle = '#000033';
+  ctx.beginPath(); ctx.ellipse(-6, -5, 4, 5, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(6, -5, 4, 5, 0, 0, Math.PI*2); ctx.fill();
+
+  // Mouth — smile curves up, frown curves down
+  ctx.strokeStyle = '#000033'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (isCrying) {
+    ctx.arc(0, 12, 7, Math.PI*0.15, Math.PI*0.85); // frown
+  } else {
+    ctx.arc(0, 4, 7, Math.PI*1.15, Math.PI*1.85);  // smile
+  }
+  ctx.stroke();
+
+  // Tears when crying — drip down from eyes
+  if (isCrying) {
+    const tearDrip = Math.sin(t * 3) * 0.5 + 0.5;
+    ctx.fillStyle = '#44aaff'; ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 8;
+    // Left tear
+    ctx.beginPath();
+    ctx.ellipse(-6, 5 + tearDrip * 12, 2, 3 + tearDrip * 4, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Right tear
+    ctx.beginPath();
+    ctx.ellipse(6, 5 + tearDrip * 12, 2, 3 + tearDrip * 4, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Decorative border
+  ctx.strokeStyle = frozen ? '#aaddff' : (isCrying ? '#6688ff' : '#ffee88');
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI*2); ctx.stroke();
+
   ctx.restore();
-  const bw=40; ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2,y-40,bw,5);
-  ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#cc0000'; ctx.fillRect(x-bw/2,y-40,bw*(ehp.hp/ehp.maxHp),5);
+
+  const bw = 40;
+  ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2, y-36, bw, 5);
+  ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#4488ff';
+  ctx.fillRect(x-bw/2, y-36, bw*(ehp.hp/ehp.maxHp), 5);
 }
 
 function drawGiftBox(epos, ehp, ai, frozen) {
@@ -145,6 +184,67 @@ function drawRingmaster(epos, ehp, ai, frozen) {
   const bw = 38;
   ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2, y-42, bw, 5);
   ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#cc0044'; ctx.fillRect(x-bw/2, y-42, bw*(ehp.hp/ehp.maxHp), 5);
+}
+
+function drawJuggler(epos, ehp, ai, frozen) {
+  const {x, y} = epos;
+  const t = Date.now() / 300;
+  const sphereAngle = ai.sphereAngle || 0;
+
+  ctx.save(); ctx.translate(x, y);
+  if (frozen) { ctx.globalAlpha=0.7; ctx.shadowColor='#aaccff'; }
+  else { ctx.shadowColor='#ffdd00'; ctx.shadowBlur=18; }
+
+  // Rolling sphere beneath
+  const SPHERE_R = 14;
+  ctx.save(); ctx.translate(0, 18);
+  ctx.fillStyle = frozen ? '#4488cc' : '#cc8800';
+  ctx.beginPath(); ctx.arc(0, 0, SPHERE_R, 0, Math.PI*2); ctx.fill();
+  // Sphere stripe to show rolling
+  ctx.strokeStyle = frozen ? '#88aadd' : '#ffcc44';
+  ctx.lineWidth = 2.5; ctx.save();
+  ctx.rotate(sphereAngle);
+  ctx.beginPath(); ctx.moveTo(-SPHERE_R, 0); ctx.lineTo(SPHERE_R, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -SPHERE_R); ctx.lineTo(0, SPHERE_R); ctx.stroke();
+  ctx.restore(); ctx.restore();
+
+  // Body — wobbles side to side balancing on sphere
+  const wobble = Math.sin(t * 1.4) * 0.12;
+  ctx.save(); ctx.rotate(wobble);
+  ctx.fillStyle = frozen ? '#88aacc' : '#ffcc99'; // skin
+  ctx.beginPath(); ctx.arc(0, -2, 10, 0, Math.PI*2); ctx.fill(); // head
+  ctx.fillStyle = frozen ? '#4488cc' : '#ff6600';
+  ctx.fillRect(-8, 6, 16, 14); // body
+  // Arms raised for juggling
+  ctx.strokeStyle = frozen ? '#88aacc' : '#ffcc99';
+  ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-8, 10); ctx.lineTo(-18, -4); ctx.stroke(); // left arm up
+  ctx.beginPath(); ctx.moveTo(8, 10);  ctx.lineTo(18, -4);  ctx.stroke(); // right arm up
+  ctx.restore();
+
+  // Juggle slots — balls and enemies arc above
+  const slotCount = ai.juggleSlots ? ai.juggleSlots.length : 0;
+  for (let i = 0; i < slotCount; i++) {
+    const slot = ai.juggleSlots[i];
+    if (slot.type !== 'ball') continue; // enemy slots drawn by their own draw fn
+    const slotAngle = (i / Math.max(ai.juggleMax, 1)) * Math.PI * 2;
+    const arcX = Math.cos(slotAngle + t * 1.2) * 28;
+    const arcY = -38 + Math.sin(slotAngle * 2 + t * 1.2) * 16;
+    const ballColors = ['#ff4444','#ffdd00','#00ff88','#ff69b4','#4488ff','#ff8800'];
+    ctx.save(); ctx.translate(arcX, arcY);
+    ctx.fillStyle = ballColors[i % ballColors.length];
+    ctx.shadowColor = ballColors[i % ballColors.length];
+    ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore();
+
+  const bw = 48;
+  ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2, y-46, bw, 6);
+  ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#ffaa00';
+  ctx.fillRect(x-bw/2, y-46, bw*(ehp.hp/ehp.maxHp), 6);
 }
 
 function drawTightrope(epos, ehp, frozen) {
@@ -390,12 +490,14 @@ function draw() {
     const alpha = isPhased ? 0.22 : (ehp.hitFlash > 0 ? (Math.random()>.5?1:.3) : 1);
     ctx.save(); ctx.globalAlpha=alpha;
     if      (type==='scissors')   drawScissors(epos, ehp, frozen);
-    else if (type==='clown')      drawClown(epos, ehp, frozen);
-    else if (type==='giftBox')    drawGiftBox(epos, ehp, ai, frozen);
+  else if (type==='mask')    drawMask(epos, ehp, ai, frozen);
+  else if (type==='giftBox')    drawGiftBox(epos, ehp, ai, frozen);
     else if (type==='partyHat')   drawPartyHat(epos, ehp, frozen);
     else if (type==='boss')       drawBoss(epos, ehp, frozen);
     else if (type==='cannonball') drawCannonball(epos, ehp, ai, frozen);
     else if (type==='ringmaster') drawRingmaster(epos, ehp, ai, frozen);
+          else if (type==='juggler') drawJuggler(epos, ehp, ai, frozen);
+
     else if (type==='tightrope')  drawTightrope(epos, ehp, frozen);
     ctx.restore();
   }
