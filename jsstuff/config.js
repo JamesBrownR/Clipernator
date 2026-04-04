@@ -42,3 +42,9 @@ const CFG = {
 let worldW = CFG.W;
 let worldH = CFG.H;
 let renderScale = 1.0;
+
+// Add to the bottom of config.js
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const playerImg = new Image();
+playerImg.src = 'Clipernator.png';
