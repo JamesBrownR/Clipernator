@@ -81,7 +81,7 @@ function initGameState() {
  
 
   gs = {
-    score: 0, wave: 1,
+    score: 0, wave: 10,
     health: CFG.MAX_HEALTH, maxHealth: CFG.MAX_HEALTH,
     ammo: CFG.MAX_AMMO, maxAmmo: CFG.MAX_AMMO,
     reloading: false, reloadTimer: 0,
@@ -96,15 +96,15 @@ function initGameState() {
 
     // Item flags
     bouncyHouse: false,
-    hasDoubleCake: false, hasTripleCake: false, hasQuadCake: false,
-    hasDash: false,
+    hasDoubleCake: true, hasTripleCake: true, hasQuadCake: true,
+    hasDash: true,
     dashCharges: 0, dashMaxCharges: CFG.DASH_MAX_CHARGES,
     dashCooldownTimer: 0, dashCooldownMax: CFG.DASH_COOLDOWN_FRAMES,
     dashTimer: 0, dashVx: 0, dashVy: 0,
     frozen: false,
     hasGlowsticks: false,
     glowCooldown: 0,
-    hasShakeFizzlePop: false,
+    hasShakeFizzlePop: true,
     sfpMeter: 0, sfpMax: 600, sfpFull: false,
     hasFlawlessBaking: false,
     flawlessThisWave: true,
