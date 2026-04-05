@@ -477,6 +477,8 @@ function sysDashCollision() {
 function sysEnemyPlayerCollision() {
   if (gs.invincible > 0 || gs.frozen || (gs.dashTimer > 0 && gs.hasTightropeBoots)) return;
   const ppos = ECS.get(gs.playerId, 'pos');
+    if (!ppos) return; 
+
   for (const id of ECS.query('enemy', 'pos')) {
     const epos = ECS.get(id, 'pos');
     if (Math.hypot(ppos.x - epos.x, ppos.y - epos.y) < 28) {
