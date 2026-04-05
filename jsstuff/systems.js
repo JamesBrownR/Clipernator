@@ -850,7 +850,10 @@ function spawnEnemy() {
     attempts++;
   } while (Math.hypot(x - ppos.x, y - ppos.y) < CFG.SAFE_SPAWN_DIST && attempts < 8);
 
-  let type = 'scissors';
+  let type = 'utensil';
+    const subtypes = ['fork', 'knife', 'spoon'];
+ const subtype = subtypes[Math.floor(Math.random() * 3)];
+  ECS.add(id, 'enemy', { type: 'utensil', subtype });
   const roll = Math.random();
 
   if (gs.floor === 2) {
