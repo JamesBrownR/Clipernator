@@ -297,19 +297,21 @@ function drawPlayer() {
   const aimingLeft = Math.cos(gunAngle) < 0;
 
   
-   // ── BODY ──
-  if (playerImg.complete && playerImg.naturalWidth > 0) {
-    const BODY_W = 26;
-    const BODY_H = 42;
-        const bob = Math.sin(playerBobTimer) * 1.0; // ±2.5px vertical bounce
+// ── BODY ──
+  const sourceImg = playerCanvas || playerImg;
+  if (sourceImg && (sourceImg.complete !== false)) {
+    const BODY_W = 36;
+    const BODY_H = 56;
+    const bob = Math.sin(playerBobTimer) * 1.0;
     ctx.save();
-      ctx.translate(x, y + bob);
+    ctx.translate(x, y + bob);
     if (blinking) ctx.globalAlpha = 0.35;
     const movingLeft = Math.cos(playerMoveAngle) < 0;
     if (movingLeft) ctx.scale(-1, 1);
-    ctx.drawImage(playerImg,
-      207, 204, 276, 579,
-      -BODY_W / 2, -BODY_H * 0.6,
+    // Crop to actual Clippy bounds: x:290, y:160, w:440, h:740
+    ctx.drawImage(sourceImg,
+      290, 160, 440, 740,
+      -BODY_W / 2, -BODY_H * 0.75,
       BODY_W, BODY_H
     );
     ctx.restore();
