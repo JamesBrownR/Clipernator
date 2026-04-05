@@ -47,7 +47,29 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
 // Player body sprite (Clippy paperclip)
+// In config.js — replace the playerImg lines with this:
 const playerImg = new Image();
+let playerCanvas = null; // will hold the black-stripped version
+
+playerImg.onload = function() {
+  // Strip black background
+  const off = document.createElement('canvas');
+  off.width  = playerImg.naturalWidth;
+  off.height = playerImg.naturalHeight;
+  const offCtx = off.getContext('2d');
+  offCtx.drawImage(playerImg, 0, 0);
+  const imageData = offCtx.getImageData(0, 0, off.width, off.height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2];
+    // If pixel is very dark (black background), make transparent
+    if (r < 30 && g < 30 && b < 30) {
+      data[i+3] = 0;
+    }
+  }
+  offCtx.putImageData(imageData, 0, 0);
+  playerCanvas = off;
+};
 playerImg.src = '/Clipernator/sprites/Clippy.png';
 
 // Shotgun sprite — follows mouse aim independently of body
