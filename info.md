@@ -16,6 +16,7 @@ Changes (I need to make a lot of changes, not sure where to start):
   * make melee damage scale with bullet damage
   * make melee (glowsticks) do more base damage
   * make glowsticks be able to reflect projectiles, anything that is reflected should also become an explosive (so it explodes on impact). It should also pause the game few a few frames like hitflash
+  * floor 2 should have 15 levels before the boss (so wave 25)
 
   
 Make enemies more interactive overall:
