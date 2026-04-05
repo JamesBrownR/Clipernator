@@ -5,7 +5,7 @@
 const ITEM_DEFS = {
   birthday: {
     id: 'birthday', label: 'BIRTHDAY\nPARTY', icon: '🎂',
-    desc: 'ALL\nENEMIES\nMOVE WIDELY',
+    desc: 'ALL\nENEMIES\nMOVE SLOWLY\nFOR 3 SECONDS',
     color: '#ff69b4', shadowColor: '#ff69b4', spawnCooldown: 18000,
     effect(gs) {
       gs.partyFreezeTimer = CFG.PARTY_FREEZE_FRAMES;
@@ -268,10 +268,77 @@ const ITEM_DEFS = {
 
   glowsticks: {
     id: 'glowsticks', label: 'GLOW\nSTICKS', icon: '🟢',
-    desc: 'RIGHT-CLICK:\nMELEE SWING\nDAMAGE IN FRONT',
+    desc: 'RIGHT-CLICK:\nMELEE SWING\nREFLECTS BULLETS\n& CANNONBALLS!',
     color: '#00ff88', shadowColor: '#00ff00', spawnCooldown: 999999999,
     effect() {},
     draw() {}
+  },
+
+  // ── General items (appear on any floor, 20% chance) ──
+
+  paperCuts: {
+    id: 'paperCuts', label: 'PAPER\nCUTS', icon: '📄',
+    desc: 'PERMANENT:\nDAMAGED ENEMIES\nTAKE 1 DAMAGE\nPER SECOND',
+    color: '#00ffcc', shadowColor: '#00ccaa', spawnCooldown: 999999999,
+    effect(gs) {
+      gs.hasPaperCuts = true;
+      gs.paperCutsTimer = 0;
+      showMsg('PAPER CUTS! DAMAGED ENEMIES BLEED OUT!');
+    },
+    draw(fi) {
+      const {x,y,phase}=fi, t=Date.now()/280, bob=Math.sin(t+phase)*5;
+      ctx.save(); ctx.translate(x,y+bob);
+      ctx.shadowColor='#00ffcc'; ctx.shadowBlur=18+Math.sin(t*2)*6;
+      // Paper sheets
+      for(let i=2;i>=0;i--){
+        const off=i*3, col=i===0?'#ffffff':i===1?'#ddffff':'#bbffee';
+        ctx.fillStyle=col; ctx.strokeStyle='#00ccaa'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(-18+off,-20+off,32,38,2); ctx.fill(); ctx.stroke();
+      }
+      // Lines on paper
+      ctx.strokeStyle='#00ccaa'; ctx.lineWidth=1.2;
+      for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(-14,-12+i*7);ctx.lineTo(10,-12+i*7);ctx.stroke();}
+      // Red cut marks
+      ctx.strokeStyle='#ff2244'; ctx.lineWidth=2; ctx.lineCap='round';
+      for(let i=0;i<3;i++){
+        const cx=-10+i*8, cy=-6+i*6;
+        ctx.beginPath();ctx.moveTo(cx-4,cy);ctx.lineTo(cx+4,cy+3);ctx.stroke();
+        ctx.fillStyle='rgba(255,34,68,0.4)'; ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fill();
+      }
+      ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+      ctx.fillText('PAPER',0,28); ctx.fillText('CUTS',0,38); ctx.restore();
+    }
+  },
+
+  extraClips: {
+    id: 'extraClips', label: 'EXTRA\nCLIPS', icon: '📎',
+    desc: '+25% MAX HP\n+25% MAX AMMO\nFULL HEAL\nFULL RELOAD',
+    color: '#ffdd00', shadowColor: '#ffaa00', spawnCooldown: 999999999,
+    effect(gs) {
+      gs.hasExtraClips = true;
+      gs.maxHealth = Math.floor(gs.maxHealth * 1.25);
+      gs.maxAmmo   = Math.floor(gs.maxAmmo   * 1.25);
+      gs.health    = gs.maxHealth;
+      gs.ammo      = gs.maxAmmo;
+      gs.reloading = false;
+      updateHUD();
+      showMsg('EXTRA CLIPS! +25% HP & AMMO, FULL HEAL!');
+    },
+    draw(fi) {
+      const {x,y,phase}=fi, t=Date.now()/300, bob=Math.sin(t+phase)*5, spin=Math.sin(t*.6+phase)*.1;
+      ctx.save(); ctx.translate(x,y+bob); ctx.rotate(spin);
+      ctx.shadowColor='#ffdd00'; ctx.shadowBlur=20+Math.sin(t)*8;
+      // Draw several paperclip shapes
+      const clipColors=['#ffdd00','#ffaa00','#ff8800'];
+      for(let c=0;c<3;c++){
+        ctx.save(); ctx.translate((c-1)*12, c*4-4); ctx.rotate(c*0.3);
+        ctx.strokeStyle=clipColors[c]; ctx.lineWidth=3; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(0,-14); ctx.arcTo(10,-14,10,0,8); ctx.arcTo(10,8,-2,8,8); ctx.arcTo(-2,8,-2,-6,8); ctx.arcTo(-2,-6,6,-6,8); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+      ctx.fillText('EXTRA',0,28); ctx.fillText('CLIPS',0,38); ctx.restore();
+    }
   },
 
   // ── Floor 2 items ──
@@ -298,7 +365,13 @@ const ITEM_DEFS = {
     id: 'mirrorMaze', label: 'MIRROR\nMAZE', icon: '🪞',
     desc: 'BULLETS SPLIT\nINTO 2 ON\nFIRST WALL BOUNCE\n(ENABLES BOUNCY)',
     color: '#ccddff', shadowColor: '#8899ff', spawnCooldown: 999999999,
-    effect(gs) { gs.hasMirrorMaze = true; gs.bouncyHouse = true; showMsg('MIRROR MAZE! BULLETS SPLIT ON BOUNCE!'); },
+    effect(gs) {
+      gs.hasMirrorMaze = true;
+      gs.bouncyHouse = true;
+      // Add bouncy to unlocked if not present
+      if (!gs.unlockedItems.includes('bouncy')) gs.unlockedItems.push('bouncy');
+      showMsg('MIRROR MAZE! BULLETS SPLIT ON BOUNCE!');
+    },
     draw(fi) {
       const {x,y,phase}=fi, t=Date.now()/260, bob=Math.sin(t+phase)*5;
       ctx.save(); ctx.translate(x,y+bob);
@@ -333,6 +406,69 @@ const ITEM_DEFS = {
       for(let i=0;i<4;i++){const a=t*1.5+i*1.57,px=Math.cos(a)*8,py=Math.sin(a)*4-18; ctx.beginPath(); ctx.arc(px,py,5,0,Math.PI*2); ctx.fill();}
       ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
       ctx.fillText('POPCORN',0,28); ctx.fillText('BUCKET',0,38); ctx.restore();
+    }
+  },
+
+  // ── Upgrade items ──
+  popcornUpgrade: {
+    id: 'popcornUpgrade', label: 'MEGA\nPOPCORN\nBUCKET', icon: '🍿⭐',
+    desc: 'COLLECT 3 KERNELS\n(NOT 5) FOR FRENZY\nFRENZY LASTS 6 SECS\nHUGE EXPLOSION RADIUS',
+    color: '#ffaa00', shadowColor: '#ff8800', spawnCooldown: 999999999,
+    effect(gs) {
+      gs.hasPopcornUpgrade = true;
+      showMsg('MEGA POPCORN! BIGGER FRENZIES, FEWER KERNELS!');
+    },
+    draw(fi) {
+      const {x,y,phase}=fi, t=Date.now()/260, bob=Math.sin(t+phase)*5;
+      ctx.save(); ctx.translate(x,y+bob);
+      ctx.shadowColor='#ff8800'; ctx.shadowBlur=24+Math.sin(t)*8;
+      ctx.fillStyle='#aa2200'; ctx.beginPath(); ctx.moveTo(-20,14); ctx.lineTo(-15,-18); ctx.lineTo(15,-18); ctx.lineTo(20,14); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#ffdd00'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(-18,8); ctx.lineTo(-14,-18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-5,8); ctx.lineTo(-4,-18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(7,8); ctx.lineTo(6,-18); ctx.stroke();
+      ctx.fillStyle='#fffacc'; ctx.shadowColor='#ffdd00'; ctx.shadowBlur=12;
+      for(let i=0;i<6;i++){const a=t*1.8+i*1.05,px=Math.cos(a)*12,py=Math.sin(a)*5-22; ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2); ctx.fill();}
+      // Star
+      ctx.fillStyle='#ffdd00'; ctx.shadowColor='#ff8800'; ctx.shadowBlur=10;
+      ctx.font='12px serif'; ctx.textAlign='center'; ctx.fillText('⭐',14,-22);
+      ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+      ctx.fillText('MEGA',0,30); ctx.fillText('POPCORN',0,40); ctx.restore();
+    }
+  },
+
+  clownishUpgrade: {
+    id: 'clownishUpgrade', label: 'FULL\nCLOWN\nMODE', icon: '🤡',
+    desc: 'CLOWN NOSE BLASTS\nA FULL RING OF 8\nBULLETS (3X DMG)\nCONFUSE ALL NEARBY',
+    color: '#4488ff', shadowColor: '#2244cc', spawnCooldown: 999999999,
+    effect(gs) {
+      gs.hasClownishUpgrade = true;
+      showMsg('FULL CLOWN MODE! THE NOSE KNOWS!');
+    },
+    draw(fi) {
+      const {x,y,phase}=fi, t=Date.now()/280, bob=Math.sin(t+phase)*5;
+      ctx.save(); ctx.translate(x,y+bob);
+      ctx.shadowColor='#4488ff'; ctx.shadowBlur=22+Math.sin(t*2)*8;
+      // Face
+      ctx.fillStyle='#fff4cc'; ctx.beginPath(); ctx.arc(0,-4,16,0,Math.PI*2); ctx.fill();
+      // Clown makeup
+      ctx.fillStyle='#ff2244'; ctx.beginPath(); ctx.arc(-7,-6,4,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(7,-6,4,0,Math.PI*2); ctx.fill();
+      // Pulsing blue nose
+      const noseR = 5+Math.sin(t*3)*2;
+      ctx.fillStyle='#4488ff'; ctx.shadowColor='#88aaff'; ctx.shadowBlur=14;
+      ctx.beginPath(); ctx.arc(0,-4,noseR,0,Math.PI*2); ctx.fill();
+      // Smile
+      ctx.strokeStyle='#333'; ctx.lineWidth=2; ctx.lineCap='round';
+      ctx.beginPath(); ctx.arc(0,0,7,0.2,Math.PI-0.2); ctx.stroke();
+      // Wig
+      ctx.fillStyle='#ff4400'; ctx.shadowColor='#ff6600'; ctx.shadowBlur=8;
+      for(let i=0;i<7;i++){const wa=(i/7)*Math.PI*2,wr=20; ctx.beginPath(); ctx.arc(Math.cos(wa)*wr,Math.sin(wa)*wr-4,5,0,Math.PI*2); ctx.fill();}
+      // Bullets orbiting
+      ctx.shadowBlur=0;
+      for(let i=0;i<8;i++){const ba=t*2+(i/8)*Math.PI*2; ctx.fillStyle='#4488ff'; ctx.shadowColor='#4488ff'; ctx.shadowBlur=4; ctx.fillRect(Math.cos(ba)*28-2,Math.sin(ba)*28-10,4,2);}
+      ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+      ctx.fillText('FULL CLOWN',0,22); ctx.fillText('MODE',0,32); ctx.restore();
     }
   },
 
@@ -401,7 +537,7 @@ const ITEM_DEFS = {
 
   clownish: {
     id: 'clownish', label: 'CLOWNISH', icon: '🔵',
-    desc: 'BLUE NOSE GROWS\nEVERY 8 SECS\nNEAR 2+ ENEMIES:\nBLAST CONFUSES THEM',
+    desc: 'BLUE NOSE GROWS\nEVERY 8 SECS\nNEAR 2+ ENEMIES:\nBLAST + CONFUSES THEM',
     color: '#4488ff', shadowColor: '#2266cc', spawnCooldown: 999999999,
     effect(gs) {
       gs.hasClownish = true;
