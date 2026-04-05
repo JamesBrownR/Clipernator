@@ -109,28 +109,29 @@ function swingGlowsticks() {
   // Melee damage scales with bullet damage — base 3x bullet damage
   const meleeDmg = baseBulletDamage() * 3;
 
-  // ── Reflect enemy bullets in the swing arc ──
+  // ── Reflect enemy bullets in range — NO cone check needed.
+  // Bullets come from all directions; just distance-check them.
   for (let i = gs.enemyBullets.length - 1; i >= 0; i--) {
     const eb = gs.enemyBullets[i];
     const dx = eb.x - ppos.x, dy = eb.y - ppos.y;
     const dist = Math.hypot(dx, dy);
     if (dist < CFG.MELEE_RANGE) {
-      const bulletAngle = Math.atan2(dy, dx);
-      if (angleDiff(bulletAngle, gunAngle) < CFG.MELEE_CONE_ANGLE) {
-        // Reflect: redirect bullet back toward nearest enemy
-        const reflected = {
-          x: eb.x, y: eb.y,
-          vx: -eb.vx * 1.5, vy: -eb.vy * 1.5,
-          life: 120, maxLife: 120,
-          angle: Math.atan2(-eb.vy, -eb.vx),
-          damageMult: baseBulletDamage() * 2,
-          isDud: false,
-          isReflected: true
-        };
-        gs.bullets.push(reflected);
-        gs.enemyBullets.splice(i, 1);
-        spawnParticles(eb.x, eb.y, '#00ff88', 8);
-      }
+      // Reflect: reverse velocity and boost, aim generally back at enemies
+      const reflectAngle = Math.atan2(-eb.vy, -eb.vx);
+      const reflectSpeed = Math.max(8, Math.hypot(eb.vx, eb.vy) * 2.0);
+      const reflected = {
+        x: eb.x, y: eb.y,
+        vx: Math.cos(reflectAngle) * reflectSpeed,
+        vy: Math.sin(reflectAngle) * reflectSpeed,
+        life: 120, maxLife: 120,
+        angle: reflectAngle,
+        damageMult: baseBulletDamage() * 2,
+        isDud: false,
+        isReflected: true
+      };
+      gs.bullets.push(reflected);
+      gs.enemyBullets.splice(i, 1);
+      spawnParticles(eb.x, eb.y, '#00ff88', 8);
     }
   }
 
@@ -146,41 +147,38 @@ function swingGlowsticks() {
     const dx = epos.x - ppos.x, dy = epos.y - ppos.y;
     const dist = Math.hypot(dx, dy);
     if (dist < CFG.MELEE_RANGE + 10) {
-      const bulletAngle = Math.atan2(dy, dx);
-      if (angleDiff(bulletAngle, gunAngle) < CFG.MELEE_CONE_ANGLE + 0.3) {
-        // Explode on impact!
-        spawnPartyParticles(epos.x, epos.y);
-        spawnParticles(epos.x, epos.y, '#ff4400', 30);
-        // Deal AoE damage to nearby enemies
-        for (const oid of ECS.query('enemy', 'pos', 'hp')) {
-          if (oid === id) continue;
-          const op = ECS.get(oid, 'pos');
-          const od = Math.hypot(op.x - epos.x, op.y - epos.y);
-          if (od < 80) {
-            const oh = ECS.get(oid, 'hp');
-            oh.hp -= meleeDmg * 2; oh.hitFlash = 14;
-            if (oh.hp <= 0) {
-              spawnParticles(op.x, op.y, '#ff2222', 18);
-              ECS.destroyEntity(oid);
-              gs.score += Math.round(15 * gs.wave); gs.waveKills++;
-              tryDropTicket();
-              gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-              updateHUD(); checkWave();
-            }
+      // Explode on impact!
+      spawnPartyParticles(epos.x, epos.y);
+      spawnParticles(epos.x, epos.y, '#ff4400', 30);
+      // Deal AoE damage to nearby enemies
+      for (const oid of ECS.query('enemy', 'pos', 'hp')) {
+        if (oid === id) continue;
+        const op = ECS.get(oid, 'pos');
+        const od = Math.hypot(op.x - epos.x, op.y - epos.y);
+        if (od < 80) {
+          const oh = ECS.get(oid, 'hp');
+          oh.hp -= meleeDmg * 2; oh.hitFlash = 14;
+          if (oh.hp <= 0) {
+            spawnParticles(op.x, op.y, '#ff2222', 18);
+            ECS.destroyEntity(oid);
+            gs.score += Math.round(15 * gs.wave); gs.waveKills++;
+            tryDropTicket();
+            gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+            updateHUD(); checkWave();
           }
         }
-        gs.shakeX = 22; gs.shakeY = 22;
-        showMsg('CANNONBALL DEFLECTED! BOOM!!!');
-        ECS.destroyEntity(id);
-        gs.score += Math.round(20 * gs.wave); gs.waveKills++;
-        tryDropTicket();
-        updateHUD(); checkWave();
-        continue;
       }
+      gs.shakeX = 22; gs.shakeY = 22;
+      showMsg('CANNONBALL DEFLECTED! BOOM!!!');
+      ECS.destroyEntity(id);
+      gs.score += Math.round(20 * gs.wave); gs.waveKills++;
+      tryDropTicket();
+      updateHUD(); checkWave();
+      continue;
     }
   }
 
-  // ── Normal melee hits ──
+  // ── Normal melee hits on enemies in the swing cone ──
   for (const id of ECS.query('enemy', 'pos', 'hp')) {
     const eai2 = ECS.get(id, 'ai');
     const type2 = ECS.get(id, 'enemy').type;
@@ -548,7 +546,7 @@ function sysDashCollision() {
   }
   const ppos = ECS.get(gs.playerId, 'pos');
   const pvel = ECS.get(gs.playerId, 'vel');
-  // Dash damage scales with current player speed (already was in original, kept)
+  // Dash damage scales with current player speed
   const dashSpd = Math.hypot(pvel.vx, pvel.vy);
   const speedScale = Math.max(1, dashSpd / CFG.DASH_SPEED);
   for (const id of ECS.query('enemy', 'pos', 'hp', 'ai')) {
@@ -809,7 +807,6 @@ function sysTimers() {
         }
         spawnPartyParticles(ppos3.x, ppos3.y);
         showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! RING OF CONFUSION!' : 'CLOWN NOSE BLAST! ENEMIES CONFUSED!');
-        const confuseCount = gs.hasClownishUpgrade ? near.length : near.length; // all in range
         for (const eid of near) {
           const eai = ECS.get(eid,'ai');
           if (eai) { eai.confused = true; eai.confuseTimer = gs.hasClownishUpgrade ? 480 : 300; }
@@ -880,7 +877,7 @@ function spawnEnemy() {
     if (roll < 0.30)      type = 'mask';
     else if (roll < 0.52) type = 'giftBox';
     else if (roll < 0.72) type = 'partyHat';
-    // else scissors
+    // else utensil
   } else if (gs.wave >= 5) {
     if (roll < 0.32)      type = 'mask';
     else if (roll < 0.58) type = 'partyHat';
@@ -892,10 +889,10 @@ function spawnEnemy() {
   const baseHp = 1 + Math.floor(gs.wave / 2);
   const id     = ECS.createEntity();
   const subtypes = ['fork', 'knife', 'spoon'];
- ECS.add(id, 'enemy', {
-  type,
-   subtype: type === 'utensil'
-    ? subtypes[Math.floor(Math.random() * 3)]
+  ECS.add(id, 'enemy', {
+    type,
+    subtype: type === 'utensil'
+      ? subtypes[Math.floor(Math.random() * 3)]
       : undefined
   });
   ECS.add(id, 'pos',     { x, y, angle: 0 });
