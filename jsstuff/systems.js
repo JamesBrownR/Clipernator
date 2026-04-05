@@ -851,9 +851,7 @@ function spawnEnemy() {
   } while (Math.hypot(x - ppos.x, y - ppos.y) < CFG.SAFE_SPAWN_DIST && attempts < 8);
 
   let type = 'utensil';
-    const subtypes = ['fork', 'knife', 'spoon'];
- const subtype = subtypes[Math.floor(Math.random() * 3)];
-  ECS.add(id, 'enemy', { type: 'utensil', subtype });
+ 
   const roll = Math.random();
 
   if (gs.floor === 2) {
@@ -880,7 +878,13 @@ function spawnEnemy() {
   const def    = ENEMY_DEFS[type];
   const baseHp = 1 + Math.floor(gs.wave / 2);
   const id     = ECS.createEntity();
-  ECS.add(id, 'enemy',   { type });
+  const subtypes = ['fork', 'knife', 'spoon'];
+ ECS.add(id, 'enemy', {
+  type,
+   subtype: type === 'utensil'
+    ? subtypes[Math.floor(Math.random() * 3)]
+      : undefined
+  });
   ECS.add(id, 'pos',     { x, y, angle: 0 });
   ECS.add(id, 'vel',     { vx: 0, vy: 0 });
   ECS.add(id, 'hp',      { hp: Math.ceil(baseHp * def.hpMult), maxHp: Math.ceil(baseHp * def.hpMult), hitFlash: 0 });
