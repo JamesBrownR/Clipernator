@@ -16,7 +16,6 @@ Changes (I need to make a lot of changes, not sure where to start):
   * make melee damage scale with bullet damage
   * make melee (glowsticks) do more base damage
   * make glowsticks be able to reflect projectiles
-  * the player sprite looks horrible for some reason
   
 Make enemies more interactive overall:
   * The enemy that wiggles and balances on a sphere while juggling 6-10 balls above it. I would like a mechanic where it can pick up other enemies and juggle them also, while they can attack as they are being juggegled, and if close enough to the player it throws the enemy at them. If it throws a cannonball enemy it immedietly goes into its dashing mode toward the player. It would also be funny to see it juggiling enemies that are also juggiling balls as they collectively throw balls toward the player
