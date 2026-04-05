@@ -26,86 +26,132 @@ const BT_UTENSIL = new BTSelector(
     const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    // Init — no fixed subtype; all three utensils orbit
+    const utensils = ['fork', 'knife', 'spoon'];
+
+    // ── Init ──
     if (ai.uState       === undefined) ai.uState       = 'IDLE';
     if (ai.uOrbitAngle  === undefined) ai.uOrbitAngle  = Math.random() * Math.PI * 2;
-    if (ai.uLaunchTimer === undefined) ai.uLaunchTimer = 90 + Math.floor(Math.random() * 60);
-    if (ai.uActiveIdx   === undefined) ai.uActiveIdx   = -1;  // which utensil is launched (-1 = none)
+    if (ai.uLaunchTimer === undefined) ai.uLaunchTimer = 80 + Math.floor(Math.random() * 60);
+    if (ai.uActiveIdx   === undefined) ai.uActiveIdx   = -1;
     if (ai.uLaunchDir   === undefined) ai.uLaunchDir   = null;
     if (ai.uTravelTimer === undefined) ai.uTravelTimer = 0;
     if (ai.uForkGrabTimer === undefined) ai.uForkGrabTimer = 0;
+    if (ai.uTelegraphTimer === undefined) ai.uTelegraphTimer = 0;
 
-    const utensils = ['fork', 'knife', 'spoon'];
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
 
-    // Drift toward player
-    vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * phy.speed * 0.14;
-    vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * phy.speed * 0.14;
+    // ── Body drifts toward player ──
+    vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * phy.speed * 0.28;
+    vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * phy.speed * 0.28;
     const spd = Math.hypot(vel.vx, vel.vy);
     if (spd > phy.speed) { vel.vx = vel.vx / spd * phy.speed; vel.vy = vel.vy / spd * phy.speed; }
 
+    // ── Tick down any active fork grab ──
+    if (ai.uForkGrabTimer > 0) {
+      ai.uForkGrabTimer--;
+      const pvel = ECS.get(gs.playerId, 'vel');
+      if (pvel) { pvel.vx *= 0.35; pvel.vy *= 0.35; }
+      gs.forkGrabbed = true;
+      if (ai.uForkGrabTimer <= 0) {
+        gs.forkGrabbed = false;
+        showMsg('FORK RELEASED!');
+      }
+    }
+
     if (ai.uState === 'IDLE') {
-      ai.uOrbitAngle += 0.04;
+      ai.uOrbitAngle += 0.045;
       ai.uLaunchTimer--;
 
-      if (ai.uLaunchTimer <= 0 && dist < 320) {
-        // Pick a random utensil to launch
-        ai.uActiveIdx  = Math.floor(Math.random() * 3);
-        ai.uState      = 'LAUNCH';
-        ai.uLaunchDir  = { x: dx / dist, y: dy / dist };
-        // Store enemy body position to return to
-        ai.uBodyX      = pos.x;
-        ai.uBodyY      = pos.y;
-        // Utensil travels independently — store separate travel position
-        ai.uTipX       = pos.x + Math.cos(ai.uOrbitAngle + (ai.uActiveIdx / 3) * Math.PI * 2) * 20;
-        ai.uTipY       = pos.y + Math.sin(ai.uOrbitAngle + (ai.uActiveIdx / 3) * Math.PI * 2) * 20;
-        ai.uTipVx      = ai.uLaunchDir.x * 11;
-        ai.uTipVy      = ai.uLaunchDir.y * 11;
+      if (ai.uLaunchTimer <= 0 && dist < 360) {
+        // ── Telegraph phase before launch ──
+        ai.uActiveIdx     = Math.floor(Math.random() * 3);
+        ai.uState         = 'TELEGRAPH';
+        ai.uTelegraphTimer = 28;
+        ai.uLaunchDir     = { x: dx / dist, y: dy / dist };
+        // Store starting tip position (from orbit)
+        const orbitA = ai.uOrbitAngle + (ai.uActiveIdx / 3) * Math.PI * 2;
+        ai.uTipX = pos.x + Math.cos(orbitA) * 20;
+        ai.uTipY = pos.y + Math.sin(orbitA) * 20;
+        ai.uLaunchTimer = 100 + Math.floor(Math.random() * 60);
+      }
+    }
+    else if (ai.uState === 'TELEGRAPH') {
+      // Wobble the chosen utensil in place, emit warning particles
+      ai.uTelegraphTimer--;
+      const subtype = utensils[ai.uActiveIdx];
+      const warnColor = subtype === 'knife' ? '#ff4444' : subtype === 'spoon' ? '#aaddff' : '#ffcc88';
+      if (ai.uTelegraphTimer % 5 === 0) spawnParticles(ai.uTipX, ai.uTipY, warnColor, 4);
+      // Keep tip hovering near body
+      const orbitA = ai.uOrbitAngle + (ai.uActiveIdx / 3) * Math.PI * 2;
+      ai.uTipX = pos.x + Math.cos(orbitA) * 20 + Math.sin(Date.now()/60) * 5;
+      ai.uTipY = pos.y + Math.sin(orbitA) * 20 + Math.sin(Date.now()/80) * 5;
+      if (ai.uTelegraphTimer <= 0) {
+        // Refresh aim direction at launch moment
+        const ldx = pp.x - pos.x, ldy = pp.y - pos.y, ldist = Math.hypot(ldx, ldy) || 1;
+        ai.uLaunchDir = { x: ldx / ldist, y: ldy / ldist };
+        ai.uTipVx = ai.uLaunchDir.x * 9;
+        ai.uTipVy = ai.uLaunchDir.y * 9;
         ai.uTravelTimer = 0;
-        ai.uLaunchTimer = 110 + Math.floor(Math.random() * 60);
-        spawnParticles(pos.x, pos.y, '#cccccc', 6);
+        ai.uState = 'LAUNCH';
+        spawnParticles(pos.x, pos.y, warnColor, 10);
       }
     }
     else if (ai.uState === 'LAUNCH') {
-      // Move the tip independently
       ai.uTipX += ai.uTipVx;
       ai.uTipY += ai.uTipVy;
       ai.uTravelTimer++;
 
-      const hitWall = ai.uTipX < 25 || ai.uTipX > worldW - 25 || ai.uTipY < 25 || ai.uTipY > worldH - 25;
-      const ppos2   = ECS.get(gs.playerId, 'pos');
+      const hitWall   = ai.uTipX < 20 || ai.uTipX > worldW - 20 || ai.uTipY < 20 || ai.uTipY > worldH - 20;
+      const ppos2     = ECS.get(gs.playerId, 'pos');
       const playerHit = ppos2 && Math.hypot(ai.uTipX - ppos2.x, ai.uTipY - ppos2.y) < 22;
-      const maxTravel = ai.uTravelTimer > 55;
+      const maxTravel = ai.uTravelTimer > 65;
       const subtype   = utensils[ai.uActiveIdx];
 
       if (playerHit && gs.invincible <= 0) {
         if (subtype === 'knife') {
-          gs.health -= 22; gs.invincible = CFG.INVINCIBLE_FRAMES;
-          gs.shakeX = 14; gs.shakeY = 14;
+          // High damage + bleed debuff
+          gs.health -= 25; gs.invincible = CFG.INVINCIBLE_FRAMES;
+          gs.shakeX = 16; gs.shakeY = 16;
           gs.flawlessThisWave = false;
+          gs.knifeBleedTimer = 180; // 3 seconds of 1 dmg/sec bleed
           triggerSFPHit(); updateHUD();
+          showMsg('KNIFE SLASH! YOU\'RE BLEEDING!');
+          spawnParticles(ppos2.x, ppos2.y, '#ff2244', 16);
           if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
         } else if (subtype === 'spoon') {
-          gs.health -= 12; gs.invincible = CFG.INVINCIBLE_FRAMES;
-          gs.shakeX = 18; gs.shakeY = 18;
+          // Moderate damage + strong knockback on player AND nearby enemies
+          gs.health -= 14; gs.invincible = CFG.INVINCIBLE_FRAMES;
+          gs.shakeX = 22; gs.shakeY = 22;
           gs.flawlessThisWave = false;
           triggerSFPHit(); updateHUD();
-          if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
-          // Knockback nearby enemies
+          // Launch the player away from the tip
+          const pvel = ECS.get(gs.playerId, 'vel');
+          if (pvel) {
+            const kd = Math.hypot(ppos2.x - ai.uTipX, ppos2.y - ai.uTipY) || 1;
+            pvel.vx += ((ppos2.x - ai.uTipX) / kd) * 18;
+            pvel.vy += ((ppos2.y - ai.uTipY) / kd) * 18;
+          }
+          // Also knock nearby enemies
           for (const eid of ECS.query('enemy', 'pos', 'vel')) {
             if (eid === id) continue;
             const ep = ECS.get(eid, 'pos'), ev = ECS.get(eid, 'vel');
             const kd = Math.hypot(ep.x - ai.uTipX, ep.y - ai.uTipY);
-            if (kd < 90) { const kn = kd || 1; ev.vx += ((ep.x - ai.uTipX) / kn) * 9; ev.vy += ((ep.y - ai.uTipY) / kn) * 9; }
+            if (kd < 110) {
+              const kn = kd || 1;
+              ev.vx += ((ep.x - ai.uTipX) / kn) * 12;
+              ev.vy += ((ep.y - ai.uTipY) / kn) * 12;
+            }
           }
-          spawnParticles(ai.uTipX, ai.uTipY, '#aaddff', 18);
+          spawnParticles(ai.uTipX, ai.uTipY, '#aaddff', 20);
+          showMsg('SPOON LAUNCHED! KNOCKED AWAY!');
+          if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
         } else if (subtype === 'fork') {
-          // Fork: grab — slows and briefly pulls player
+          // No damage — grabs and roots the player
           gs.invincible = CFG.INVINCIBLE_FRAMES;
-          ai.uForkGrabTimer = 60;  // hold for 60 frames
-          ai.uGrabbed = true;
-          showMsg('FORK GRABBED YOU! SQUIRM FREE!');
-          spawnParticles(ai.uTipX, ai.uTipY, '#ffcc88', 12);
+          ai.uForkGrabTimer = 75;
+          gs.forkGrabbed = true;
+          showMsg('FORK GRABBED YOU! WIGGLE FREE!');
+          spawnParticles(ai.uTipX, ai.uTipY, '#ffcc88', 14);
         }
       }
 
@@ -114,32 +160,15 @@ const BT_UTENSIL = new BTSelector(
       }
     }
     else if (ai.uState === 'RETURN') {
-      // Tip returns to enemy body position (which has moved)
       const rdx = pos.x - ai.uTipX, rdy = pos.y - ai.uTipY;
       const rdist = Math.hypot(rdx, rdy) || 1;
 
-      // Fork drag — slow the player for a bit
-      if (ai.uGrabbed && ai.uForkGrabTimer > 0) {
-        ai.uForkGrabTimer--;
-        const ppos3 = ECS.get(gs.playerId, 'pos');
-        const pvel3 = ECS.get(gs.playerId, 'vel');
-        if (ppos3 && pvel3) {
-          pvel3.vx *= 0.6;
-          pvel3.vy *= 0.6;
-        }
-        if (ai.uForkGrabTimer <= 0) {
-          ai.uGrabbed = false;
-          showMsg('FORK RELEASED!');
-        }
-      }
-
-      ai.uTipX += (rdx / rdist) * 9;
-      ai.uTipY += (rdy / rdist) * 9;
+      ai.uTipX += (rdx / rdist) * 10;
+      ai.uTipY += (rdy / rdist) * 10;
 
       if (rdist < 22) {
         ai.uState     = 'IDLE';
         ai.uActiveIdx = -1;
-        ai.uGrabbed   = false;
         spawnParticles(pos.x, pos.y, '#cccccc', 4);
       }
     }
