@@ -80,12 +80,13 @@ function triggerSFPHit() {
           gs.waveKills++;
           tryDropTicket();
           gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-          updateHUD(); checkWave();
+          updateHUD(); 
         }
       }
     }
     spawnPartyParticles(ppos.x, ppos.y);
     showMsg('SHOCKWAVE RELEASE!!!');
+    setTimeout(() => checkWave(), 0);
   }
   gs.sfpMeter = 0;
   gs.sfpFull = false;
@@ -490,6 +491,7 @@ function sysEnemyPlayerCollision() {
       spawnParticles(ppos.x, ppos.y, '#ff3333', 14);
       updateHUD();
       if (gs.health <= 0) { gameOver(); return; }
+      return;
     }
   }
 }
