@@ -352,13 +352,27 @@ const BT_GIFTBOX = new BTSelector(
     // If being held by player, skip normal AI
     if (ai.heldByPlayer) return BT.RUNNING;
 
-    const dx = pp.x - pos.x, dy = pp.y - pos.y;
-    const dist = Math.hypot(dx, dy) || 1;
+    // If thrown, coast freely until we need to explode
+    if (ai.thrown) {
+      vel.vx *= 0.97;
+      vel.vy *= 0.97;
+      // Wind up continues while thrown
+      ai.windupTimer = Math.min(120, (ai.windupTimer || 0) + 2);
+      if (ai.windupTimer >= 120 && !ai.exploded) {
+        ai.exploded = true;
+        _giftBoxExplode(id, pos, gs);
+      }
+      return BT.RUNNING;
+    }
 
     if (ai.windupTimer === undefined) ai.windupTimer = 0;
-    if (ai.exploded === undefined) ai.exploded = false;
+    if (ai.exploded === undefined)    ai.exploded    = false;
+    if (ai.pendingDestroy === undefined) ai.pendingDestroy = false;
 
     if (ai.exploded) return BT.RUNNING;
+
+    const dx = pp.x - pos.x, dy = pp.y - pos.y;
+    const dist = Math.hypot(dx, dy) || 1;
 
     // Drift toward player
     vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
@@ -369,62 +383,66 @@ const BT_GIFTBOX = new BTSelector(
     // Wind up when player is close
     if (dist < 140) {
       ai.windupTimer++;
-      // Shake particles as it winds up
       if (ai.windupTimer % 12 === 0) spawnParticles(pos.x, pos.y, '#ffaa00', 4);
       if (ai.windupTimer === 30) showMsg('⚠️ GIFT BOX WINDING UP!');
 
       if (ai.windupTimer >= 120) {
-        // EXPLODE
         ai.exploded = true;
-        vel.vx = 0; vel.vy = 0;
-        spawnPartyParticles(pos.x, pos.y);
-        spawnParticles(pos.x, pos.y, '#ff4400', 30);
-        gs.shakeX = 22; gs.shakeY = 22;
-
-        // AoE damage to player
-        const ppos2 = ECS.get(gs.playerId, 'pos');
-        if (ppos2 && Math.hypot(pos.x - ppos2.x, pos.y - ppos2.y) < 110 && gs.invincible <= 0) {
-          gs.health -= 30; gs.invincible = CFG.INVINCIBLE_FRAMES;
-          gs.flawlessThisWave = false;
-          triggerSFPHit(); updateHUD();
-          if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
-        }
-
-        // AoE damage to other enemies
-        for (const eid of ECS.query('enemy', 'pos', 'hp')) {
-          if (eid === id) continue;
-          const ep = ECS.get(eid, 'pos');
-          const eh = ECS.get(eid, 'hp');
-          if (Math.hypot(ep.x - pos.x, ep.y - pos.y) < 110) {
-            eh.hp -= 8; eh.hitFlash = 14;
-            if (eh.hp <= 0) {
-              spawnParticles(ep.x, ep.y, '#ff2222', 14);
-              ECS.destroyEntity(eid);
-              gs.score += Math.round(10 * gs.wave); gs.waveKills++;
-              tryDropTicket();
-              gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-              updateHUD(); checkWave();
-            }
-          }
-        }
-
-        // Destroy self after a moment
-        setTimeout(() => {
-          if (ECS.has(id, 'pos')) {
-            ECS.destroyEntity(id);
-            gs.waveKills++;
-            updateHUD(); checkWave();
-          }
-        }, 200);
+        _giftBoxExplode(id, pos, gs);
       }
     } else {
-      // Wind down if player moves away
       if (ai.windupTimer > 0) ai.windupTimer = Math.max(0, ai.windupTimer - 1);
     }
 
     return BT.RUNNING;
   })
 );
+
+function _giftBoxExplode(id, pos, gs) {
+  const vel = ECS.get(id, 'vel');
+  if (vel) { vel.vx = 0; vel.vy = 0; }
+  spawnPartyParticles(pos.x, pos.y);
+  spawnParticles(pos.x, pos.y, '#ff4400', 30);
+  gs.shakeX = 22; gs.shakeY = 22;
+
+  // AoE damage to player
+  const ppos = ECS.get(gs.playerId, 'pos');
+  if (ppos && Math.hypot(pos.x - ppos.x, pos.y - ppos.y) < 110 && gs.invincible <= 0) {
+    gs.health -= 30; gs.invincible = CFG.INVINCIBLE_FRAMES;
+    gs.flawlessThisWave = false;
+    triggerSFPHit(); updateHUD();
+    if (gs.health <= 0) { gameOver(); return; }
+  }
+
+  // AoE damage to other enemies
+  const toKill = [];
+  for (const eid of ECS.query('enemy', 'pos', 'hp')) {
+    if (eid === id) continue;
+    const ep = ECS.get(eid, 'pos');
+    const eh = ECS.get(eid, 'hp');
+    if (Math.hypot(ep.x - pos.x, ep.y - pos.y) < 110) {
+      eh.hp -= 8; eh.hitFlash = 14;
+      if (eh.hp <= 0) toKill.push(eid);
+    }
+  }
+  for (const eid of toKill) {
+    const ep = ECS.get(eid, 'pos');
+    if (ep) spawnParticles(ep.x, ep.y, '#ff2222', 14);
+    ECS.destroyEntity(eid);
+    gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+    tryDropTicket();
+    gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+    updateHUD();
+  }
+
+  // Destroy self — mark for removal, then do it synchronously
+  if (ECS.has(id, 'pos')) {
+    ECS.destroyEntity(id);
+    gs.waveKills++;
+    updateHUD();
+    checkWave();
+  }
+}
 
 // ── PartyHat: fast + periodic speed dives ──
 const BT_PARTYHAT = new BTSelector(
