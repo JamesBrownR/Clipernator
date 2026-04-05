@@ -81,7 +81,7 @@ function initGameState() {
  
 
   gs = {
-    score: 0, wave: 1,
+    score: 0, wave: 10,
     health: CFG.MAX_HEALTH, maxHealth: CFG.MAX_HEALTH,
     ammo: CFG.MAX_AMMO, maxAmmo: CFG.MAX_AMMO,
     reloading: false, reloadTimer: 0,
