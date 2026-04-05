@@ -45,7 +45,7 @@ function baseBulletDamage() {
 
 // Returns world position of gun muzzle tip for bullet spawn / muzzle flash
 function gunMuzzlePos() {
-  const tipDist = 90 * 0.68; // GUN_W * (1 - GRIP_RATIO) = distance from grip to muzzle tip
+  const tipDist = 90 * 0.68;
   return {
     x: gunX + Math.cos(gunAngle) * tipDist,
     y: gunY + Math.sin(gunAngle) * tipDist,
@@ -96,7 +96,7 @@ function unlockGlowsticks() {
   if (gs.hasGlowsticks) return;
   gs.hasGlowsticks = true;
   gs.unlockedItems.push('glowsticks');
-  showMsg('GLOWSTICKS UNLOCKED! RIGHT-CLICK TO SWING');
+  showMsg('GLOWSTICKS UNLOCKED! RIGHT-CLICK TO SWING & REFLECT SHOTS');
   updateHUD();
 }
 
@@ -106,9 +106,85 @@ function swingGlowsticks() {
   meleeSwingTimer = CFG.MELEE_SWING_FRAMES;
 
   const ppos = ECS.get(gs.playerId, 'pos');
-  const meleeDmg = baseBulletDamage() * 1.5;
+  // Melee damage scales with bullet damage — base 3x bullet damage
+  const meleeDmg = baseBulletDamage() * 3;
 
+  // ── Reflect enemy bullets in the swing arc ──
+  for (let i = gs.enemyBullets.length - 1; i >= 0; i--) {
+    const eb = gs.enemyBullets[i];
+    const dx = eb.x - ppos.x, dy = eb.y - ppos.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < CFG.MELEE_RANGE) {
+      const bulletAngle = Math.atan2(dy, dx);
+      if (angleDiff(bulletAngle, gunAngle) < CFG.MELEE_CONE_ANGLE) {
+        // Reflect: redirect bullet back toward nearest enemy
+        const reflected = {
+          x: eb.x, y: eb.y,
+          vx: -eb.vx * 1.5, vy: -eb.vy * 1.5,
+          life: 120, maxLife: 120,
+          angle: Math.atan2(-eb.vy, -eb.vx),
+          damageMult: baseBulletDamage() * 2,
+          isDud: false,
+          isReflected: true
+        };
+        gs.bullets.push(reflected);
+        gs.enemyBullets.splice(i, 1);
+        spawnParticles(eb.x, eb.y, '#00ff88', 8);
+      }
+    }
+  }
+
+  // ── Reflect / deflect charging cannonballs ──
+  for (const id of ECS.query('enemy', 'pos', 'hp', 'ai')) {
+    const type = ECS.get(id, 'enemy').type;
+    if (type !== 'cannonball') continue;
+    const epos = ECS.get(id, 'pos');
+    const eai  = ECS.get(id, 'ai');
+    const ehp  = ECS.get(id, 'hp');
+    const evel = ECS.get(id, 'vel');
+    if (eai.chargeState !== 'CHARGING') continue;
+    const dx = epos.x - ppos.x, dy = epos.y - ppos.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < CFG.MELEE_RANGE + 10) {
+      const bulletAngle = Math.atan2(dy, dx);
+      if (angleDiff(bulletAngle, gunAngle) < CFG.MELEE_CONE_ANGLE + 0.3) {
+        // Explode on impact!
+        spawnPartyParticles(epos.x, epos.y);
+        spawnParticles(epos.x, epos.y, '#ff4400', 30);
+        // Deal AoE damage to nearby enemies
+        for (const oid of ECS.query('enemy', 'pos', 'hp')) {
+          if (oid === id) continue;
+          const op = ECS.get(oid, 'pos');
+          const od = Math.hypot(op.x - epos.x, op.y - epos.y);
+          if (od < 80) {
+            const oh = ECS.get(oid, 'hp');
+            oh.hp -= meleeDmg * 2; oh.hitFlash = 14;
+            if (oh.hp <= 0) {
+              spawnParticles(op.x, op.y, '#ff2222', 18);
+              ECS.destroyEntity(oid);
+              gs.score += Math.round(15 * gs.wave); gs.waveKills++;
+              tryDropTicket();
+              gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+              updateHUD(); checkWave();
+            }
+          }
+        }
+        gs.shakeX = 22; gs.shakeY = 22;
+        showMsg('CANNONBALL DEFLECTED! BOOM!!!');
+        ECS.destroyEntity(id);
+        gs.score += Math.round(20 * gs.wave); gs.waveKills++;
+        tryDropTicket();
+        updateHUD(); checkWave();
+        continue;
+      }
+    }
+  }
+
+  // ── Normal melee hits ──
   for (const id of ECS.query('enemy', 'pos', 'hp')) {
+    const eai2 = ECS.get(id, 'ai');
+    const type2 = ECS.get(id, 'enemy').type;
+    if (type2 === 'cannonball' && eai2 && eai2.chargeState === 'CHARGING') continue; // handled above
     const epos = ECS.get(id, 'pos');
     const ehp  = ECS.get(id, 'hp');
     const evel = ECS.get(id, 'vel');
@@ -116,12 +192,10 @@ function swingGlowsticks() {
     const dist = Math.hypot(dx, dy);
     if (dist < CFG.MELEE_RANGE && dist > 5) {
       const enemyAngle = Math.atan2(dy, dx);
-      // Swing arc uses gunAngle instead of pos.angle so it matches the visual
       if (angleDiff(enemyAngle, gunAngle) < CFG.MELEE_CONE_ANGLE) {
         ehp.hp -= meleeDmg; ehp.hitFlash = 12;
         const knockDist = dist > 0 ? dist : 1;
-        evel.vx += (dx / knockDist) * 7;
-        evel.vy += (dy / knockDist) * 7;
+        if (evel) { evel.vx += (dx / knockDist) * 7; evel.vy += (dy / knockDist) * 7; }
         spawnParticles(epos.x, epos.y, '#00ff88', 9);
         if (ehp.hp <= 0) {
           spawnParticles(epos.x, epos.y, '#ff2222', 18);
@@ -185,24 +259,22 @@ function sysPlayerMovement() {
   if (pos.y < CFG.WALL_PAD)          { pos.y = CFG.WALL_PAD;          vel.vy = bouncy ? Math.abs(vel.vy)  : 0; }
   if (pos.y > worldH - CFG.WALL_PAD) { pos.y = worldH - CFG.WALL_PAD; vel.vy = bouncy ? -Math.abs(vel.vy) : 0; }
 
-  // Update body facing angle from movement velocity
-const moveSpd = Math.hypot(vel.vx, vel.vy);
+  const moveSpd = Math.hypot(vel.vx, vel.vy);
   if (moveSpd > 0.5) {
     playerMoveAngle = Math.atan2(vel.vy, vel.vx);
   } else {
-    // Slowly turn body to face aim direction when standing still
     let da = gunAngle - playerMoveAngle;
     while (da > Math.PI)  da -= Math.PI * 2;
     while (da < -Math.PI) da += Math.PI * 2;
-    playerMoveAngle += da * 0.04; // 0.04 = slow lazy turn
+    playerMoveAngle += da * 0.04;
   } 
   
   if (moveSpd > 0.5) {
-    playerBobTimer += moveSpd * 0.08; // faster movement = faster bob
+    playerBobTimer += moveSpd * 0.08;
   } else {
-    playerBobTimer *= 0.85; // decay when stopping
+    playerBobTimer *= 0.85;
   }
- // Update gun floating position — moves toward mouse, clamped to MAX_HOLD_DIST from player
+
   const MAX_HOLD_DIST = 50;
   const mdx = mouse.x - pos.x;
   const mdy = mouse.y - pos.y;
@@ -211,20 +283,15 @@ const moveSpd = Math.hypot(vel.vx, vel.vy);
   const targetGunX = pos.x + (mdx / mouseDist) * holdDist;
   const targetGunY = pos.y + (mdy / mouseDist) * holdDist;
 
-  // Smooth lerp so gun floats naturally
   gunX += (targetGunX - gunX) * 0.18;
   gunY += (targetGunY - gunY) * 0.18;
 
-  // Gun angle points from gun's actual position toward mouse
   gunAngle = Math.atan2(mouse.y - gunY, mouse.x - gunX);
-  // Update gun angle to face mouse (smooth follow with slight lag)
   const targetGunAngle = Math.atan2(mouse.y - pos.y, mouse.x - pos.x);
-  // Smooth interpolation — gun lags ~10% behind mouse per frame for feel
   let da = targetGunAngle - gunAngle;
-  // Wrap difference to [-π, π]
   while (da > Math.PI)  da -= Math.PI * 2;
   while (da < -Math.PI) da += Math.PI * 2;
-  gunAngle += da * 0.25; // 0.25 = slight lag; set to 1.0 for instant
+  gunAngle += da * 0.25;
 
   gs.dashTrail = gs.dashTrail.filter(t => { t.life--; return t.life > 0; });
 }
@@ -238,12 +305,9 @@ function sysAI() {
   for (const id of enemies) {
 
     const ai2 = ECS.get(id,'ai');
-    // Skip BT tick for juggled enemies — juggler controls their position
     if (ai2 && ai2.juggled) {
-      // Still allow shooting if they're a shooter type
       const type = ECS.get(id,'enemy').type;
       if (type === 'mask') {
-        // juggled mask still cries toward player
         const pos2 = ECS.get(id,'pos');
         const pp2 = playerPos(gs);
         if (pp2 && ai2.shootCooldown !== undefined) {
@@ -254,17 +318,16 @@ function sysAI() {
             const aim = Math.atan2(ady,adx);
             gs.enemyBullets.push({
               x:pos2.x, y:pos2.y,
-              vx:Math.cos(aim)*2.0, vy:Math.sin(aim)*2.0,
+              vx:Math.cos(aim)*1.0, vy:Math.sin(aim)*1.0,
               life:140, maxLife:140, color:'#44aaff',
               isTear:true, gravity:0.045
             });
           }
         }
       }
-      // Still update hit flash
       const hp2 = ECS.get(id,'hp');
       if (hp2 && hp2.hitFlash > 0) hp2.hitFlash--;
-      continue; // skip normal BT
+      continue;
     }
     
     const type = ECS.get(id, 'enemy').type;
@@ -291,7 +354,6 @@ function sysAI() {
     const hp = ECS.get(id, 'hp');
     if (hp && hp.hitFlash > 0) hp.hitFlash--;
 
-  
     const phy2 = ECS.get(id, 'physics');
     if (ai2 && phy2) {
       if (ai2.confused) {
@@ -321,6 +383,29 @@ function sysAI() {
         }
       } else if (phy2._baseSpeed) {
         phy2.speed = phy2._baseSpeed;
+      }
+    }
+  }
+
+  // ── Paper Cuts: tick damage on damaged enemies ──
+  if (gs.hasPaperCuts) {
+    gs.paperCutsTimer = (gs.paperCutsTimer || 0) + 1;
+    if (gs.paperCutsTimer >= 60) {
+      gs.paperCutsTimer = 0;
+      for (const id of ECS.query('enemy', 'hp')) {
+        const ehp = ECS.get(id, 'hp');
+        if (ehp.hp < ehp.maxHp) {
+          ehp.hp -= 1; ehp.hitFlash = 4;
+          if (ehp.hp <= 0) {
+            const epos = ECS.get(id, 'pos');
+            if (epos) spawnParticles(epos.x, epos.y, '#ff2222', 10);
+            ECS.destroyEntity(id);
+            gs.score += Math.round(5 * gs.wave); gs.waveKills++;
+            tryDropTicket();
+            gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+            updateHUD(); checkWave();
+          }
+        }
       }
     }
   }
@@ -450,7 +535,7 @@ function sysDashCollision() {
   }
   const ppos = ECS.get(gs.playerId, 'pos');
   const pvel = ECS.get(gs.playerId, 'vel');
-  // Dash damage scales with current player speed
+  // Dash damage scales with current player speed (already was in original, kept)
   const dashSpd = Math.hypot(pvel.vx, pvel.vy);
   const speedScale = Math.max(1, dashSpd / CFG.DASH_SPEED);
   for (const id of ECS.query('enemy', 'pos', 'hp', 'ai')) {
@@ -478,7 +563,7 @@ function sysDashCollision() {
 function sysEnemyPlayerCollision() {
   if (gs.invincible > 0 || gs.frozen || (gs.dashTimer > 0 && gs.hasTightropeBoots)) return;
   const ppos = ECS.get(gs.playerId, 'pos');
-    if (!ppos) return; 
+  if (!ppos) return; 
 
   for (const id of ECS.query('enemy', 'pos')) {
     const epos = ECS.get(id, 'pos');
@@ -503,7 +588,6 @@ function sysEnemyBullets() {
   const ppos = ECS.get(gs.playerId, 'pos');
   gs.enemyBullets = gs.enemyBullets.filter(eb => {
     if (!gs.frozen) { eb.x += eb.vx; eb.y += eb.vy; eb.life--; }
-    // Tear gravity
     if (eb.isTear && eb.gravity) {
       eb.vy += eb.gravity;
     }
@@ -513,7 +597,7 @@ function sysEnemyBullets() {
       eb.vx += (dx/dist) * (eb.homingStrength||0.04);
       eb.vy += (dy/dist) * (eb.homingStrength||0.04);
       const spd = Math.hypot(eb.vx,eb.vy);
-      if (spd > 4) { eb.vx=eb.vx/spd*4; eb.vy=eb.vy/spd*4; }
+      if (spd > 2) { eb.vx=eb.vx/spd*2; eb.vy=eb.vy/spd*2; }
     }
 
     if (gs.bouncyHouse) {
@@ -554,7 +638,7 @@ function sysFieldItemPickup() {
       gs.itemCooldowns[fi.id] = Date.now();
       gs.fieldItems.splice(i, 1);
       def.effect(gs);
-      const permanent = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks']);
+      const permanent = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks','paperCuts','extraClips','clownishUpgrade','popcornUpgrade']);
       if (!permanent.has(fi.id)) {
         setTimeout(() => { if (gameRunning) trySpawnFieldItems(); }, def.spawnCooldown);
       }
@@ -568,14 +652,15 @@ function sysFieldItemPickup() {
 function sysPopcorn() {
   if (!gs.hasPopcornBucket || !gs.popcornKernels) return;
   const ppos = ECS.get(gs.playerId,'pos');
+  const kernelGoal = gs.hasPopcornUpgrade ? 3 : 5;
   gs.popcornKernels = gs.popcornKernels.filter(k => {
     if (Math.hypot(k.x - ppos.x, k.y - ppos.y) < 22) {
       spawnParticles(k.x, k.y, '#ffdd00', 4);
       gs._kernelsCollected = (gs._kernelsCollected||0) + 1;
-      if (gs._kernelsCollected >= 5) {
+      if (gs._kernelsCollected >= kernelGoal) {
         gs._kernelsCollected = 0;
-        gs.popcornFrenzyTimer = 240;
-        showMsg('🍿 POPCORN FRENZY! BULLETS EXPLODE!');
+        gs.popcornFrenzyTimer = gs.hasPopcornUpgrade ? 360 : 240;
+        showMsg(gs.hasPopcornUpgrade ? '🍿 MEGA FRENZY! MASSIVE EXPLOSION RADIUS!' : '🍿 POPCORN FRENZY! BULLETS EXPLODE!');
         spawnPartyParticles(ppos.x, ppos.y);
       }
       return false;
@@ -701,15 +786,20 @@ function sysTimers() {
         Math.hypot(ECS.get(id,'pos').x - ppos3.x, ECS.get(id,'pos').y - ppos3.y) < 200
       );
       if (near.length >= 2) {
-        for (let bi = 0; bi < 2; bi++) {
-          const ba = gunAngle + (bi === 0 ? -0.5 : 0.5);
-          gs.bullets.push({ x:ppos3.x, y:ppos3.y, vx:Math.cos(ba)*8, vy:Math.sin(ba)*8, life:80, maxLife:80, angle:ba, damageMult:2, isDud:false });
+        // Upgraded clownish: shoots more bullets in a ring
+        const bulletCount = gs.hasClownishUpgrade ? 8 : 2;
+        for (let bi = 0; bi < bulletCount; bi++) {
+          const ba = gs.hasClownishUpgrade
+            ? (bi / bulletCount) * Math.PI * 2
+            : gunAngle + (bi === 0 ? -0.5 : 0.5);
+          gs.bullets.push({ x:ppos3.x, y:ppos3.y, vx:Math.cos(ba)*8, vy:Math.sin(ba)*8, life:80, maxLife:80, angle:ba, damageMult:gs.hasClownishUpgrade ? 3 : 2, isDud:false });
         }
         spawnPartyParticles(ppos3.x, ppos3.y);
-        showMsg('CLOWN NOSE BLAST! ENEMIES CONFUSED!');
+        showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! RING OF CONFUSION!' : 'CLOWN NOSE BLAST! ENEMIES CONFUSED!');
+        const confuseCount = gs.hasClownishUpgrade ? near.length : near.length; // all in range
         for (const eid of near) {
           const eai = ECS.get(eid,'ai');
-          if (eai) { eai.confused = true; eai.confuseTimer = 300; }
+          if (eai) { eai.confused = true; eai.confuseTimer = gs.hasClownishUpgrade ? 480 : 300; }
         }
       }
     }
@@ -776,6 +866,7 @@ function spawnEnemy() {
     if (roll < 0.30)      type = 'mask';
     else if (roll < 0.52) type = 'giftBox';
     else if (roll < 0.72) type = 'partyHat';
+    // else scissors
   } else if (gs.wave >= 5) {
     if (roll < 0.32)      type = 'mask';
     else if (roll < 0.58) type = 'partyHat';
@@ -820,20 +911,17 @@ function shoot() {
   if (gs.ammo <= 0 || gs.reloading) return;
   gs.ammo--; muzzleFlash = 10; updateHUD();
 
-  // Recoil kick
   gunRecoil = 1.0;
 
   const ppos = ECS.get(gs.playerId, 'pos');
   gs.shakeX = (Math.random() - .5) * 13;
   gs.shakeY = (Math.random() - .5) * 13;
 
-  // Spawn bullets from muzzle tip position
   const muzzle = gunMuzzlePos();
 
   let doubleCount = 0;
   const totalBullets = CFG.BULLET_COUNT + (gs.hasCursedCandles ? gs.candlesLit * 2 : 0);
   for (let i = 0; i < totalBullets; i++) {
-    // Spread around gunAngle, not pos.angle
     const a = gunAngle + (Math.random() - .5) * .32;
     let damageMult = 1, isDud = false;
     if (gs.hasQuadCake) {
@@ -873,7 +961,6 @@ function tryDash() {
     gs.dashVx = (pvel.vx / spd) * CFG.DASH_SPEED;
     gs.dashVy = (pvel.vy / spd) * CFG.DASH_SPEED;
   } else {
-    // Dash toward mouse if standing still
     gs.dashVx = Math.cos(gunAngle) * CFG.DASH_SPEED;
     gs.dashVy = Math.sin(gunAngle) * CFG.DASH_SPEED;
   }
@@ -931,7 +1018,7 @@ function checkWave() {
 
 function trySpawnFieldItems() {
   const now = Date.now();
-  const permanent = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks']);
+  const permanent = new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks','paperCuts','extraClips','clownishUpgrade','popcornUpgrade']);
   for (const id of gs.unlockedItems) {
     if (gs.fieldItems.some(fi => fi.id === id)) continue;
     if (id === 'bouncy'          && gs.bouncyHouse)        continue;
@@ -943,6 +1030,10 @@ function trySpawnFieldItems() {
     if (id === 'flawlessBaking'  && gs.hasFlawlessBaking)  continue;
     if (id === 'cursedCandles'   && gs.hasCursedCandles)   continue;
     if (id === 'glowsticks') continue;
+    if (id === 'paperCuts'       && gs.hasPaperCuts)       continue;
+    if (id === 'extraClips'      && gs.hasExtraClips)      continue;
+    if (id === 'clownishUpgrade' && gs.hasClownishUpgrade) continue;
+    if (id === 'popcornUpgrade'  && gs.hasPopcornUpgrade)  continue;
     const def = ITEM_DEFS[id];
     const last = gs.itemCooldowns[id] || 0;
     if (now - last >= def.spawnCooldown || last === 0) {
@@ -950,6 +1041,10 @@ function trySpawnFieldItems() {
     }
   }
 }
+
+// ── Item pool pools ──
+// General items: can appear on any floor (20% chance to replace a floor-specific pick)
+const GENERAL_ITEM_IDS = ['paperCuts', 'extraClips'];
 
 function offerItemChoice() {
   gs.pendingChoice = true;
@@ -961,15 +1056,45 @@ function offerItemChoice() {
   const cardsEl  = document.getElementById('item-cards');
   cardsEl.innerHTML = '';
 
-  const itemPool = gs.floor === 2 ? FLOOR2_ITEM_IDS : ALL_ITEM_IDS;
-  let available = itemPool.filter(id => {
+  // Build floor-specific pool
+  const floorPool = gs.floor === 2 ? FLOOR2_ITEM_IDS : ALL_ITEM_IDS;
+
+  let floorAvailable = floorPool.filter(id => {
     if (id === 'tripleCake' && !gs.hasDoubleCake) return false;
     if (id === 'quadCake'   && !gs.hasTripleCake) return false;
     if (id === 'knockingPins') return true;
     return !gs.unlockedItems.includes(id);
   });
 
-  const offered = shuffle(available).slice(0, 3);
+  // Upgrade items unlock when their prerequisite is owned
+  const upgradePool = [];
+  if (gs.hasClownish && !gs.hasClownishUpgrade) upgradePool.push('clownishUpgrade');
+  if (gs.hasPopcornBucket && !gs.hasPopcornUpgrade) upgradePool.push('popcornUpgrade');
+  floorAvailable = [...floorAvailable, ...upgradePool];
+
+  // General items available (not yet owned)
+  const generalAvailable = GENERAL_ITEM_IDS.filter(id => !gs.unlockedItems.includes(id));
+
+  // Build offered slots: up to 3
+  // Each slot: 20% chance to be filled by a general item if any available
+  let offered = [];
+  const shuffledFloor = shuffle(floorAvailable);
+  const shuffledGeneral = shuffle(generalAvailable);
+  let fi = 0, gi = 0;
+
+  for (let slot = 0; slot < 3; slot++) {
+    const useGeneral = generalAvailable.length > 0 && gi < shuffledGeneral.length && Math.random() < 0.20;
+    if (useGeneral) {
+      offered.push(shuffledGeneral[gi++]);
+    } else if (fi < shuffledFloor.length) {
+      offered.push(shuffledFloor[fi++]);
+    } else if (gi < shuffledGeneral.length) {
+      offered.push(shuffledGeneral[gi++]);
+    }
+  }
+
+  // Deduplicate
+  offered = [...new Set(offered)].slice(0, 3);
 
   for (const id of offered) {
     const def = ITEM_DEFS[id];
@@ -979,6 +1104,10 @@ function offerItemChoice() {
     if (id === 'doubledCake') { card.style.background='#001133'; card.style.borderColor='#4488ff'; }
     else if (id === 'tripleCake') { card.style.background='#220022'; card.style.borderColor='#cc44ff'; }
     else if (id === 'quadCake')   { card.style.background='#220000'; card.style.borderColor='#ff3333'; }
+    else if (id === 'paperCuts')  { card.style.background='#001a1a'; card.style.borderColor='#00ffcc'; }
+    else if (id === 'extraClips') { card.style.background='#1a1a00'; card.style.borderColor='#ffdd00'; }
+    else if (id === 'clownishUpgrade') { card.style.background='#001133'; card.style.borderColor='#4488ff'; }
+    else if (id === 'popcornUpgrade')  { card.style.background='#1a0a00'; card.style.borderColor='#ffaa00'; }
     card.innerHTML = `
       <div class="ic-icon">${def.icon}</div>
       <div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div>
@@ -998,7 +1127,7 @@ function offerItemChoice() {
 
   choiceEl.style.display = 'flex';
   const skipBtn = document.getElementById('skip-btn');
-  const allOwned = offered.every(id => gs.unlockedItems.includes(id));
+  const allOwned = offered.length === 0 || offered.every(id => gs.unlockedItems.includes(id));
   skipBtn.style.display = allOwned ? 'block' : 'none';
   skipBtn.onclick = () => {
     choiceEl.style.display = 'none'; gs.pendingChoice = false; gameRunning = true;
