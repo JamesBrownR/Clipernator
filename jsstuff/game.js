@@ -93,7 +93,7 @@ function initGameState() {
     waveEnemiesLeft: 8, waveKills: 0,
     unlockedItems: [], itemCooldowns: {},
     pendingChoice: false,
-    heldGiftBox = null;
+    heldGiftBox = null,
 
     // Item flags
     bouncyHouse: false,
