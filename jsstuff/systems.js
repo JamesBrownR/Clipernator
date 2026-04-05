@@ -236,11 +236,13 @@ function sysPlayerMovement() {
     vel.vx = gs.dashVx;
     vel.vy = gs.dashVy;
   } else {
-    let ix = 0, iy = 0;
-    if (keys['ArrowLeft']  || keys['a'] || keys['A']) ix--;
-    if (keys['ArrowRight'] || keys['d'] || keys['D']) ix++;
-    if (keys['ArrowUp']    || keys['w'] || keys['W']) iy--;
-    if (keys['ArrowDown']  || keys['s'] || keys['S']) iy++;
+ let ix = 0, iy = 0;
+    if (!gs.forkGrabbed) {
+      if (keys['ArrowLeft']  || keys['a'] || keys['A']) ix--;
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) ix++;
+      if (keys['ArrowUp']    || keys['w'] || keys['W']) iy--;
+      if (keys['ArrowDown']  || keys['s'] || keys['S']) iy++;
+    }
     if (ix && iy) { ix *= 0.707; iy *= 0.707; }
     if (ix || iy) { vel.vx += ix * 0.38 * topSpd; vel.vy += iy * 0.38 * topSpd; }
     else { vel.vx *= 0.82; vel.vy *= 0.82; }
