@@ -15,28 +15,132 @@ const BOSS_PHASE = {
 // BEHAVIOR TREES
 // ================================================================
 
-// ── Scissors: always chase player ──
-const BT_SCISSORS = new BTSelector(
+// ── Utensil: fork / knife / spoon ──
+// Idle: three utensils orbit center. One launches toward player,
+// travels until it hits a wall or target, then returns.
+// Fork  — grabs nearest entity on hit and drags it back (no damage)
+// Knife — high damage on hit
+// Spoon — knockback AoE on hit, moderate damage
+const BT_UTENSIL = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
     const pos = ECS.get(id, 'pos');
     const vel = ECS.get(id, 'vel');
     const phy = ECS.get(id, 'physics');
-    const pp = playerPos(gs);
+    const ai  = ECS.get(id, 'ai');
+    const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
-    const dx = pp.x - pos.x, dy = pp.y - pos.y;
-    const dist = Math.hypot(dx, dy) || 1;
-    if (gs.bouncyHouse) {
-      vel.vx += (dx / dist) * phy.speed * 0.04;
-      vel.vy += (dy / dist) * phy.speed * 0.04;
+
+    // Init
+    if (!ai.uSubtype)      ai.uSubtype     = ECS.get(id, 'enemy').subtype || 'knife';
+    if (!ai.uState)        ai.uState       = 'IDLE';
+    if (ai.uOrbitAngle === undefined) ai.uOrbitAngle = Math.random() * Math.PI * 2;
+    if (ai.uLaunchTimer === undefined) ai.uLaunchTimer = 90 + Math.floor(Math.random() * 60);
+    if (!ai.uReturnPos)    ai.uReturnPos   = { x: pos.x, y: pos.y };
+    if (!ai.uGrabId)       ai.uGrabId      = null;
+
+    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
+
+    if (ai.uState === 'IDLE') {
+      // Slow drift toward player
+      vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * phy.speed * 0.14;
+      vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * phy.speed * 0.14;
       const spd = Math.hypot(vel.vx, vel.vy);
-      if (spd > phy.speed * 1.3) { vel.vx = vel.vx/spd*phy.speed*1.3; vel.vy = vel.vy/spd*phy.speed*1.3; }
-    } else {
-      vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
-      vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
-      const spd = Math.hypot(vel.vx, vel.vy);
-      if (spd > phy.speed) { vel.vx = vel.vx/spd*phy.speed; vel.vy = vel.vy/spd*phy.speed; }
+      if (spd > phy.speed) { vel.vx = vel.vx / spd * phy.speed; vel.vy = vel.vy / spd * phy.speed; }
+
+      ai.uOrbitAngle += 0.04;
+      ai.uLaunchTimer--;
+
+      if (ai.uLaunchTimer <= 0 && dist < 320) {
+        // Launch!
+        ai.uState = 'LAUNCH';
+        ai.uLaunchDir = { x: dx / dist, y: dy / dist };
+        ai.uReturnPos = { x: pos.x, y: pos.y };
+        ai.uTravelTimer = 0;
+        vel.vx = ai.uLaunchDir.x * 11;
+        vel.vy = ai.uLaunchDir.y * 11;
+        ai.uLaunchTimer = 110 + Math.floor(Math.random() * 60);
+        spawnParticles(pos.x, pos.y, '#cccccc', 6);
+      }
     }
+    else if (ai.uState === 'LAUNCH') {
+      ai.uTravelTimer++;
+      // Check wall hits
+      const hitWall = pos.x < 25 || pos.x > worldW - 25 || pos.y < 25 || pos.y > worldH - 25;
+      // Check player hit
+      const ppos2 = ECS.get(gs.playerId, 'pos');
+      const playerHit = ppos2 && Math.hypot(pos.x - ppos2.x, pos.y - ppos2.y) < 26;
+      // Max travel
+      const maxTravel = ai.uTravelTimer > 55;
+
+      if (hitWall || maxTravel || playerHit) {
+        if (playerHit && gs.invincible <= 0) {
+          // Apply subtype effect
+          if (ai.uSubtype === 'knife') {
+            gs.health -= 22; gs.invincible = CFG.INVINCIBLE_FRAMES;
+            gs.shakeX = 14; gs.shakeY = 14;
+            gs.flawlessThisWave = false;
+            triggerSFPHit(); updateHUD();
+            if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
+          } else if (ai.uSubtype === 'spoon') {
+            gs.health -= 12; gs.invincible = CFG.INVINCIBLE_FRAMES;
+            gs.shakeX = 18; gs.shakeY = 18;
+            gs.flawlessThisWave = false;
+            triggerSFPHit(); updateHUD();
+            if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
+            // Spoon knockback: also knock nearby enemies away from impact
+            for (const eid of ECS.query('enemy', 'pos', 'vel')) {
+              if (eid === id) continue;
+              const ep = ECS.get(eid, 'pos');
+              const ev = ECS.get(eid, 'vel');
+              const kd = Math.hypot(ep.x - pos.x, ep.y - pos.y);
+              if (kd < 90) {
+                const kn = kd || 1;
+                ev.vx += ((ep.x - pos.x) / kn) * 9;
+                ev.vy += ((ep.y - pos.y) / kn) * 9;
+              }
+            }
+            spawnParticles(pos.x, pos.y, '#aaddff', 18);
+          } else if (ai.uSubtype === 'fork') {
+            // Fork: grab player, drag them toward utensil home pos
+            ai.uGrabId = gs.playerId;
+            gs.invincible = CFG.INVINCIBLE_FRAMES;
+            showMsg('FORK GRABBED YOU!');
+            spawnParticles(pos.x, pos.y, '#ffcc88', 12);
+          }
+        }
+        // Return home
+        ai.uState = 'RETURN';
+        vel.vx = 0; vel.vy = 0;
+      }
+    }
+    else if (ai.uState === 'RETURN') {
+      // Fly back to return position
+      const rdx = ai.uReturnPos.x - pos.x, rdy = ai.uReturnPos.y - pos.y;
+      const rdist = Math.hypot(rdx, rdy) || 1;
+
+      // If fork grabbed something, drag it along
+      if (ai.uSubtype === 'fork' && ai.uGrabId !== null) {
+        const gpos = ECS.get(ai.uGrabId, 'pos');
+        if (gpos) {
+          gpos.x += (pos.x - gpos.x) * 0.25;
+          gpos.y += (pos.y - gpos.y) * 0.25;
+        }
+      }
+
+      vel.vx = (rdx / rdist) * 9;
+      vel.vy = (rdy / rdist) * 9;
+
+      if (rdist < 18) {
+        pos.x = ai.uReturnPos.x;
+        pos.y = ai.uReturnPos.y;
+        vel.vx = 0; vel.vy = 0;
+        ai.uState = 'IDLE';
+        ai.uGrabId = null;
+        spawnParticles(pos.x, pos.y, '#cccccc', 4);
+      }
+    }
+
     return BT.RUNNING;
   })
 );
@@ -56,7 +160,6 @@ const BT_MASK = new BTSelector(
     ai.shootCooldown = (ai.shootCooldown || 0);
 
     if (ai.maskState === 'SMILE') {
-      // Chase player while smiling
       vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
       vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
       const spd = Math.hypot(vel.vx, vel.vy);
@@ -64,29 +167,27 @@ const BT_MASK = new BTSelector(
       if (ai.maskTimer <= 0) {
         ai.maskState = 'CRY';
         ai.maskTimer = 140;
-        ai.cryBurst = 5; // number of cry bursts
+        ai.cryBurst = 5;
         ai.cryBurstTimer = 0;
         vel.vx *= 0.3; vel.vy *= 0.3;
       }
     } else {
-      // Crying state — slow drift, fire tear bursts
       vel.vx *= 0.94; vel.vy *= 0.94;
       ai.cryBurstTimer = (ai.cryBurstTimer||0) - 1;
       if (ai.cryBurstTimer <= 0 && ai.cryBurst > 0) {
         ai.cryBurst--;
         ai.cryBurstTimer = 22;
-        // Fire 3 tears in a spread, with downward gravity flag
         const aim = Math.atan2(dy, dx);
         for (const sa of [-0.28, 0, 0.28]) {
           const a = aim + sa;
           gs.enemyBullets.push({
             x: pos.x, y: pos.y,
-            vx: Math.cos(a) * 2.2,  // half speed
-            vy: Math.sin(a) * 2.2,
+            vx: Math.cos(a) * 1.1,   // was 2.2, halved
+            vy: Math.sin(a) * 1.1,
             life: 160, maxLife: 160,
             color: '#44aaff',
-            isTear: true,           // gravity flag
-            gravity: 0.045          // curves downward each frame
+            isTear: true,
+            gravity: 0.045
           });
         }
         spawnParticles(pos.x, pos.y, '#44aaff', 5);
@@ -108,15 +209,15 @@ const BT_JUGGLER = new BTSelector(
     const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    // Init juggler state
     if (!ai.juggleBalls)    ai.juggleBalls    = 6;
     if (!ai.juggleMax)      ai.juggleMax      = 6;
-    if (!ai.juggleSlots)    ai.juggleSlots    = []; // array of {type:'ball'|'enemy', id?}
+    if (!ai.juggleSlots)    ai.juggleSlots    = [];
     if (!ai.regenTimer)     ai.regenTimer     = 0;
     if (!ai.throwCooldown)  ai.throwCooldown  = 60;
     if (!ai.sphereAngle)    ai.sphereAngle    = 0;
+    if (ai.ballShootTimer === undefined) ai.ballShootTimer = 45;
 
-    // Fill slots with balls up to juggleBalls count
+    // Fill ball slots
     while (ai.juggleSlots.filter(s=>s.type==='ball').length < ai.juggleBalls &&
            ai.juggleSlots.length < ai.juggleMax) {
       ai.juggleSlots.push({ type:'ball', phase: Math.random()*Math.PI*2 });
@@ -124,13 +225,11 @@ const BT_JUGGLER = new BTSelector(
 
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
 
-    // Slow drift toward player
     vel.vx = (vel.vx||0)*0.9 + (dx/dist)*phy.speed*0.12;
     vel.vy = (vel.vy||0)*0.9 + (dy/dist)*phy.speed*0.12;
     const spd = Math.hypot(vel.vx,vel.vy);
     if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
 
-    // Roll sphere angle based on movement
     ai.sphereAngle += vel.vx * 0.06;
 
     // Capture nearby enemies into juggle slots
@@ -158,11 +257,35 @@ const BT_JUGGLER = new BTSelector(
       const slot = ai.juggleSlots[i];
       const slotAngle = (i / ai.juggleMax) * Math.PI * 2;
       const arcX = Math.cos(slotAngle + t) * 28;
-      const arcY = -38 + Math.sin(slotAngle * 2 + t) * 18; // figure-8 arc above
+      const arcY = -38 + Math.sin(slotAngle * 2 + t) * 18;
       if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
         const epos = ECS.get(slot.id,'pos');
         epos.x = pos.x + arcX;
         epos.y = pos.y + arcY;
+      }
+    }
+
+    // Juggled enemies shoot at player periodically
+    ai.ballShootTimer--;
+    if (ai.ballShootTimer <= 0) {
+      ai.ballShootTimer = 45;
+      for (const slot of ai.juggleSlots) {
+        if (slot.type !== 'enemy') continue;
+        if (!ECS.has(slot.id, 'pos')) continue;
+        const epos = ECS.get(slot.id, 'pos');
+        const etype = ECS.get(slot.id, 'enemy').type;
+        const edx = pp.x - epos.x, edy = pp.y - epos.y;
+        const edist = Math.hypot(edx, edy) || 1;
+        const aim = Math.atan2(edy, edx);
+        // Each juggled enemy fires one bullet toward player (half speed)
+        gs.enemyBullets.push({
+          x: epos.x, y: epos.y,
+          vx: Math.cos(aim) * 1.4,
+          vy: Math.sin(aim) * 1.4,
+          life: 130, maxLife: 130,
+          color: etype === 'mask' ? '#44aaff' : '#ffdd44',
+        });
+        spawnParticles(epos.x, epos.y, '#ffdd00', 3);
       }
     }
 
@@ -172,10 +295,10 @@ const BT_JUGGLER = new BTSelector(
       ai.throwCooldown = 55;
       const slot = ai.juggleSlots.shift();
       if (slot.type === 'ball') {
-        const throwSpd = 4.5;
+        const throwSpd = 2.2; // halved from 4.5
         gs.enemyBullets.push({
           x: pos.x, y: pos.y - 38,
-          vx: (dx/dist)*throwSpd, vy: (dy/dist)*throwSpd - 1.5,
+          vx: (dx/dist)*throwSpd, vy: (dy/dist)*throwSpd - 0.8,
           life: 150, maxLife: 150,
           color: '#ffdd00',
           isJuggleBall: true
@@ -184,7 +307,6 @@ const BT_JUGGLER = new BTSelector(
         const eai = ECS.get(slot.id,'ai');
         eai.juggled = false;
         eai.juggledBy = null;
-        // If cannonball, trigger charge immediately
         const etype = ECS.get(slot.id,'enemy').type;
         if (etype === 'cannonball') {
           eai.chargeState = 'TELEGRAPH';
@@ -192,25 +314,23 @@ const BT_JUGGLER = new BTSelector(
           eai.chargeTarget = { x: pp.x, y: pp.y };
         }
         spawnParticles(pos.x, pos.y - 38, '#ff8800', 8);
+        showMsg('JUGGLER THROWS AN ENEMY!');
       }
     }
 
-    // Regen balls over time when slots are empty
+    // Regen balls
     if (ai.juggleBalls < ai.juggleMax) {
       ai.regenTimer++;
-      if (ai.regenTimer >= 540) { // ~9 seconds
-        ai.regenTimer = 0;
-        ai.juggleBalls++;
-      }
+      if (ai.regenTimer >= 540) { ai.regenTimer = 0; ai.juggleBalls++; }
     }
 
-    // Clean up dead juggled enemies from slots
-   ai.juggleSlots = ai.juggleSlots.filter(s => {
+    // Clean up dead juggled enemies
+    ai.juggleSlots = ai.juggleSlots.filter(s => {
       if (s.type !== 'enemy') return true;
-      if (!ECS.has(s.id, 'pos')) return false;       // entity destroyed
-      if (s.id === gs.playerId) return false;         // never juggle player
+      if (!ECS.has(s.id, 'pos')) return false;
+      if (s.id === gs.playerId) return false;
       const sea = ECS.get(s.id, 'ai');
-      if (!sea || sea.juggledBy !== id) return false; // claimed by someone else
+      if (!sea || sea.juggledBy !== id) return false;
       return true;
     });
 
@@ -218,7 +338,7 @@ const BT_JUGGLER = new BTSelector(
   })
 );
 
-// ── GiftBox: slow drift + lunge ──
+// ── GiftBox: slow wind-up explosion ──
 const BT_GIFTBOX = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
@@ -228,19 +348,80 @@ const BT_GIFTBOX = new BTSelector(
     const ai  = ECS.get(id, 'ai');
     const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
+
+    // If being held by player, skip normal AI
+    if (ai.heldByPlayer) return BT.RUNNING;
+
     const dx = pp.x - pos.x, dy = pp.y - pos.y;
     const dist = Math.hypot(dx, dy) || 1;
-    ai.ambushTimer = (ai.ambushTimer||0) + 1;
+
+    if (ai.windupTimer === undefined) ai.windupTimer = 0;
+    if (ai.exploded === undefined) ai.exploded = false;
+
+    if (ai.exploded) return BT.RUNNING;
+
+    // Drift toward player
     vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
     vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
     const spd = Math.hypot(vel.vx, vel.vy);
     if (spd > phy.speed) { vel.vx = vel.vx/spd*phy.speed; vel.vy = vel.vy/spd*phy.speed; }
-    if (ai.ambushTimer > 90 && dist < 90) {
-      vel.vx = (dx/dist)*9;
-      vel.vy = (dy/dist)*9;
-      ai.ambushTimer = 0;
-      spawnParticles(pos.x, pos.y, '#ffaa00', 15);
+
+    // Wind up when player is close
+    if (dist < 140) {
+      ai.windupTimer++;
+      // Shake particles as it winds up
+      if (ai.windupTimer % 12 === 0) spawnParticles(pos.x, pos.y, '#ffaa00', 4);
+      if (ai.windupTimer === 30) showMsg('⚠️ GIFT BOX WINDING UP!');
+
+      if (ai.windupTimer >= 120) {
+        // EXPLODE
+        ai.exploded = true;
+        vel.vx = 0; vel.vy = 0;
+        spawnPartyParticles(pos.x, pos.y);
+        spawnParticles(pos.x, pos.y, '#ff4400', 30);
+        gs.shakeX = 22; gs.shakeY = 22;
+
+        // AoE damage to player
+        const ppos2 = ECS.get(gs.playerId, 'pos');
+        if (ppos2 && Math.hypot(pos.x - ppos2.x, pos.y - ppos2.y) < 110 && gs.invincible <= 0) {
+          gs.health -= 30; gs.invincible = CFG.INVINCIBLE_FRAMES;
+          gs.flawlessThisWave = false;
+          triggerSFPHit(); updateHUD();
+          if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
+        }
+
+        // AoE damage to other enemies
+        for (const eid of ECS.query('enemy', 'pos', 'hp')) {
+          if (eid === id) continue;
+          const ep = ECS.get(eid, 'pos');
+          const eh = ECS.get(eid, 'hp');
+          if (Math.hypot(ep.x - pos.x, ep.y - pos.y) < 110) {
+            eh.hp -= 8; eh.hitFlash = 14;
+            if (eh.hp <= 0) {
+              spawnParticles(ep.x, ep.y, '#ff2222', 14);
+              ECS.destroyEntity(eid);
+              gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+              tryDropTicket();
+              gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+              updateHUD(); checkWave();
+            }
+          }
+        }
+
+        // Destroy self after a moment
+        setTimeout(() => {
+          if (ECS.has(id, 'pos')) {
+            ECS.destroyEntity(id);
+            gs.waveKills++;
+            updateHUD(); checkWave();
+          }
+        }, 200);
+      }
+    } else {
+      // Wind down if player moves away
+      if (ai.windupTimer > 0) ai.windupTimer = Math.max(0, ai.windupTimer - 1);
     }
+
     return BT.RUNNING;
   })
 );
@@ -287,7 +468,6 @@ const BT_BOSS = new BTSelector(
 
     const phase2 = hp.hp < hp.maxHp * 0.5;
 
-    // Drift toward center
     const cx = worldW / 2, cy = worldH / 2;
     const toCX = cx - pos.x, toCY = cy - pos.y;
     const distCenter = Math.hypot(toCX, toCY);
@@ -367,7 +547,8 @@ const BT_BOSS = new BTSelector(
       if (phase2) {
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * Math.PI * 2;
-          gs.enemyBullets.push({ x: ai.slamTarget.x, y: ai.slamTarget.y, vx: Math.cos(a)*3.5, vy: Math.sin(a)*3.5, life: 120, maxLife: 120, color: '#cc00ff' });
+          // halved speed
+          gs.enemyBullets.push({ x: ai.slamTarget.x, y: ai.slamTarget.y, vx: Math.cos(a)*1.75, vy: Math.sin(a)*1.75, life: 120, maxLife: 120, color: '#cc00ff' });
         }
       }
       if (ai.phaseTimer <= 0) {
@@ -393,7 +574,7 @@ const BT_BOSS = new BTSelector(
         const arms = phase2 ? 4 : 3;
         for (let arm = 0; arm < arms; arm++) {
           const a = ai.spiralAngle + (arm / arms) * Math.PI * 2;
-          const spd2 = phase2 ? 2.2 : 1.8;
+          const spd2 = phase2 ? 1.1 : 0.9; // halved
           gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*spd2, vy: Math.sin(a)*spd2, life: 140, maxLife: 140, color: '#cc00ff' });
         }
         ai.spiralAngle += phase2 ? 0.18 : 0.14;
@@ -412,7 +593,7 @@ const BT_BOSS = new BTSelector(
         for (let i = 0; i < count; i++) {
           const spread = phase2 ? 0.55 : 0.45;
           const a = aim + (i / (count - 1) - 0.5) * spread * 2;
-          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*2.8, vy: Math.sin(a)*2.8, life: 110, maxLife: 110, color: '#ff44ff' });
+          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*1.4, vy: Math.sin(a)*1.4, life: 110, maxLife: 110, color: '#ff44ff' }); // halved
         }
         spawnParticles(pos.x, pos.y, '#ff00ff', 10);
         ai.volleyCount--;
@@ -491,7 +672,7 @@ const BT_BALLOON_WITCH = new BTSelector(
     if (ai.shootCooldown <= 0) {
       ai.shootCooldown = 150;
       const aim = Math.atan2(dy,dx);
-      gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(aim)*1.5, vy:Math.sin(aim)*1.5, life:200, maxLife:200, color:'#9944ff', homing:true, homingStrength:0.04 });
+      gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(aim)*0.75, vy:Math.sin(aim)*0.75, life:200, maxLife:200, color:'#9944ff', homing:true, homingStrength:0.03 }); // halved speed + homing strength
       spawnParticles(pos.x, pos.y, '#9944ff', 5);
     }
     return BT.RUNNING;
@@ -570,7 +751,7 @@ const BT_BOSS2 = new BTSelector(
         const arms = phase2 ? 5 : 3;
         for (let arm=0;arm<arms;arm++) {
           const a = ai.spiralAngle + (arm/arms)*Math.PI*2;
-          gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(a)*4,vy:Math.sin(a)*4,life:150,maxLife:150,color:'#ff4400'});
+          gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(a)*2,vy:Math.sin(a)*2,life:150,maxLife:150,color:'#ff4400'}); // halved
         }
         ai.spiralAngle += phase2 ? 0.2 : 0.15;
       }
@@ -602,7 +783,7 @@ const BT_BOSS2 = new BTSelector(
         for (let i=0;i<count;i++) {
           const spread = phase2 ? 0.6 : 0.4;
           const a = aim + (i/(count-1)-.5)*spread*2;
-          gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(a)*6,vy:Math.sin(a)*6,life:110,maxLife:110,color:'#ff4400'});
+          gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,life:110,maxLife:110,color:'#ff4400'}); // halved
         }
         spawnParticles(pos.x,pos.y,'#ff4400',10);
         ai.volleyCount--; ai.volleyTimer = phase2 ? 20 : 28;
@@ -713,7 +894,7 @@ const BT_RINGMASTER = new BTSelector(
       const aim = Math.atan2(dy,dx);
       for (const sa of [-0.35, -0.18, 0, 0.18, 0.35]) {
         const a = aim + sa;
-        gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*3, vy:Math.sin(a)*3, life:130, maxLife:130, color:'#cc0044' });
+        gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*1.5, vy:Math.sin(a)*1.5, life:130, maxLife:130, color:'#cc0044' }); // halved
       }
       spawnParticles(pos.x, pos.y, '#cc0044', 8);
     }
@@ -721,14 +902,12 @@ const BT_RINGMASTER = new BTSelector(
   })
 );
 
-
-
 // ================================================================
 // ENEMY BT MAP
 // ================================================================
 const ENEMY_BTS = {
-  scissors:       BT_SCISSORS,
- mask:           BT_MASK, 
+  utensil:        BT_UTENSIL,
+  mask:           BT_MASK,
   giftBox:        BT_GIFTBOX,
   partyHat:       BT_PARTYHAT,
   boss:           BT_BOSS,
@@ -739,17 +918,16 @@ const ENEMY_BTS = {
   boss2:          BT_BOSS2,
   cannonball:     BT_CANNONBALL,
   ringmaster:     BT_RINGMASTER,
-   juggler:        BT_JUGGLER, 
+  juggler:        BT_JUGGLER,
 };
 
 // ================================================================
 // ENEMY DEFINITIONS
 // ================================================================
 const ENEMY_DEFS = {
-  scissors:       { hpMult: 1.0, speedMult: 1.0,  size: 28, color: '#cc2222' },
- mask:    { hpMult: 1.1, speedMult: 1.05, size: 28, color: '#44aaff' },
- 
-  giftBox:        { hpMult: 2.2, speedMult: 0.6,  size: 34, color: '#ffaa00' },
+  utensil:        { hpMult: 1.0, speedMult: 0.9,  size: 28, color: '#cccccc' },
+  mask:           { hpMult: 1.1, speedMult: 1.05, size: 28, color: '#44aaff' },
+  giftBox:        { hpMult: 2.2, speedMult: 0.5,  size: 34, color: '#ffaa00' },
   partyHat:       { hpMult: 0.8, speedMult: 1.4,  size: 26, color: '#ffdd00' },
   boss:           { hpMult: 1,   speedMult: 0.4,  size: 55, color: '#9900cc' },
   birthdayBomber: { hpMult: 1.4, speedMult: 0.85, size: 30, color: '#ff4400' },
@@ -759,5 +937,5 @@ const ENEMY_DEFS = {
   boss2:          { hpMult: 1,   speedMult: 0.45, size: 60, color: '#ff2200' },
   cannonball:     { hpMult: 1.6, speedMult: 0.5,  size: 30, color: '#ff6600' },
   ringmaster:     { hpMult: 1.2, speedMult: 0.7,  size: 32, color: '#cc0044' },
-   juggler: { hpMult: 2.0, speedMult: 0.55, size: 36, color: '#ffdd00' },
+  juggler:        { hpMult: 2.0, speedMult: 0.55, size: 36, color: '#ffdd00' },
 };
