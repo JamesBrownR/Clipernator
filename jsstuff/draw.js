@@ -5,6 +5,41 @@
 // ── Utensil enemy ──
 // Draws three utensils orbiting a center. When launching, the chosen
 // one streaks ahead; returning one trails back.
+
+// ── Helper: draw a single utensil shape ──
+function _drawUtensilShape(ctx, type, color, scale = 1) {
+  ctx.strokeStyle = color;
+  ctx.fillStyle   = color;
+  ctx.lineWidth   = 2.5 * scale;
+  ctx.lineCap     = 'round';
+
+  if (type === 'fork') {
+    // Handle
+    ctx.beginPath(); ctx.moveTo(0, 14 * scale); ctx.lineTo(0, -4 * scale); ctx.stroke();
+    // Tines
+    for (let i = -2; i <= 2; i += 2) {
+      ctx.beginPath(); ctx.moveTo(0, -4 * scale); ctx.lineTo(i * scale, -14 * scale); ctx.stroke();
+    }
+  } else if (type === 'knife') {
+    // Handle
+    ctx.beginPath(); ctx.moveTo(0, 14 * scale); ctx.lineTo(0, 2 * scale); ctx.stroke();
+    // Blade
+    ctx.beginPath();
+    ctx.moveTo(0, 2 * scale);
+    ctx.lineTo(4 * scale, -10 * scale);
+    ctx.lineTo(0, -14 * scale);
+    ctx.closePath();
+    ctx.fill();
+  } else if (type === 'spoon') {
+    // Handle
+    ctx.beginPath(); ctx.moveTo(0, 14 * scale); ctx.lineTo(0, -2 * scale); ctx.stroke();
+    // Bowl
+    ctx.beginPath();
+    ctx.ellipse(0, -8 * scale, 5 * scale, 7 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function drawUtensil(epos, ehp, ai, frozen) {
   const { x, y } = epos;
   const utensils    = ['fork', 'knife', 'spoon'];
@@ -605,7 +640,6 @@ function draw() {
     else if (type==='ringmaster') drawRingmaster(epos, ehp, ai, frozen);
           else if (type==='juggler') drawJuggler(epos, ehp, ai, frozen);
 
-    else if (type==='tightrope')  drawTightrope(epos, ehp, frozen);
     ctx.restore();
   }
 
