@@ -137,6 +137,7 @@ const BT_JUGGLER = new BTSelector(
     if (ai.juggleSlots.length < ai.juggleMax) {
       for (const eid of ECS.query('enemy','pos','ai')) {
         if (eid === id) continue;
+        if (eid === gs.playerId) continue;
         const eai = ECS.get(eid,'ai');
         if (eai.juggled) continue;
         const epos = ECS.get(eid,'pos');
@@ -204,8 +205,12 @@ const BT_JUGGLER = new BTSelector(
     }
 
     // Clean up dead juggled enemies from slots
-    ai.juggleSlots = ai.juggleSlots.filter(s => {
-      if (s.type === 'enemy' && !ECS.has(s.id,'pos')) return false;
+   ai.juggleSlots = ai.juggleSlots.filter(s => {
+      if (s.type !== 'enemy') return true;
+      if (!ECS.has(s.id, 'pos')) return false;       // entity destroyed
+      if (s.id === gs.playerId) return false;         // never juggle player
+      const sea = ECS.get(s.id, 'ai');
+      if (!sea || sea.juggledBy !== id) return false; // claimed by someone else
       return true;
     });
 
