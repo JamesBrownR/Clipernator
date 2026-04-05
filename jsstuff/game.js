@@ -94,6 +94,7 @@ function initGameState() {
     unlockedItems: [], itemCooldowns: {},
     pendingChoice: false,
     heldGiftBox: null,
+    forkGrabbed: false
 
     // Item flags
     bouncyHouse: false,
