@@ -341,15 +341,17 @@ function sysAI() {
       continue;
     }
     
-    const type = ECS.get(id, 'enemy').type;
+   const type = ECS.get(id, 'enemy').type;
     const bt = ENEMY_BTS[type];
     if (bt) bt.tick(id, gs);
+
+    // Entity may have been destroyed by its own BT (e.g. giftbox exploding)
+    if (!ECS.has(id, 'pos') || !ECS.has(id, 'vel')) continue;
 
     const pos = ECS.get(id, 'pos');
     const vel = ECS.get(id, 'vel');
     pos.x += vel.vx;
     pos.y += vel.vy;
-
     if (gs.bouncyHouse) {
       if (pos.x < 18)          { pos.x = 18;          vel.vx =  Math.abs(vel.vx); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
       if (pos.x > worldW - 18) { pos.x = worldW - 18; vel.vx = -Math.abs(vel.vx); spawnParticles(pos.x, pos.y, '#88ffdd', 4); }
