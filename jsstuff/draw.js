@@ -2,29 +2,121 @@
 // CLIPBLAST: PARTY HUNTER — Draw Functions
 // ============================================================
 
-function drawScissors(epos, ehp, frozen) {
-  const { x, y, angle } = epos;
-  ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
-  if (frozen) { ctx.shadowColor='#aaccff'; ctx.shadowBlur=18; ctx.globalAlpha=0.7; }
-  else { ctx.shadowColor='#ff3333'; ctx.shadowBlur=12; }
-  const openAmt = frozen ? 0.05 : Math.abs(Math.sin(Date.now()/100))*.5;
-  ctx.save(); ctx.rotate(openAmt);
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(22,-6); ctx.lineTo(24,0); ctx.lineTo(0,0);
-  ctx.fillStyle=frozen?'#4488cc':'#cc2222'; ctx.fill();
-  ctx.strokeStyle=frozen?'#88ccff':'#ff4444'; ctx.lineWidth=1.5; ctx.stroke(); ctx.restore();
-  ctx.save(); ctx.rotate(-openAmt);
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(22,6); ctx.lineTo(24,0); ctx.lineTo(0,0);
-  ctx.fillStyle=frozen?'#4488cc':'#cc2222'; ctx.fill();
-  ctx.strokeStyle=frozen?'#88ccff':'#ff4444'; ctx.lineWidth=1.5; ctx.stroke(); ctx.restore();
-  ctx.fillStyle=frozen?'#aaddff':'#ffcc00'; ctx.beginPath(); ctx.arc(0,0,4.5,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle=frozen?'#88aacc':'#aa8800'; ctx.beginPath(); ctx.arc(0,0,2,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle=frozen?'#6699cc':'#999'; ctx.lineWidth=3.5; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(-4,-4); ctx.arc(-11,-9,6.5,0,Math.PI*1.4); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-4,4);  ctx.arc(-11,9,6.5,0,Math.PI*1.4,true); ctx.stroke();
+// ── Utensil enemy ──
+// Draws three utensils orbiting a center. When launching, the chosen
+// one streaks ahead; returning one trails back.
+function drawUtensil(epos, ehp, ai, frozen) {
+  const { x, y } = epos;
+  const subtype = ai.uSubtype || 'knife';
+  const state   = ai.uState   || 'IDLE';
+  const orbitAngle = ai.uOrbitAngle || 0;
+ 
+  ctx.save();
+  ctx.translate(x, y);
+  if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
+ 
+  const utensils = ['fork', 'knife', 'spoon'];
+  const colors   = { fork: '#ffcc88', knife: '#ccccee', spoon: '#ffddaa' };
+ 
+  for (let i = 0; i < 3; i++) {
+    const u = utensils[i];
+    const isLaunching = state !== 'IDLE' && u === subtype;
+ 
+    // In IDLE: orbit. In LAUNCH/RETURN: the active utensil is at pos itself, others still orbit
+    if (isLaunching) continue; // active utensil drawn separately below
+ 
+    const angle = orbitAngle + (i / 3) * Math.PI * 2;
+    const ox = Math.cos(angle) * 20;
+    const oy = Math.sin(angle) * 20;
+ 
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.rotate(angle + Math.PI / 2);
+    ctx.shadowColor = frozen ? '#aaccff' : colors[u];
+    ctx.shadowBlur = 8;
+    _drawUtensilShape(ctx, u, frozen ? '#88aacc' : colors[u]);
+    ctx.restore();
+  }
+ 
+  // Draw launching utensil at world pos (already translated by sysAI)
+  if (state !== 'IDLE') {
+    ctx.save();
+    ctx.rotate(Math.atan2(ai.uLaunchDir ? ai.uLaunchDir.y : 0, ai.uLaunchDir ? ai.uLaunchDir.x : 1));
+    ctx.shadowColor = frozen ? '#aaccff' : colors[subtype];
+    ctx.shadowBlur = frozen ? 10 : 18;
+    _drawUtensilShape(ctx, subtype, frozen ? '#aaddff' : colors[subtype], 1.4);
+    ctx.restore();
+  }
+ 
   ctx.restore();
-  const bw=34;
-  ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2,y-34,bw,5);
-  ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#cc0000'; ctx.fillRect(x-bw/2,y-34,bw*(ehp.hp/ehp.maxHp),5);
+ 
+  // HP bar
+  const bw = 36;
+  ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 36, bw, 5);
+  ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cccccc';
+  ctx.fillRect(x - bw/2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
+}
+ 
+function _drawUtensilShape(ctx, type, color, scale = 1.0) {
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2 * scale;
+  ctx.lineCap = 'round';
+ 
+  if (type === 'knife') {
+    // Blade + handle
+    ctx.beginPath();
+    ctx.moveTo(0, -14 * scale);
+    ctx.lineTo(3 * scale, 0);
+    ctx.lineTo(1.5 * scale, 10 * scale);
+    ctx.lineTo(-1.5 * scale, 10 * scale);
+    ctx.lineTo(-1 * scale, 0);
+    ctx.closePath();
+    ctx.fill();
+    // Handle grip lines
+    ctx.strokeStyle = '#888888';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-1.5 * scale, 4 * scale);  ctx.lineTo(1.5 * scale, 4 * scale);  ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-1.5 * scale, 7 * scale);  ctx.lineTo(1.5 * scale, 7 * scale);  ctx.stroke();
+  } else if (type === 'fork') {
+    // Four tines + handle
+    ctx.lineWidth = 1.8 * scale;
+    for (let t = -2; t <= 2; t++) {
+      if (t === 0) continue; // 4 tines, skip middle
+      ctx.beginPath();
+      ctx.moveTo(t * 2.5 * scale, -14 * scale);
+      ctx.lineTo(t * 2.5 * scale, -6 * scale);
+      ctx.stroke();
+    }
+    // Tine connectors
+    ctx.beginPath();
+    ctx.moveTo(-5 * scale, -6 * scale);
+    ctx.lineTo(5 * scale, -6 * scale);
+    ctx.stroke();
+    // Handle
+    ctx.lineWidth = 3 * scale;
+    ctx.beginPath();
+    ctx.moveTo(0, -6 * scale);
+    ctx.lineTo(0, 12 * scale);
+    ctx.stroke();
+    // Prong tips as small circles
+    ctx.fillStyle = color;
+    for (let t = -2; t <= 2; t++) {
+      if (t === 0) continue;
+      ctx.beginPath(); ctx.arc(t * 2.5 * scale, -14 * scale, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (type === 'spoon') {
+    // Bowl
+    ctx.beginPath();
+    ctx.ellipse(0, -10 * scale, 5 * scale, 7 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Handle
+    ctx.lineWidth = 3 * scale;
+    ctx.beginPath();
+    ctx.moveTo(0, -3 * scale);
+    ctx.lineTo(0, 12 * scale);
+    ctx.stroke();
+  }
 }
 
 function drawMask(epos, ehp, ai, frozen) {
@@ -82,18 +174,101 @@ function drawMask(epos, ehp, ai, frozen) {
   ctx.fillRect(x-bw/2, y-36, bw*(ehp.hp/ehp.maxHp), 5);
 }
 
+// ── Gift box: shows wind-up progress and shaking ──
 function drawGiftBox(epos, ehp, ai, frozen) {
-  const {x,y}=epos;
-  ctx.save(); ctx.translate(x,y);
-  if (frozen) ctx.globalAlpha=0.65;
-  const shake = ai.ambushTimer > 60 ? Math.sin(Date.now()/30)*2 : 0;
-  ctx.shadowColor=frozen?'#88ccff':'#ffaa00'; ctx.shadowBlur=16;
-  ctx.fillStyle=frozen?'#77aaff':'#ff6699'; ctx.fillRect(-17+shake,-17,34,34);
-  ctx.fillStyle='#ffee00'; ctx.fillRect(-18,-6,36,8); ctx.fillRect(-6,-18,8,36);
-  ctx.fillStyle='#ff0000'; ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(-8,-28); ctx.lineTo(8,-28); ctx.fill();
+  const { x, y } = epos;
+  const windup = ai.windupTimer || 0;
+  const windupRatio = Math.min(1, windup / 120);
+  const heldByPlayer = ai.heldByPlayer || false;
+ 
+  // Shake amplitude grows with windup
+  const shakeAmt = windupRatio * 5;
+  const sx = x + (Math.random() - 0.5) * shakeAmt;
+  const sy = y + (Math.random() - 0.5) * shakeAmt;
+ 
+  ctx.save();
+  ctx.translate(sx, sy);
+  if (frozen) ctx.globalAlpha = 0.65;
+ 
+  // Color shifts from pink → red as it winds up
+  const r = Math.round(255);
+  const g = Math.round(102 - windupRatio * 102);
+  const b = Math.round(153 - windupRatio * 153);
+  const boxColor = frozen ? '#77aaff' : `rgb(${r},${g},${b})`;
+ 
+  ctx.shadowColor = frozen ? '#88ccff' : (windupRatio > 0.6 ? '#ff2200' : '#ffaa00');
+  ctx.shadowBlur = 16 + windupRatio * 20;
+ 
+  // Box body
+  ctx.fillStyle = boxColor;
+  ctx.fillRect(-17, -17, 34, 34);
+ 
+  // Ribbon cross
+  ctx.fillStyle = '#ffee00';
+  ctx.fillRect(-18, -6, 36, 8);
+  ctx.fillRect(-6, -18, 8, 36);
+ 
+  // Bow on top
+  ctx.fillStyle = '#ff0000';
+  ctx.beginPath();
+  ctx.moveTo(0, -18);
+  ctx.lineTo(-8, -28);
+  ctx.lineTo(8, -28);
+  ctx.closePath();
+  ctx.fill();
+ 
+  // Wind-up indicator: tick marks around the box
+  if (windupRatio > 0 && !frozen) {
+    const ticks = Math.floor(windupRatio * 8);
+    ctx.strokeStyle = '#ff2200';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#ff4400';
+    ctx.shadowBlur = 8;
+    for (let i = 0; i < ticks; i++) {
+      const ta = (i / 8) * Math.PI * 2 - Math.PI / 2;
+      const r1 = 22, r2 = 28;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(ta) * r1, Math.sin(ta) * r1);
+      ctx.lineTo(Math.cos(ta) * r2, Math.sin(ta) * r2);
+      ctx.stroke();
+    }
+    // Warning exclamation when nearly full
+    if (windupRatio > 0.75) {
+      ctx.font = `bold ${8 + windupRatio * 4}px "Press Start 2P"`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 14;
+      ctx.fillText('!', 0, 6);
+    }
+  }
+ 
+  // If held: draw a hand indicator
+  if (heldByPlayer) {
+    ctx.strokeStyle = '#ffdd00';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+ 
   ctx.restore();
-  const bw=40; ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2,y-40,bw,5);
-  ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#cc0000'; ctx.fillRect(x-bw/2,y-40,bw*(ehp.hp/ehp.maxHp),5);
+ 
+  // HP bar
+  const bw = 40;
+  ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 40, bw, 5);
+  ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cc0000';
+  ctx.fillRect(x - bw/2, y - 40, bw * (ehp.hp / ehp.maxHp), 5);
+ 
+  // Wind-up progress bar below hp bar
+  if (windupRatio > 0 && !frozen) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(x - bw/2, y - 32, bw, 4);
+    ctx.fillStyle = `rgb(${Math.round(255)},${Math.round(100 * (1 - windupRatio))},0)`;
+    ctx.fillRect(x - bw/2, y - 32, bw * windupRatio, 4);
+  }
 }
 
 function drawPartyHat(epos, ehp, frozen) {
@@ -484,7 +659,7 @@ function draw() {
     const isPhased = ai && ai.phased;
     const alpha = isPhased ? 0.22 : (ehp.hitFlash > 0 ? (Math.random()>.5?1:.3) : 1);
     ctx.save(); ctx.globalAlpha=alpha;
-    if      (type==='scissors')   drawScissors(epos, ehp, frozen);
+     if (type==='utensil')  drawUtensil(epos, ehp, ai, frozen)
   else if (type==='mask')    drawMask(epos, ehp, ai, frozen);
   else if (type==='giftBox')    drawGiftBox(epos, ehp, ai, frozen);
     else if (type==='partyHat')   drawPartyHat(epos, ehp, frozen);
