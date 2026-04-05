@@ -294,6 +294,17 @@ function sysPlayerMovement() {
   gunAngle += da * 0.25;
 
   gs.dashTrail = gs.dashTrail.filter(t => { t.life--; return t.life > 0; });
+
+   if (gs.heldGiftBox !== null) {
+     if (!ECS.has(gs.heldGiftBox, 'pos')) {
+       gs.heldGiftBox = null;
+     } else {
+       const hbpos = ECS.get(gs.heldGiftBox, 'pos');
+       const ppos = ECS.get(gs.playerId, 'pos');
+       hbpos.x = ppos.x + Math.cos(gunAngle) * 36;
+       hbpos.y = ppos.y + Math.sin(gunAngle) * 36;
+    }
+   }
 }
 
 // ================================================================
