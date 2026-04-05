@@ -16,11 +16,6 @@ const BOSS_PHASE = {
 // ================================================================
 
 // ── Utensil: fork / knife / spoon ──
-// Idle: three utensils orbit center. One launches toward player,
-// travels until it hits a wall or target, then returns.
-// Fork  — grabs nearest entity on hit and drags it back (no damage)
-// Knife — high damage on hit
-// Spoon — knockback AoE on hit, moderate damage
 const BT_UTENSIL = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
@@ -31,7 +26,6 @@ const BT_UTENSIL = new BTSelector(
     const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    // Init
     if (!ai.uSubtype)      ai.uSubtype     = ECS.get(id, 'enemy').subtype || 'knife';
     if (!ai.uState)        ai.uState       = 'IDLE';
     if (ai.uOrbitAngle === undefined) ai.uOrbitAngle = Math.random() * Math.PI * 2;
@@ -42,7 +36,6 @@ const BT_UTENSIL = new BTSelector(
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
 
     if (ai.uState === 'IDLE') {
-      // Slow drift toward player
       vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * phy.speed * 0.14;
       vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * phy.speed * 0.14;
       const spd = Math.hypot(vel.vx, vel.vy);
@@ -52,7 +45,6 @@ const BT_UTENSIL = new BTSelector(
       ai.uLaunchTimer--;
 
       if (ai.uLaunchTimer <= 0 && dist < 320) {
-        // Launch!
         ai.uState = 'LAUNCH';
         ai.uLaunchDir = { x: dx / dist, y: dy / dist };
         ai.uReturnPos = { x: pos.x, y: pos.y };
@@ -65,17 +57,13 @@ const BT_UTENSIL = new BTSelector(
     }
     else if (ai.uState === 'LAUNCH') {
       ai.uTravelTimer++;
-      // Check wall hits
       const hitWall = pos.x < 25 || pos.x > worldW - 25 || pos.y < 25 || pos.y > worldH - 25;
-      // Check player hit
       const ppos2 = ECS.get(gs.playerId, 'pos');
       const playerHit = ppos2 && Math.hypot(pos.x - ppos2.x, pos.y - ppos2.y) < 26;
-      // Max travel
       const maxTravel = ai.uTravelTimer > 55;
 
       if (hitWall || maxTravel || playerHit) {
         if (playerHit && gs.invincible <= 0) {
-          // Apply subtype effect
           if (ai.uSubtype === 'knife') {
             gs.health -= 22; gs.invincible = CFG.INVINCIBLE_FRAMES;
             gs.shakeX = 14; gs.shakeY = 14;
@@ -88,7 +76,6 @@ const BT_UTENSIL = new BTSelector(
             gs.flawlessThisWave = false;
             triggerSFPHit(); updateHUD();
             if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
-            // Spoon knockback: also knock nearby enemies away from impact
             for (const eid of ECS.query('enemy', 'pos', 'vel')) {
               if (eid === id) continue;
               const ep = ECS.get(eid, 'pos');
@@ -102,24 +89,20 @@ const BT_UTENSIL = new BTSelector(
             }
             spawnParticles(pos.x, pos.y, '#aaddff', 18);
           } else if (ai.uSubtype === 'fork') {
-            // Fork: grab player, drag them toward utensil home pos
             ai.uGrabId = gs.playerId;
             gs.invincible = CFG.INVINCIBLE_FRAMES;
             showMsg('FORK GRABBED YOU!');
             spawnParticles(pos.x, pos.y, '#ffcc88', 12);
           }
         }
-        // Return home
         ai.uState = 'RETURN';
         vel.vx = 0; vel.vy = 0;
       }
     }
     else if (ai.uState === 'RETURN') {
-      // Fly back to return position
       const rdx = ai.uReturnPos.x - pos.x, rdy = ai.uReturnPos.y - pos.y;
       const rdist = Math.hypot(rdx, rdy) || 1;
 
-      // If fork grabbed something, drag it along
       if (ai.uSubtype === 'fork' && ai.uGrabId !== null) {
         const gpos = ECS.get(ai.uGrabId, 'pos');
         if (gpos) {
@@ -182,7 +165,7 @@ const BT_MASK = new BTSelector(
           const a = aim + sa;
           gs.enemyBullets.push({
             x: pos.x, y: pos.y,
-            vx: Math.cos(a) * 1.1,   // was 2.2, halved
+            vx: Math.cos(a) * 1.1,
             vy: Math.sin(a) * 1.1,
             life: 160, maxLife: 160,
             color: '#44aaff',
@@ -202,6 +185,8 @@ const BT_MASK = new BTSelector(
 );
 
 // ── Floor 2: Juggler ──
+// FIX: juggleBalls starts at 4 (not 6), juggleMax is 8 (not 6).
+// This leaves slots available for capturing nearby enemies.
 const BT_JUGGLER = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
@@ -209,18 +194,20 @@ const BT_JUGGLER = new BTSelector(
     const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    if (!ai.juggleBalls)    ai.juggleBalls    = 6;
-    if (!ai.juggleMax)      ai.juggleMax      = 6;
-    if (!ai.juggleSlots)    ai.juggleSlots    = [];
-    if (!ai.regenTimer)     ai.regenTimer     = 0;
-    if (!ai.throwCooldown)  ai.throwCooldown  = 60;
-    if (!ai.sphereAngle)    ai.sphereAngle    = 0;
+    // FIX: 4 starting balls, max 8 total slots (leaves room for up to 4 captured enemies)
+    if (ai.juggleBalls   === undefined) ai.juggleBalls    = 4;
+    if (ai.juggleMax     === undefined) ai.juggleMax      = 8;
+    if (!ai.juggleSlots)               ai.juggleSlots    = [];
+    if (!ai.regenTimer)                ai.regenTimer     = 0;
+    if (!ai.throwCooldown)             ai.throwCooldown  = 60;
+    if (!ai.sphereAngle)               ai.sphereAngle    = 0;
     if (ai.ballShootTimer === undefined) ai.ballShootTimer = 45;
 
-    // Fill ball slots
-    while (ai.juggleSlots.filter(s=>s.type==='ball').length < ai.juggleBalls &&
-           ai.juggleSlots.length < ai.juggleMax) {
-      ai.juggleSlots.push({ type:'ball', phase: Math.random()*Math.PI*2 });
+    // Fill ball slots up to juggleBalls count (but never exceed juggleMax)
+    const currentBalls = ai.juggleSlots.filter(s => s.type === 'ball').length;
+    const currentTotal = ai.juggleSlots.length;
+    if (currentBalls < ai.juggleBalls && currentTotal < ai.juggleMax) {
+      ai.juggleSlots.push({ type: 'ball', phase: Math.random() * Math.PI * 2 });
     }
 
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
@@ -232,7 +219,7 @@ const BT_JUGGLER = new BTSelector(
 
     ai.sphereAngle += vel.vx * 0.06;
 
-    // Capture nearby enemies into juggle slots
+    // Capture nearby enemies into juggle slots (when there's room)
     if (ai.juggleSlots.length < ai.juggleMax) {
       for (const eid of ECS.query('enemy','pos','ai')) {
         if (eid === id) continue;
@@ -255,7 +242,7 @@ const BT_JUGGLER = new BTSelector(
     const t = Date.now() / 400;
     for (let i = 0; i < ai.juggleSlots.length; i++) {
       const slot = ai.juggleSlots[i];
-      const slotAngle = (i / ai.juggleMax) * Math.PI * 2;
+      const slotAngle = (i / Math.max(ai.juggleMax, 1)) * Math.PI * 2;
       const arcX = Math.cos(slotAngle + t) * 28;
       const arcY = -38 + Math.sin(slotAngle * 2 + t) * 18;
       if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
@@ -277,7 +264,6 @@ const BT_JUGGLER = new BTSelector(
         const edx = pp.x - epos.x, edy = pp.y - epos.y;
         const edist = Math.hypot(edx, edy) || 1;
         const aim = Math.atan2(edy, edx);
-        // Each juggled enemy fires one bullet toward player (half speed)
         gs.enemyBullets.push({
           x: epos.x, y: epos.y,
           vx: Math.cos(aim) * 1.4,
@@ -295,7 +281,7 @@ const BT_JUGGLER = new BTSelector(
       ai.throwCooldown = 55;
       const slot = ai.juggleSlots.shift();
       if (slot.type === 'ball') {
-        const throwSpd = 2.2; // halved from 4.5
+        const throwSpd = 2.2;
         gs.enemyBullets.push({
           x: pos.x, y: pos.y - 38,
           vx: (dx/dist)*throwSpd, vy: (dy/dist)*throwSpd - 0.8,
@@ -318,10 +304,10 @@ const BT_JUGGLER = new BTSelector(
       }
     }
 
-    // Regen balls
-    if (ai.juggleBalls < ai.juggleMax) {
+    // Regen balls up to juggleBalls max (but only if total < juggleMax)
+    if (currentBalls < ai.juggleBalls) {
       ai.regenTimer++;
-      if (ai.regenTimer >= 540) { ai.regenTimer = 0; ai.juggleBalls++; }
+      if (ai.regenTimer >= 540) { ai.regenTimer = 0; /* ball added at top of tick */ }
     }
 
     // Clean up dead juggled enemies
@@ -349,14 +335,11 @@ const BT_GIFTBOX = new BTSelector(
     const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    // If being held by player, skip normal AI
     if (ai.heldByPlayer) return BT.RUNNING;
 
-    // If thrown, coast freely until we need to explode
     if (ai.thrown) {
       vel.vx *= 0.97;
       vel.vy *= 0.97;
-      // Wind up continues while thrown
       ai.windupTimer = Math.min(120, (ai.windupTimer || 0) + 2);
       if (ai.windupTimer >= 120 && !ai.exploded) {
         ai.exploded = true;
@@ -374,13 +357,11 @@ const BT_GIFTBOX = new BTSelector(
     const dx = pp.x - pos.x, dy = pp.y - pos.y;
     const dist = Math.hypot(dx, dy) || 1;
 
-    // Drift toward player
     vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
     vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
     const spd = Math.hypot(vel.vx, vel.vy);
     if (spd > phy.speed) { vel.vx = vel.vx/spd*phy.speed; vel.vy = vel.vy/spd*phy.speed; }
 
-    // Wind up when player is close
     if (dist < 140) {
       ai.windupTimer++;
       if (ai.windupTimer % 12 === 0) spawnParticles(pos.x, pos.y, '#ffaa00', 4);
@@ -405,7 +386,6 @@ function _giftBoxExplode(id, pos, gs) {
   spawnParticles(pos.x, pos.y, '#ff4400', 30);
   gs.shakeX = 22; gs.shakeY = 22;
 
-  // AoE damage to player
   const ppos = ECS.get(gs.playerId, 'pos');
   if (ppos && Math.hypot(pos.x - ppos.x, pos.y - ppos.y) < 110 && gs.invincible <= 0) {
     gs.health -= 30; gs.invincible = CFG.INVINCIBLE_FRAMES;
@@ -414,7 +394,6 @@ function _giftBoxExplode(id, pos, gs) {
     if (gs.health <= 0) { gameOver(); return; }
   }
 
-  // AoE damage to other enemies
   const toKill = [];
   for (const eid of ECS.query('enemy', 'pos', 'hp')) {
     if (eid === id) continue;
@@ -435,7 +414,6 @@ function _giftBoxExplode(id, pos, gs) {
     updateHUD();
   }
 
-  // Destroy self — mark for removal, then do it synchronously
   if (ECS.has(id, 'pos')) {
     ECS.destroyEntity(id);
     gs.waveKills++;
@@ -565,7 +543,6 @@ const BT_BOSS = new BTSelector(
       if (phase2) {
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * Math.PI * 2;
-          // halved speed
           gs.enemyBullets.push({ x: ai.slamTarget.x, y: ai.slamTarget.y, vx: Math.cos(a)*1.75, vy: Math.sin(a)*1.75, life: 120, maxLife: 120, color: '#cc00ff' });
         }
       }
@@ -592,7 +569,7 @@ const BT_BOSS = new BTSelector(
         const arms = phase2 ? 4 : 3;
         for (let arm = 0; arm < arms; arm++) {
           const a = ai.spiralAngle + (arm / arms) * Math.PI * 2;
-          const spd2 = phase2 ? 1.1 : 0.9; // halved
+          const spd2 = phase2 ? 1.1 : 0.9;
           gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*spd2, vy: Math.sin(a)*spd2, life: 140, maxLife: 140, color: '#cc00ff' });
         }
         ai.spiralAngle += phase2 ? 0.18 : 0.14;
@@ -611,7 +588,7 @@ const BT_BOSS = new BTSelector(
         for (let i = 0; i < count; i++) {
           const spread = phase2 ? 0.55 : 0.45;
           const a = aim + (i / (count - 1) - 0.5) * spread * 2;
-          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*1.4, vy: Math.sin(a)*1.4, life: 110, maxLife: 110, color: '#ff44ff' }); // halved
+          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*1.4, vy: Math.sin(a)*1.4, life: 110, maxLife: 110, color: '#ff44ff' });
         }
         spawnParticles(pos.x, pos.y, '#ff00ff', 10);
         ai.volleyCount--;
@@ -690,7 +667,7 @@ const BT_BALLOON_WITCH = new BTSelector(
     if (ai.shootCooldown <= 0) {
       ai.shootCooldown = 150;
       const aim = Math.atan2(dy,dx);
-      gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(aim)*0.75, vy:Math.sin(aim)*0.75, life:200, maxLife:200, color:'#9944ff', homing:true, homingStrength:0.03 }); // halved speed + homing strength
+      gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(aim)*0.75, vy:Math.sin(aim)*0.75, life:200, maxLife:200, color:'#9944ff', homing:true, homingStrength:0.03 });
       spawnParticles(pos.x, pos.y, '#9944ff', 5);
     }
     return BT.RUNNING;
@@ -769,7 +746,7 @@ const BT_BOSS2 = new BTSelector(
         const arms = phase2 ? 5 : 3;
         for (let arm=0;arm<arms;arm++) {
           const a = ai.spiralAngle + (arm/arms)*Math.PI*2;
-          gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(a)*2,vy:Math.sin(a)*2,life:150,maxLife:150,color:'#ff4400'}); // halved
+          gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(a)*2,vy:Math.sin(a)*2,life:150,maxLife:150,color:'#ff4400'});
         }
         ai.spiralAngle += phase2 ? 0.2 : 0.15;
       }
@@ -801,7 +778,7 @@ const BT_BOSS2 = new BTSelector(
         for (let i=0;i<count;i++) {
           const spread = phase2 ? 0.6 : 0.4;
           const a = aim + (i/(count-1)-.5)*spread*2;
-          gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,life:110,maxLife:110,color:'#ff4400'}); // halved
+          gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,life:110,maxLife:110,color:'#ff4400'});
         }
         spawnParticles(pos.x,pos.y,'#ff4400',10);
         ai.volleyCount--; ai.volleyTimer = phase2 ? 20 : 28;
@@ -912,7 +889,7 @@ const BT_RINGMASTER = new BTSelector(
       const aim = Math.atan2(dy,dx);
       for (const sa of [-0.35, -0.18, 0, 0.18, 0.35]) {
         const a = aim + sa;
-        gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*1.5, vy:Math.sin(a)*1.5, life:130, maxLife:130, color:'#cc0044' }); // halved
+        gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*1.5, vy:Math.sin(a)*1.5, life:130, maxLife:130, color:'#cc0044' });
       }
       spawnParticles(pos.x, pos.y, '#cc0044', 8);
     }
