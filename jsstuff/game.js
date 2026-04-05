@@ -1,6 +1,6 @@
 // ============================================================
 // CLIPBLAST: PARTY HUNTER — Game Core
-// ECS, game state, input, loop, HUD, pause, game over
+// ECS, game state, input, loop, HUD, pause, game  over
 // ============================================================
 
 // ── Global runtime variables ──
