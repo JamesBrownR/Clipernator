@@ -93,6 +93,7 @@ function initGameState() {
     waveEnemiesLeft: 8, waveKills: 0,
     unlockedItems: [], itemCooldowns: {},
     pendingChoice: false,
+    gs.heldGiftBox = null;
 
     // Item flags
     bouncyHouse: false,
@@ -303,13 +304,54 @@ function startGame() {
   loop();
 }
 
+ function tryPickUpGiftBox() {
+   const ppos = ECS.get(gs.playerId, 'pos');
+   if (gs.heldGiftBox !== null) {
+     // Throw it
+     throwGiftBox();
+     return;
+   }
+    for (const id of ECS.query('enemy', 'pos', 'ai')) {
+     const type = ECS.get(id, 'enemy').type;
+       if (type !== 'giftBox') continue;
+       const epos = ECS.get(id, 'pos');
+       if (Math.hypot(epos.x - ppos.x, epos.y - ppos.y) < 48) {
+         gs.heldGiftBox = id;
+       ECS.get(id, 'ai').heldByPlayer = true;
+        ECS.get(id, 'vel').vx = 0;
+        ECS.get(id, 'vel').vy = 0;
+        showMsg('GIFT BOX GRABBED! RIGHT-CLICK TO THROW!');
+        return;
+      }
+    }
+  }
+  
+  function throwGiftBox() {
+    if (gs.heldGiftBox === null) return;
+    const id = gs.heldGiftBox;
+    if (!ECS.has(id, 'pos')) { gs.heldGiftBox = null; return; }
+    const ai = ECS.get(id, 'ai');
+    const vel = ECS.get(id, 'vel');
+    ai.heldByPlayer = false;
+    gs.heldGiftBox = null;
+    // Throw toward mouse
+    const epos = ECS.get(id, 'pos');
+    const dx = mouse.x - epos.x, dy = mouse.y - epos.y;
+     const dist = Math.hypot(dx, dy) || 1;
+    vel.vx = (dx / dist) * 9;
+    vel.vy = (dy / dist) * 9;
+  showMsg('GIFT BOX THROWN!');
+  }
+
 // ================================================================
 // INPUT
 // ================================================================
 canvas.addEventListener('contextmenu', e => {
-  e.preventDefault();
-  if (gameRunning && gs.hasGlowsticks) swingGlowsticks();
-});
+     e.preventDefault();
+     if (!gameRunning) return;
+    if (gs.hasGlowsticks) { swingGlowsticks(); return; }  // glowsticks take priority
+    tryPickUpGiftBox();
+  });
 
 canvas.addEventListener('mousemove', e => {
   const rect = canvas.getBoundingClientRect();
