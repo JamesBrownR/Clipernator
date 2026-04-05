@@ -327,21 +327,21 @@ function startGame() {
   }
   
   function throwGiftBox() {
-    if (gs.heldGiftBox === null) return;
-    const id = gs.heldGiftBox;
-    if (!ECS.has(id, 'pos')) { gs.heldGiftBox = null; return; }
-    const ai = ECS.get(id, 'ai');
-    const vel = ECS.get(id, 'vel');
-    ai.heldByPlayer = false;
-    gs.heldGiftBox = null;
-    // Throw toward mouse
-    const epos = ECS.get(id, 'pos');
-    const dx = mouse.x - epos.x, dy = mouse.y - epos.y;
-     const dist = Math.hypot(dx, dy) || 1;
-    vel.vx = (dx / dist) * 9;
-    vel.vy = (dy / dist) * 9;
+  if (gs.heldGiftBox === null) return;
+  const id = gs.heldGiftBox;
+  if (!ECS.has(id, 'pos')) { gs.heldGiftBox = null; return; }
+  const ai  = ECS.get(id, 'ai');
+  const vel = ECS.get(id, 'vel');
+  ai.heldByPlayer = false;
+  ai.thrown = true;          // ← NEW: prevents BT from reclaiming velocity
+  gs.heldGiftBox = null;
+  const epos = ECS.get(id, 'pos');
+  const dx = mouse.x - epos.x, dy = mouse.y - epos.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  vel.vx = (dx / dist) * 9;
+  vel.vy = (dy / dist) * 9;
   showMsg('GIFT BOX THROWN!');
-  }
+}
 
 // ================================================================
 // INPUT
