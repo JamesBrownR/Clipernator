@@ -7,116 +7,53 @@
 // one streaks ahead; returning one trails back.
 function drawUtensil(epos, ehp, ai, frozen) {
   const { x, y } = epos;
-  const subtype = ai.uSubtype || 'knife';
-  const state   = ai.uState   || 'IDLE';
-  const orbitAngle = ai.uOrbitAngle || 0;
- 
+  const utensils    = ['fork', 'knife', 'spoon'];
+  const colors      = { fork: '#ffcc88', knife: '#ccccee', spoon: '#ffddaa' };
+  const orbitAngle  = ai.uOrbitAngle || 0;
+  const activeIdx   = ai.uActiveIdx !== undefined ? ai.uActiveIdx : -1;
+  const state       = ai.uState || 'IDLE';
+
   ctx.save();
-  ctx.translate(x, y);
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
- 
-  const utensils = ['fork', 'knife', 'spoon'];
-  const colors   = { fork: '#ffcc88', knife: '#ccccee', spoon: '#ffddaa' };
- 
+
+  // Draw the two orbiting utensils that are NOT currently launched
   for (let i = 0; i < 3; i++) {
-    const u = utensils[i];
-    const isLaunching = state !== 'IDLE' && u === subtype;
- 
-    // In IDLE: orbit. In LAUNCH/RETURN: the active utensil is at pos itself, others still orbit
-    if (isLaunching) continue; // active utensil drawn separately below
- 
+    if (state !== 'IDLE' && i === activeIdx) continue;  // skip the launched one
+    const u     = utensils[i];
     const angle = orbitAngle + (i / 3) * Math.PI * 2;
-    const ox = Math.cos(angle) * 20;
-    const oy = Math.sin(angle) * 20;
- 
+    const ox    = x + Math.cos(angle) * 20;
+    const oy    = y + Math.sin(angle) * 20;
     ctx.save();
     ctx.translate(ox, oy);
     ctx.rotate(angle + Math.PI / 2);
     ctx.shadowColor = frozen ? '#aaccff' : colors[u];
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur  = 8;
     _drawUtensilShape(ctx, u, frozen ? '#88aacc' : colors[u]);
     ctx.restore();
   }
- 
-  // Draw launching utensil at world pos (already translated by sysAI)
-  if (state !== 'IDLE') {
+
+  // Draw the launched/returning utensil at its tip position
+  if (state !== 'IDLE' && activeIdx >= 0 && ai.uTipX !== undefined) {
+    const u       = utensils[activeIdx];
+    const tipAngle = ai.uLaunchDir
+      ? Math.atan2(ai.uLaunchDir.y, ai.uLaunchDir.x)
+      : 0;
     ctx.save();
-    ctx.rotate(Math.atan2(ai.uLaunchDir ? ai.uLaunchDir.y : 0, ai.uLaunchDir ? ai.uLaunchDir.x : 1));
-    ctx.shadowColor = frozen ? '#aaccff' : colors[subtype];
-    ctx.shadowBlur = frozen ? 10 : 18;
-    _drawUtensilShape(ctx, subtype, frozen ? '#aaddff' : colors[subtype], 1.4);
+    ctx.translate(ai.uTipX, ai.uTipY);
+    ctx.rotate(tipAngle + Math.PI / 2);
+    ctx.shadowColor = frozen ? '#aaccff' : colors[u];
+    ctx.shadowBlur  = frozen ? 10 : 20;
+    _drawUtensilShape(ctx, u, frozen ? '#aaddff' : colors[u], 1.4);
     ctx.restore();
   }
- 
+
   ctx.restore();
- 
+
   // HP bar
   const bw = 36;
   ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 36, bw, 5);
   ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cccccc';
   ctx.fillRect(x - bw/2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
-}
- 
-function _drawUtensilShape(ctx, type, color, scale = 1.0) {
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2 * scale;
-  ctx.lineCap = 'round';
- 
-  if (type === 'knife') {
-    // Blade + handle
-    ctx.beginPath();
-    ctx.moveTo(0, -14 * scale);
-    ctx.lineTo(3 * scale, 0);
-    ctx.lineTo(1.5 * scale, 10 * scale);
-    ctx.lineTo(-1.5 * scale, 10 * scale);
-    ctx.lineTo(-1 * scale, 0);
-    ctx.closePath();
-    ctx.fill();
-    // Handle grip lines
-    ctx.strokeStyle = '#888888';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(-1.5 * scale, 4 * scale);  ctx.lineTo(1.5 * scale, 4 * scale);  ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-1.5 * scale, 7 * scale);  ctx.lineTo(1.5 * scale, 7 * scale);  ctx.stroke();
-  } else if (type === 'fork') {
-    // Four tines + handle
-    ctx.lineWidth = 1.8 * scale;
-    for (let t = -2; t <= 2; t++) {
-      if (t === 0) continue; // 4 tines, skip middle
-      ctx.beginPath();
-      ctx.moveTo(t * 2.5 * scale, -14 * scale);
-      ctx.lineTo(t * 2.5 * scale, -6 * scale);
-      ctx.stroke();
-    }
-    // Tine connectors
-    ctx.beginPath();
-    ctx.moveTo(-5 * scale, -6 * scale);
-    ctx.lineTo(5 * scale, -6 * scale);
-    ctx.stroke();
-    // Handle
-    ctx.lineWidth = 3 * scale;
-    ctx.beginPath();
-    ctx.moveTo(0, -6 * scale);
-    ctx.lineTo(0, 12 * scale);
-    ctx.stroke();
-    // Prong tips as small circles
-    ctx.fillStyle = color;
-    for (let t = -2; t <= 2; t++) {
-      if (t === 0) continue;
-      ctx.beginPath(); ctx.arc(t * 2.5 * scale, -14 * scale, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
-    }
-  } else if (type === 'spoon') {
-    // Bowl
-    ctx.beginPath();
-    ctx.ellipse(0, -10 * scale, 5 * scale, 7 * scale, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Handle
-    ctx.lineWidth = 3 * scale;
-    ctx.beginPath();
-    ctx.moveTo(0, -3 * scale);
-    ctx.lineTo(0, 12 * scale);
-    ctx.stroke();
-  }
 }
 
 function drawMask(epos, ehp, ai, frozen) {
