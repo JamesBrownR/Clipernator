@@ -15,13 +15,13 @@ Changes (I need to make a lot of changes, not sure where to start):
   * make dash damage scale with player speed, if it doesn't already
   * make melee damage scale with bullet damage
   * make melee (glowsticks) do more base damage
-  * make glowsticks be able to reflect projectiles, anything that is reflected should also become an explosive (so it explodes on impact). It should also pause the game few a few frames like hitflash
+  * make glowsticks be able to reflect projectiles, anything that is reflected should also become an explosive (so it explodes on impact). to be clear, reflected projectiles should not explode instantly, but should become explosive such that it detonated when it collides with something after the glowstick reflected it. It should also pause the game few a few frames like hitflash. 
   * floor 2 should have 15 levels before the boss (so wave 25)
 
   
 Make enemies more interactive overall:
   * The enemy that wiggles and balances on a sphere while juggling 6-10 balls above it. I would like a mechanic where it can pick up other enemies and juggle them also, while they can attack as they are being juggegled, and if close enough to the player it throws the enemy at them. If it throws a cannonball enemy it immedietly goes into its dashing mode toward the player. It would also be funny to see it juggiling enemies that are also juggiling balls as they collectively throw balls toward the player
-  * the glowsicks should be able to reflect cannonball enemies as they charge toward the player, and they should explode on impact when this happens
+  * the glowsicks should be able to reflect cannonball enemies as they charge toward the player, making them charge in the direction the player hit them
   * The bullets on all the enemies need to be slowed down by like half, they are too fast to dodge generally
   * Should replace the mask enemy with two pixel art sprites instead of the draw function... though not sure how I would do the crying or state change animation
   * need to replace the scissors with a fork, knife, and spoon enemy (randomly chooses one to attack from, and it launches across the screen until it hits something then comes back and goes back to its idle animation of the three utencilts spinning around. the fork does no damage but grabs entities, the spoon knocks back entities and deals, the knife deals more damage
