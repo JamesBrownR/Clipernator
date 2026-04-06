@@ -81,7 +81,7 @@ function initGameState() {
  
 
   gs = {
-    score: 0, wave: 10,
+    score: 0, wave: 1,
     health: CFG.MAX_HEALTH, maxHealth: CFG.MAX_HEALTH,
     ammo: CFG.MAX_AMMO, maxAmmo: CFG.MAX_AMMO,
     reloading: false, reloadTimer: 0,
@@ -104,11 +104,11 @@ function initGameState() {
     dashCooldownTimer: 0, dashCooldownMax: CFG.DASH_COOLDOWN_FRAMES,
     dashTimer: 0, dashVx: 0, dashVy: 0,
     frozen: false,
-    hasGlowsticks: true,
+    hasGlowsticks: false,
     glowCooldown: 0,
     hasShakeFizzlePop: false,
     sfpMeter: 0, sfpMax: 600, sfpFull: false,
-    hasFlawlessBaking: false,
+    hasFlawlessBaking: true,
     flawlessThisWave: true,
     hasCursedCandles: false,
     candlesLit: 0, candleHpTimer: 0, candleRelightDelay: 0,
