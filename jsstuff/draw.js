@@ -793,6 +793,27 @@ function draw() {
     }
   }
 
+  // Glow explosion ring (from reflected bullet detonation)
+  if (gs.glowExplosionTimer && gs.glowExplosionTimer > 0) {
+    const progress = 1 - (gs.glowExplosionTimer / 10);
+    const ringR = 20 + progress * 80;
+    ctx.save();
+    ctx.globalAlpha = (1 - progress) * 0.85;
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 6 - progress * 4;
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur = 30;
+    ctx.beginPath();
+    ctx.arc(gs.glowExplosionX, gs.glowExplosionY, ringR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = (1 - progress) * 0.4;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(gs.glowExplosionX, gs.glowExplosionY, ringR * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  
   // Vignette
   const g=ctx.createRadialGradient(CFG.W/2,CFG.H/2,CFG.H*.28,CFG.W/2,CFG.H/2,CFG.H*.9);
   g.addColorStop(0,'transparent');
