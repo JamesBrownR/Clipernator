@@ -53,6 +53,56 @@ function gunMuzzlePos() {
 }
 
 // ================================================================
+// EXPLOSIVE BULLET DETONATION
+// Called whenever a bullet with isExplosive:true hits something.
+// Deals AoE damage to enemies in radius, shakes screen, and
+// freezes the game loop for a few frames (hitflash-style pause).
+// ================================================================
+function detonateExplosiveBullet(b, hitX, hitY) {
+  const EXPLODE_RADIUS = 90;
+  const EXPLODE_DMG    = (b.damageMult || 1) * 3;
+  const FREEZE_FRAMES  = 3; // brief freeze on detonation
+
+  spawnPartyParticles(hitX, hitY);
+  spawnParticles(hitX, hitY, '#00ff88', 20);
+  spawnParticles(hitX, hitY, '#ffffff', 12);
+  gs.shakeX = 18; gs.shakeY = 18;
+  gs.glowExplosionX = hitX;
+  gs.glowExplosionY = hitY;
+  gs.glowExplosionTimer = 10; // draw a ring flash for 10 frames
+
+  // Brief game freeze (pause loop for N frames worth of ms)
+  gs.explosionFreezeTimer = (gs.explosionFreezeTimer || 0) + FREEZE_FRAMES;
+
+  // AoE damage to all enemies in radius
+  const toKill = [];
+  for (const eid of ECS.query('enemy', 'pos', 'hp')) {
+    const epos = ECS.get(eid, 'pos');
+    const ehp  = ECS.get(eid, 'hp');
+    const d = Math.hypot(epos.x - hitX, epos.y - hitY);
+    if (d < EXPLODE_RADIUS) {
+      ehp.hp -= EXPLODE_DMG;
+      ehp.hitFlash = 14;
+      spawnParticles(epos.x, epos.y, '#00ff88', 8);
+      if (ehp.hp <= 0) toKill.push(eid);
+    }
+  }
+  for (const eid of toKill) {
+    const epos = ECS.get(eid, 'pos');
+    if (epos) spawnParticles(epos.x, epos.y, '#ff2222', 18);
+    ECS.destroyEntity(eid);
+    gs.score += Math.round(15 * gs.wave);
+    gs.waveKills++;
+    tryDropTicket();
+    gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+    updateHUD();
+  }
+  if (toKill.length > 0) checkWave();
+
+  b.life = 0; // consume the bullet
+}
+
+// ================================================================
 // ITEM-TRIGGERED HELPERS
 // ================================================================
 
@@ -96,7 +146,7 @@ function unlockGlowsticks() {
   if (gs.hasGlowsticks) return;
   gs.hasGlowsticks = true;
   gs.unlockedItems.push('glowsticks');
-  showMsg('GLOWSTICKS UNLOCKED! RIGHT-CLICK TO SWING & REFLECT SHOTS');
+  showMsg('GLOWSTICKS UNLOCKED! RIGHT-CLICK TO SWING & REFLECT SHOTS — REFLECTED SHOTS EXPLODE!');
   updateHUD();
 }
 
@@ -109,14 +159,13 @@ function swingGlowsticks() {
   // Melee damage scales with bullet damage — base 3x bullet damage
   const meleeDmg = baseBulletDamage() * 3;
 
-  // ── Reflect enemy bullets in range — NO cone check needed.
-  // Bullets come from all directions; just distance-check them.
+  // ── Reflect enemy bullets in range ──
+  // Reflected bullets become EXPLOSIVE: they detonate on next collision.
   for (let i = gs.enemyBullets.length - 1; i >= 0; i--) {
     const eb = gs.enemyBullets[i];
     const dx = eb.x - ppos.x, dy = eb.y - ppos.y;
     const dist = Math.hypot(dx, dy);
     if (dist < CFG.MELEE_RANGE) {
-      // Reflect: reverse velocity and boost, aim generally back at enemies
       const reflectAngle = Math.atan2(-eb.vy, -eb.vx);
       const reflectSpeed = Math.max(8, Math.hypot(eb.vx, eb.vy) * 2.0);
       const reflected = {
@@ -127,7 +176,8 @@ function swingGlowsticks() {
         angle: reflectAngle,
         damageMult: baseBulletDamage() * 2,
         isDud: false,
-        isReflected: true
+        isReflected: true,
+        isExplosive: true   // ← KEY: reflected bullets explode on impact
       };
       gs.bullets.push(reflected);
       gs.enemyBullets.splice(i, 1);
@@ -147,34 +197,23 @@ function swingGlowsticks() {
     const dx = epos.x - ppos.x, dy = epos.y - ppos.y;
     const dist = Math.hypot(dx, dy);
     if (dist < CFG.MELEE_RANGE + 10) {
-      // Explode on impact!
-      spawnPartyParticles(epos.x, epos.y);
-      spawnParticles(epos.x, epos.y, '#ff4400', 30);
-      // Deal AoE damage to nearby enemies
-      for (const oid of ECS.query('enemy', 'pos', 'hp')) {
-        if (oid === id) continue;
-        const op = ECS.get(oid, 'pos');
-        const od = Math.hypot(op.x - epos.x, op.y - epos.y);
-        if (od < 80) {
-          const oh = ECS.get(oid, 'hp');
-          oh.hp -= meleeDmg * 2; oh.hitFlash = 14;
-          if (oh.hp <= 0) {
-            spawnParticles(op.x, op.y, '#ff2222', 18);
-            ECS.destroyEntity(oid);
-            gs.score += Math.round(15 * gs.wave); gs.waveKills++;
-            tryDropTicket();
-            gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-            updateHUD(); checkWave();
-          }
-        }
-      }
-      gs.shakeX = 22; gs.shakeY = 22;
-      showMsg('CANNONBALL DEFLECTED! BOOM!!!');
-      ECS.destroyEntity(id);
-      gs.score += Math.round(20 * gs.wave); gs.waveKills++;
-      tryDropTicket();
-      updateHUD(); checkWave();
-      continue;
+      // Reflect the cannonball — reverse its velocity toward wherever the player aimed
+      const reflectAngle = gunAngle; // send it in the gun's facing direction
+      const chargeSpd = Math.hypot(evel.vx, evel.vy);
+      evel.vx = Math.cos(reflectAngle) * Math.max(chargeSpd, 14);
+      evel.vy = Math.sin(reflectAngle) * Math.max(chargeSpd, 14);
+      eai.chargeTarget = {
+        x: epos.x + Math.cos(reflectAngle) * 400,
+        y: epos.y + Math.sin(reflectAngle) * 400,
+      };
+      // Mark it so that when it hits something it detonates like an explosive bullet
+      eai.reflectedByGlowstick = true;
+
+      spawnParticles(epos.x, epos.y, '#00ff88', 18);
+      spawnParticles(epos.x, epos.y, '#ffffff', 8);
+      gs.shakeX = 14; gs.shakeY = 14;
+      showMsg('CANNONBALL REDIRECTED! IT\'LL EXPLODE ON IMPACT!');
+      continue; // don't also do the explode-on-reflect logic below
     }
   }
 
@@ -182,7 +221,7 @@ function swingGlowsticks() {
   for (const id of ECS.query('enemy', 'pos', 'hp')) {
     const eai2 = ECS.get(id, 'ai');
     const type2 = ECS.get(id, 'enemy').type;
-    if (type2 === 'cannonball' && eai2 && eai2.chargeState === 'CHARGING') continue; // handled above
+    if (type2 === 'cannonball' && eai2 && eai2.chargeState === 'CHARGING') continue;
     const epos = ECS.get(id, 'pos');
     const ehp  = ECS.get(id, 'hp');
     const evel = ECS.get(id, 'vel');
@@ -329,7 +368,7 @@ function sysAI() {
             const aim = Math.atan2(ady,adx);
             gs.enemyBullets.push({
               x:pos2.x, y:pos2.y,
-              vx:Math.cos(aim)*1.0, vy:Math.sin(aim)*1.0,
+              vx:Math.cos(aim)*0.5, vy:Math.sin(aim)*0.5,   // slowed by half
               life:140, maxLife:140, color:'#44aaff',
               isTear:true, gravity:0.045
             });
@@ -350,6 +389,33 @@ function sysAI() {
 
     const pos = ECS.get(id, 'pos');
     const vel = ECS.get(id, 'vel');
+
+    // ── Reflected cannonball: check if it hit something and should detonate ──
+    if (ai2 && ai2.reflectedByGlowstick && type === 'cannonball') {
+      const ppos = ECS.get(gs.playerId, 'pos');
+      const hitWall = pos.x < 30 || pos.x > worldW - 30 || pos.y < 30 || pos.y > worldH - 30;
+      let hitEnemy = false;
+      for (const oid of ECS.query('enemy', 'pos', 'hp')) {
+        if (oid === id) continue;
+        const op = ECS.get(oid, 'pos');
+        if (Math.hypot(op.x - pos.x, op.y - pos.y) < 40) { hitEnemy = true; break; }
+      }
+      if (hitWall || hitEnemy) {
+        // Detonate like an explosive bullet
+        const fakeBullet = { damageMult: baseBulletDamage() * 4, life: 1, isExplosive: true };
+        detonateExplosiveBullet(fakeBullet, pos.x, pos.y);
+        spawnParticles(pos.x, pos.y, '#ff4400', 30);
+        gs.shakeX = 22; gs.shakeY = 22;
+        showMsg('CANNONBALL EXPLODES!!!');
+        ECS.destroyEntity(id);
+        gs.score += Math.round(25 * gs.wave);
+        gs.waveKills++;
+        tryDropTicket();
+        updateHUD(); checkWave();
+        continue;
+      }
+    }
+
     pos.x += vel.vx;
     pos.y += vel.vy;
     if (gs.bouncyHouse) {
@@ -455,6 +521,13 @@ function sysBullets() {
       if (bounced) {
         b.bounces = (b.bounces || 0) + 1;
         spawnParticles(b.x, b.y, '#88ffdd', 3);
+
+        // Explosive bullets detonate on wall bounce too
+        if (b.isExplosive) {
+          detonateExplosiveBullet(b, b.x, b.y);
+          return false;
+        }
+
         if (gs.hasMirrorMaze && b.bounces === 1) {
           const perp = Math.atan2(b.vy, b.vx) + Math.PI / 2;
           gs.bullets.push({
@@ -468,7 +541,17 @@ function sysBullets() {
       }
       return b.life > 0 && (b.bounces || 0) <= 8;
     }
-    return b.life > 0 && b.x > -10 && b.x < worldW+10 && b.y > -10 && b.y < worldH+10;
+
+    // Out-of-bounds: explosive bullets detonate at the wall edge
+    const oob = b.x < -10 || b.x > worldW+10 || b.y < -10 || b.y > worldH+10;
+    if (oob && b.isExplosive) {
+      const clampX = Math.max(0, Math.min(worldW, b.x));
+      const clampY = Math.max(0, Math.min(worldH, b.y));
+      detonateExplosiveBullet(b, clampX, clampY);
+      return false;
+    }
+
+    return b.life > 0 && !oob;
   });
 }
 
@@ -485,6 +568,12 @@ function sysBulletEnemyCollision() {
       const epos = ECS.get(id, 'pos');
       const ehp  = ECS.get(id, 'hp');
       if (Math.hypot(b.x - epos.x, b.y - epos.y) < 30) {
+        // Explosive bullets: AoE detonate instead of single-target hit
+        if (b.isExplosive) {
+          detonateExplosiveBullet(b, b.x, b.y);
+          break;
+        }
+
         if (b.isDud) { b.life = 0; spawnParticles(b.x, b.y, '#666666', 3); break; }
         const dmg = b.damageMult || 1;
         ehp.hp -= dmg; ehp.hitFlash = 12; b.life = 0;
@@ -691,6 +780,17 @@ function sysTimers() {
   if (gs.confettiSlowTimer > 0) gs.confettiSlowTimer--;
   if (gs.invincible > 0) gs.invincible--;
   if (gs.glowCooldown > 0) gs.glowCooldown--;
+
+  // Explosion freeze timer: skip advancing the game for N frames
+  if (gs.explosionFreezeTimer > 0) {
+    gs.explosionFreezeTimer--;
+    // (loop() will still call draw, but we can short-circuit update by returning early)
+    // We return here so all other timers and systems also pause — true hitlag effect
+    return;
+  }
+
+  // Glow explosion ring visual timer
+  if (gs.glowExplosionTimer > 0) gs.glowExplosionTimer--;
 
   if (gs.reloading) {
     const reloadSpeed = gs.speedBoostTimer > 0 ? Math.max(1, Math.round(gs.speedBoostMult || 1)) : 1;
