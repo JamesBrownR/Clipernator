@@ -316,8 +316,8 @@ const ITEM_DEFS = {
     color: '#ffdd00', shadowColor: '#ffaa00', spawnCooldown: 999999999,
     effect(gs) {
       gs.hasExtraClips = true;
-      gs.maxHealth = Math.floor(gs.maxHealth * 1.25);
-      gs.maxAmmo   = Math.floor(gs.maxAmmo   * 1.25);
+      gs.maxHealth = Math.ceil(gs.maxHealth * 1.25);
+      gs.maxAmmo   = Math.ceil(gs.maxAmmo   * 1.25);
       gs.health    = gs.maxHealth;
       gs.ammo      = gs.maxAmmo;
       gs.reloading = false;
