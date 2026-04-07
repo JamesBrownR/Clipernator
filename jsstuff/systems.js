@@ -667,40 +667,61 @@ function sysTimers() {
 
   if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
 
-  // Clownish: smaller nose (0..1 drives 4+size*8 px radius in draw), blast + sound waves
+// Clownish: nose grows, blasts bullets + spawns waves; WAVES confuse enemies on contact
   if (gs.hasClownish) {
+    if (gs.clownNoseHonkTimer > 0) gs.clownNoseHonkTimer--;
     gs.clownNoseTimer++;
-    gs.clownNoseSize=gs.clownNoseTimer/gs.clownNoseMax;
-    if (gs.clownNoseTimer>=gs.clownNoseMax) {
-      gs.clownNoseTimer=0; gs.clownNoseSize=0;
-      const ppos3=ECS.get(gs.playerId,'pos');
-      const near=ECS.query('enemy','pos').filter(id=>Math.hypot(ECS.get(id,'pos').x-ppos3.x,ECS.get(id,'pos').y-ppos3.y)<200);
-      if (near.length>=2) {
-        const bulletCount=gs.hasClownishUpgrade?8:2;
-        for (let bi=0;bi<bulletCount;bi++) {
-          const ba=gs.hasClownishUpgrade?(bi/bulletCount)*Math.PI*2:gunAngle+(bi===0?-0.5:0.5);
-          gs.bullets.push({x:ppos3.x,y:ppos3.y,vx:Math.cos(ba)*8,vy:Math.sin(ba)*8,life:80,maxLife:80,angle:ba,damageMult:gs.hasClownishUpgrade?3:2,isDud:false});
-        }
-        // Spawn two expanding sound-wave rings
-        gs.clownSoundWaves=[
-          {x:ppos3.x,y:ppos3.y,r:10,maxR:200,life:30,maxLife:30},
-          {x:ppos3.x,y:ppos3.y,r:10,maxR:200,life:22,maxLife:30},
-        ];
-        spawnPartyParticles(ppos3.x,ppos3.y);
-        showMsg(gs.hasClownishUpgrade?'MEGA CLOWN BLAST! RING OF CONFUSION!':'CLOWN NOSE BLAST! ENEMIES CONFUSED!');
-        for (const eid of near) {
-          const eai=ECS.get(eid,'ai');
-          if (eai){eai.confused=true;eai.confuseTimer=gs.hasClownishUpgrade?480:300;eai.confuseShootTimer=0;}
-        }
+    gs.clownNoseSize = gs.clownNoseTimer / gs.clownNoseMax;
+    if (gs.clownNoseTimer >= gs.clownNoseMax) {
+      gs.clownNoseTimer = 0; gs.clownNoseSize = 0;
+      const ppos3 = ECS.get(gs.playerId, 'pos');
+      // Always fire — no enemy-count gate (was requiring 2+ nearby which felt bad)
+      const bulletCount = gs.hasClownishUpgrade ? 8 : 2;
+      for (let bi = 0; bi < bulletCount; bi++) {
+        const ba = gs.hasClownishUpgrade
+          ? (bi / bulletCount) * Math.PI * 2
+          : gunAngle + (bi === 0 ? -0.5 : 0.5);
+        gs.bullets.push({ x: ppos3.x, y: ppos3.y, vx: Math.cos(ba)*8, vy: Math.sin(ba)*8, life: 80, maxLife: 80, angle: ba, damageMult: gs.hasClownishUpgrade ? 3 : 2, isDud: false });
       }
+      // Two waves — the second lags behind so they're visually distinct
+      // hitEnemies tracks which enemies each wave has already confused
+      gs.clownSoundWaves = [
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 260, life: 38, maxLife: 38, hitEnemies: new Set() },
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 260, life: 30, maxLife: 38, hitEnemies: new Set() },
+      ];
+      gs.clownNoseHonkTimer = 14; // drives squish animation in draw.js
+      spawnPartyParticles(ppos3.x, ppos3.y);
+      showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! WAVES CONFUSE ENEMIES!' : 'CLOWN NOSE BLAST! TOUCH THE WAVES TO CONFUSE!');
     }
   }
 
-  // Tick sound wave rings
-  if (gs.clownSoundWaves) {
-    gs.clownSoundWaves=gs.clownSoundWaves.filter(w=>{w.r+=(w.maxR-w.r)*0.15+3;w.life--;return w.life>0&&w.r<w.maxR;});
+  // Tick sound wave rings — enemies that the wave radius passes through get confused
+  if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
+    const confuseDur = gs.hasClownishUpgrade ? 480 : 300;
+    const waveThickness = 22; // px band — enemy must be within this of the wave front
+    gs.clownSoundWaves = gs.clownSoundWaves.filter(w => {
+      // Expand ring
+      w.r += (w.maxR - w.r) * 0.12 + 2.5;
+      w.life--;
+      // Check each enemy against this wave's leading edge
+      for (const eid of ECS.query('enemy', 'pos', 'ai')) {
+        if (w.hitEnemies.has(eid)) continue;
+        const epos = ECS.get(eid, 'pos');
+        const d = Math.hypot(epos.x - w.x, epos.y - w.y);
+        if (d >= w.r - waveThickness && d <= w.r + 4) {
+          w.hitEnemies.add(eid);
+          const eai = ECS.get(eid, 'ai');
+          if (eai) {
+            eai.confused = true;
+            eai.confuseTimer = confuseDur;
+            eai.confuseShootTimer = 0;
+            spawnParticles(epos.x, epos.y, '#4488ff', 6);
+          }
+        }
+      }
+      return w.life > 0 && w.r < w.maxR;
+    });
   }
-}
 
 function sysSpawner() {
   gs.spawnTimer++;
