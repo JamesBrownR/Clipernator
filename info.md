@@ -15,7 +15,7 @@ Changes (I need to make a lot of changes, not sure where to start):
   * make dash damage scale with player speed, if it doesn't already
   * make melee damage scale with bullet damage
   * make melee (glowsticks) do more base damage
-  * make glowsticks be able to reflect projectiles, anything that is reflected should also become an explosive (so it explodes on impact). to be clear, reflected projectiles should not explode instantly, but should become explosive such that it detonated when it collides with something after the glowstick reflected it. It should also pause the game few a few frames like hitflash. 
+  * make glowsticks be able to reflect projectiles, anything that is reflected should also become an explosive (so it explodes on impact). to be clear, reflected projectiles should not explode instantly, but should become explosive such that it detonated when it collides with something after the glowstick reflected it. It should also pause the game few a few frames like hitflash (Update, this seems to be implimented but this note has not been removed because it seems that hitflash is incorrectly activated when a reflected entity hits something, instead of it being activated when you reflect something.)
   * floor 2 should have 15 levels before the boss (so wave 25)
 
   
@@ -28,6 +28,8 @@ Make enemies more interactive overall:
   * also need to change the gift box enemy to slowly wind up when the player is near it, until it explodes and deals damage to all entities around it (if possible the player should also be able to right click to pick it up and throw it, and when they are holding it it still winds up so they have to throw it fast)
 
 Item stuff
-  * clownish, mirror maze, funhouse distortion and possibly other floor 2 items don't work
+  * clownish, mirror maze, funhouse distortion and possibly other floor 2 items don't work (UPDATE: Seemingly none of the floor 2 items currently work as expected. Clownish makes enemies chase each other but does not make them attack or deal damage to each other, and theya re not colored blue to indicated they are distracted. There are also supposed be two "sound" waves visually emanating from the clown's nose when clownish is activated to make it clear to see; the clown nose is also too big visually. Mirror Maze doesn't work at all, it is supposed to reflect bullets from an enemy you shoot and kill to the nearest enemy, and obviously the bullet's lifetime timer should reset on every kill. Funhouse distortion doesn't work; it is supposed to curve bullets slightly toward enemies. Popcorn bucket does not feel very good to use but I will adress this more after the other items are fixed
+  * When enemy bullets touch walls and you have bouncy house, they should become "your" bullets, not staying enemy bullets
   * there needs be a pool of general items that can be offered on any floor, related to office/technology stuff. Two ideas so far: Paper Cuts (any enemy that has been damaged takes 1 damage per second) and Extra Clips (you gain 25% max health and 25% ammo). To ensure this doesnt compete with the floor items too much there should only be 20% chance of one of these items showing up vs a 80% for floor specific items (or upgrades to items you already have)
   * clownish and popcorn bucket will have upgrades
+  
