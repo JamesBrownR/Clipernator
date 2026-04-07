@@ -2,11 +2,6 @@
 // CLIPBLAST: PARTY HUNTER — Draw Functions
 // ============================================================
 
-// ── Utensil enemy ──
-// Draws three utensils orbiting a center. When launching, the chosen
-// one streaks ahead; returning one trails back.
-
-// ── Helper: draw a single utensil shape ──
 function _drawUtensilShape(ctx, type, color, scale = 1) {
   ctx.strokeStyle = color;
   ctx.fillStyle   = color;
@@ -14,16 +9,12 @@ function _drawUtensilShape(ctx, type, color, scale = 1) {
   ctx.lineCap     = 'round';
 
   if (type === 'fork') {
-    // Handle
     ctx.beginPath(); ctx.moveTo(0, 14 * scale); ctx.lineTo(0, -4 * scale); ctx.stroke();
-    // Tines
     for (let i = -2; i <= 2; i += 2) {
       ctx.beginPath(); ctx.moveTo(0, -4 * scale); ctx.lineTo(i * scale, -14 * scale); ctx.stroke();
     }
   } else if (type === 'knife') {
-    // Handle
     ctx.beginPath(); ctx.moveTo(0, 14 * scale); ctx.lineTo(0, 2 * scale); ctx.stroke();
-    // Blade
     ctx.beginPath();
     ctx.moveTo(0, 2 * scale);
     ctx.lineTo(4 * scale, -10 * scale);
@@ -31,9 +22,7 @@ function _drawUtensilShape(ctx, type, color, scale = 1) {
     ctx.closePath();
     ctx.fill();
   } else if (type === 'spoon') {
-    // Handle
     ctx.beginPath(); ctx.moveTo(0, 14 * scale); ctx.lineTo(0, -2 * scale); ctx.stroke();
-    // Bowl
     ctx.beginPath();
     ctx.ellipse(0, -8 * scale, 5 * scale, 7 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -51,9 +40,8 @@ function drawUtensil(epos, ehp, ai, frozen) {
   ctx.save();
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
 
-  // Draw the two orbiting utensils that are NOT currently launched
   for (let i = 0; i < 3; i++) {
-    if (state !== 'IDLE' && i === activeIdx) continue;  // skip the launched one
+    if (state !== 'IDLE' && i === activeIdx) continue;
     const u     = utensils[i];
     const angle = orbitAngle + (i / 3) * Math.PI * 2;
     const ox    = x + Math.cos(angle) * 20;
@@ -67,7 +55,6 @@ function drawUtensil(epos, ehp, ai, frozen) {
     ctx.restore();
   }
 
-  // Draw the launched/returning utensil at its tip position
   if (state !== 'IDLE' && activeIdx >= 0 && ai.uTipX !== undefined) {
     const u       = utensils[activeIdx];
     const tipAngle = ai.uLaunchDir
@@ -84,7 +71,6 @@ function drawUtensil(epos, ehp, ai, frozen) {
 
   ctx.restore();
 
-  // HP bar
   const bw = 36;
   ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 36, bw, 5);
   ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cccccc';
@@ -95,46 +81,50 @@ function drawMask(epos, ehp, ai, frozen) {
   const {x,y} = epos;
   const t = Date.now()/400;
   const isCrying = ai.maskState === 'CRY';
+  // ── Confused tint: blue overlay ──
+  const isConfused = ai.confused;
 
   ctx.save(); ctx.translate(x, y);
   if (frozen) { ctx.globalAlpha=0.7; ctx.shadowColor='#aaccff'; }
+  else if (isConfused) { ctx.shadowColor='#00ffff'; ctx.shadowBlur=20; }
   else { ctx.shadowColor = isCrying ? '#44aaff' : '#ffdd44'; ctx.shadowBlur = 16; }
 
-  // Mask face — oval
-  ctx.fillStyle = frozen ? '#4488cc' : (isCrying ? '#2255aa' : '#ddcc44');
+  ctx.fillStyle = frozen ? '#4488cc' : isConfused ? '#2255cc' : (isCrying ? '#2255aa' : '#ddcc44');
   ctx.beginPath(); ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI*2); ctx.fill();
 
-  // Eye holes
+  // Blue confused shimmer
+  if (isConfused) {
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#00ffff';
+    ctx.beginPath(); ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = '#000033';
   ctx.beginPath(); ctx.ellipse(-6, -5, 4, 5, 0, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(6, -5, 4, 5, 0, 0, Math.PI*2); ctx.fill();
 
-  // Mouth — smile curves up, frown curves down
   ctx.strokeStyle = '#000033'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
   ctx.beginPath();
   if (isCrying) {
-    ctx.arc(0, 12, 7, Math.PI*0.15, Math.PI*0.85); // frown
+    ctx.arc(0, 12, 7, Math.PI*0.15, Math.PI*0.85);
   } else {
-    ctx.arc(0, 4, 7, Math.PI*1.15, Math.PI*1.85);  // smile
+    ctx.arc(0, 4, 7, Math.PI*1.15, Math.PI*1.85);
   }
   ctx.stroke();
 
-  // Tears when crying — drip down from eyes
   if (isCrying) {
     const tearDrip = Math.sin(t * 3) * 0.5 + 0.5;
     ctx.fillStyle = '#44aaff'; ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 8;
-    // Left tear
     ctx.beginPath();
     ctx.ellipse(-6, 5 + tearDrip * 12, 2, 3 + tearDrip * 4, 0, 0, Math.PI*2);
     ctx.fill();
-    // Right tear
     ctx.beginPath();
     ctx.ellipse(6, 5 + tearDrip * 12, 2, 3 + tearDrip * 4, 0, 0, Math.PI*2);
     ctx.fill();
   }
 
-  // Decorative border
-  ctx.strokeStyle = frozen ? '#aaddff' : (isCrying ? '#6688ff' : '#ffee88');
+  ctx.strokeStyle = frozen ? '#aaddff' : isConfused ? '#00ffff' : (isCrying ? '#6688ff' : '#ffee88');
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI*2); ctx.stroke();
 
@@ -142,45 +132,39 @@ function drawMask(epos, ehp, ai, frozen) {
 
   const bw = 40;
   ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2, y-36, bw, 5);
-  ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#4488ff';
+  ctx.fillStyle = isConfused ? '#00ffff' : (ehp.hp<ehp.maxHp/2?'#ff6666':'#4488ff');
   ctx.fillRect(x-bw/2, y-36, bw*(ehp.hp/ehp.maxHp), 5);
 }
 
-// ── Gift box: shows wind-up progress and shaking ──
 function drawGiftBox(epos, ehp, ai, frozen) {
   const { x, y } = epos;
   const windup = ai.windupTimer || 0;
   const windupRatio = Math.min(1, windup / 120);
   const heldByPlayer = ai.heldByPlayer || false;
- 
-  // Shake amplitude grows with windup
+
   const shakeAmt = windupRatio * 5;
   const sx = x + (Math.random() - 0.5) * shakeAmt;
   const sy = y + (Math.random() - 0.5) * shakeAmt;
- 
+
   ctx.save();
   ctx.translate(sx, sy);
   if (frozen) ctx.globalAlpha = 0.65;
- 
-  // Color shifts from pink → red as it winds up
+
   const r = Math.round(255);
   const g = Math.round(102 - windupRatio * 102);
   const b = Math.round(153 - windupRatio * 153);
   const boxColor = frozen ? '#77aaff' : `rgb(${r},${g},${b})`;
- 
+
   ctx.shadowColor = frozen ? '#88ccff' : (windupRatio > 0.6 ? '#ff2200' : '#ffaa00');
   ctx.shadowBlur = 16 + windupRatio * 20;
- 
-  // Box body
+
   ctx.fillStyle = boxColor;
   ctx.fillRect(-17, -17, 34, 34);
- 
-  // Ribbon cross
+
   ctx.fillStyle = '#ffee00';
   ctx.fillRect(-18, -6, 36, 8);
   ctx.fillRect(-6, -18, 8, 36);
- 
-  // Bow on top
+
   ctx.fillStyle = '#ff0000';
   ctx.beginPath();
   ctx.moveTo(0, -18);
@@ -188,8 +172,7 @@ function drawGiftBox(epos, ehp, ai, frozen) {
   ctx.lineTo(8, -28);
   ctx.closePath();
   ctx.fill();
- 
-  // Wind-up indicator: tick marks around the box
+
   if (windupRatio > 0 && !frozen) {
     const ticks = Math.floor(windupRatio * 8);
     ctx.strokeStyle = '#ff2200';
@@ -204,7 +187,6 @@ function drawGiftBox(epos, ehp, ai, frozen) {
       ctx.lineTo(Math.cos(ta) * r2, Math.sin(ta) * r2);
       ctx.stroke();
     }
-    // Warning exclamation when nearly full
     if (windupRatio > 0.75) {
       ctx.font = `bold ${8 + windupRatio * 4}px "Press Start 2P"`;
       ctx.textAlign = 'center';
@@ -214,8 +196,7 @@ function drawGiftBox(epos, ehp, ai, frozen) {
       ctx.fillText('!', 0, 6);
     }
   }
- 
-  // If held: draw a hand indicator
+
   if (heldByPlayer) {
     ctx.strokeStyle = '#ffdd00';
     ctx.lineWidth = 2;
@@ -225,16 +206,14 @@ function drawGiftBox(epos, ehp, ai, frozen) {
     ctx.stroke();
     ctx.setLineDash([]);
   }
- 
+
   ctx.restore();
- 
-  // HP bar
+
   const bw = 40;
   ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 40, bw, 5);
   ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cc0000';
   ctx.fillRect(x - bw/2, y - 40, bw * (ehp.hp / ehp.maxHp), 5);
- 
-  // Wind-up progress bar below hp bar
+
   if (windupRatio > 0 && !frozen) {
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(x - bw/2, y - 32, bw, 4);
@@ -342,12 +321,10 @@ function drawJuggler(epos, ehp, ai, frozen) {
   if (frozen) { ctx.globalAlpha=0.7; ctx.shadowColor='#aaccff'; }
   else { ctx.shadowColor='#ffdd00'; ctx.shadowBlur=18; }
 
-  // Rolling sphere beneath
   const SPHERE_R = 14;
   ctx.save(); ctx.translate(0, 18);
   ctx.fillStyle = frozen ? '#4488cc' : '#cc8800';
   ctx.beginPath(); ctx.arc(0, 0, SPHERE_R, 0, Math.PI*2); ctx.fill();
-  // Sphere stripe to show rolling
   ctx.strokeStyle = frozen ? '#88aadd' : '#ffcc44';
   ctx.lineWidth = 2.5; ctx.save();
   ctx.rotate(sphereAngle);
@@ -355,25 +332,22 @@ function drawJuggler(epos, ehp, ai, frozen) {
   ctx.beginPath(); ctx.moveTo(0, -SPHERE_R); ctx.lineTo(0, SPHERE_R); ctx.stroke();
   ctx.restore(); ctx.restore();
 
-  // Body — wobbles side to side balancing on sphere
   const wobble = Math.sin(t * 1.4) * 0.12;
   ctx.save(); ctx.rotate(wobble);
-  ctx.fillStyle = frozen ? '#88aacc' : '#ffcc99'; // skin
-  ctx.beginPath(); ctx.arc(0, -2, 10, 0, Math.PI*2); ctx.fill(); // head
+  ctx.fillStyle = frozen ? '#88aacc' : '#ffcc99';
+  ctx.beginPath(); ctx.arc(0, -2, 10, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = frozen ? '#4488cc' : '#ff6600';
-  ctx.fillRect(-8, 6, 16, 14); // body
-  // Arms raised for juggling
+  ctx.fillRect(-8, 6, 16, 14);
   ctx.strokeStyle = frozen ? '#88aacc' : '#ffcc99';
   ctx.lineWidth = 3; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(-8, 10); ctx.lineTo(-18, -4); ctx.stroke(); // left arm up
-  ctx.beginPath(); ctx.moveTo(8, 10);  ctx.lineTo(18, -4);  ctx.stroke(); // right arm up
+  ctx.beginPath(); ctx.moveTo(-8, 10); ctx.lineTo(-18, -4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(8, 10);  ctx.lineTo(18, -4);  ctx.stroke();
   ctx.restore();
 
-  // Juggle slots — balls and enemies arc above
   const slotCount = ai.juggleSlots ? ai.juggleSlots.length : 0;
   for (let i = 0; i < slotCount; i++) {
     const slot = ai.juggleSlots[i];
-    if (slot.type !== 'ball') continue; // enemy slots drawn by their own draw fn
+    if (slot.type !== 'ball') continue;
     const slotAngle = (i / Math.max(ai.juggleMax, 1)) * Math.PI * 2;
     const arcX = Math.cos(slotAngle + t * 1.2) * 28;
     const arcY = -38 + Math.sin(slotAngle * 2 + t * 1.2) * 16;
@@ -394,12 +368,8 @@ function drawJuggler(epos, ehp, ai, frozen) {
   ctx.fillRect(x-bw/2, y-46, bw*(ehp.hp/ehp.maxHp), 6);
 }
 
-
-
 // ============================================================
-// PLAYER DRAW — split body + gun sprites
-// Body faces movement direction (playerMoveAngle)
-// Gun faces mouse (gunAngle) with recoil and flip
+// PLAYER DRAW
 // ============================================================
 function drawPlayer() {
   const ppos = ECS.get(gs.playerId, 'pos');
@@ -414,7 +384,6 @@ function drawPlayer() {
 
   const blinking = gs.invincible > 0 && Math.floor(gs.invincible / 5) % 2 === 0;
 
-  // ── SFP aura ──
   if (gs.hasShakeFizzlePop) {
     const ratio = gs.sfpFull ? 1 : gs.sfpMeter / gs.sfpMax;
     ctx.save();
@@ -427,24 +396,17 @@ function drawPlayer() {
     ctx.restore();
   }
 
-  // ── Gun constants ──
-  // Shotgun content is ~4.6:1 aspect ratio, muzzle RIGHT, stock LEFT
-  // Grip/trigger is ~32% from the left of the content = pivot point
-   // ── Gun constants ──
   const GUN_W = 90;
   const GUN_H = 20;
   const GRIP_X = GUN_W * 0.32;
   const GRIP_Y = GUN_H * 0.6;
   const recoilDist = gunRecoil * 6;
 
-  // Gun pivot uses the floating gunX/gunY position, pulled back by recoil
   const gx = gunX - Math.cos(gunAngle) * recoilDist;
   const gy = gunY - Math.sin(gunAngle) * recoilDist;
 
   const aimingLeft = Math.cos(gunAngle) < 0;
 
-  
-// ── BODY ──
   const sourceImg = playerCanvas || playerImg;
   if (sourceImg && (sourceImg.complete !== false)) {
     const BODY_W = 36;
@@ -455,7 +417,6 @@ function drawPlayer() {
     if (blinking) ctx.globalAlpha = 0.35;
     const movingLeft = Math.cos(playerMoveAngle) < 0;
     if (movingLeft) ctx.scale(-1, 1);
-    // Crop to actual Clippy bounds: x:290, y:160, w:440, h:740
     ctx.drawImage(sourceImg,
       290, 160, 440, 740,
       -BODY_W / 2, -BODY_H * 0.75,
@@ -464,7 +425,6 @@ function drawPlayer() {
     ctx.restore();
   }
 
-  // ── GUN ──
   if (shotgunImg.complete && shotgunImg.naturalWidth > 0) {
     ctx.save();
     ctx.translate(gx, gy);
@@ -481,13 +441,14 @@ function drawPlayer() {
 
   if (gunRecoil > 0) gunRecoil = Math.max(0, gunRecoil - 0.08);
 
-  // ── Clownish nose ──
+  // ── Clownish nose — capped at a small radius so it doesn't dominate the screen ──
   if (gs.hasClownish && gs.clownNoseSize > 0) {
-    const noseR = 4 + gs.clownNoseSize * 14;
+    // Max visual radius is 8px (was 4+size*14 which could reach 18px — too big)
+    const noseR = 3 + gs.clownNoseSize * 8;
     ctx.save();
     ctx.translate(ppos.x, ppos.y - 10);
     ctx.shadowColor = '#4488ff';
-    ctx.shadowBlur = 10 + gs.clownNoseSize * 20;
+    ctx.shadowBlur = 8 + gs.clownNoseSize * 12;
     ctx.fillStyle = gs.clownNoseSize > 0.85 ? '#ffffff' : '#4488ff';
     ctx.globalAlpha = 0.7 + gs.clownNoseSize * 0.3;
     ctx.beginPath(); ctx.arc(0, 0, noseR, 0, Math.PI * 2); ctx.fill();
@@ -532,7 +493,8 @@ function drawBullet(b) {
     ctx.fillStyle='#777'; ctx.shadowColor='#555'; ctx.shadowBlur=4; ctx.fillRect(-7,-1.5,14,3);
   } else {
     let color, glow;
-    if (b.damageMult >= 4)      { color='#ff3333'; glow='#ff8888'; }
+    if (b.isMirror)             { color='#8899ff'; glow='#aabbff'; }
+    else if (b.damageMult >= 4) { color='#ff3333'; glow='#ff8888'; }
     else if (b.damageMult >= 3) { color='#cc44ff'; glow='#ee88ff'; }
     else if (b.damageMult >= 2) { color='#4488ff'; glow='#88bbff'; }
     else                        { color=gs.bouncyHouse?'#88ffdd':'#ffcc44'; glow=gs.bouncyHouse?'#00ffcc':'#ff8800'; }
@@ -602,10 +564,9 @@ function draw() {
   for(const b of gs.bullets) drawBullet(b);
 
   // Enemy bullets
- for(const eb of gs.enemyBullets) {
+  for(const eb of gs.enemyBullets) {
     ctx.save(); ctx.globalAlpha=eb.life/eb.maxLife;
     if (eb.isTear) {
-      // Teardrop shape — elongated in direction of travel
       const tearAngle = Math.atan2(eb.vy, eb.vx);
       ctx.translate(eb.x, eb.y); ctx.rotate(tearAngle + Math.PI/2);
       ctx.fillStyle='#44aaff'; ctx.shadowColor='#44aaff'; ctx.shadowBlur=10;
@@ -614,6 +575,12 @@ function draw() {
       ctx.bezierCurveTo(4, -2, 4, 4, 0, 6);
       ctx.bezierCurveTo(-4, 4, -4, -2, 0, -6);
       ctx.fill();
+    } else if (eb.isConfused) {
+      // Cyan diamond shape to distinguish confused shots
+      ctx.fillStyle='#00ffff'; ctx.shadowColor='#00ffff'; ctx.shadowBlur=10;
+      ctx.save(); ctx.translate(eb.x, eb.y); ctx.rotate(Math.PI/4);
+      ctx.fillRect(-4,-4,8,8);
+      ctx.restore();
     } else {
       ctx.fillStyle=eb.color; ctx.shadowColor=eb.color; ctx.shadowBlur=8;
       ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,Math.PI*2); ctx.fill();
@@ -631,22 +598,20 @@ function draw() {
     const isPhased = ai && ai.phased;
     const alpha = isPhased ? 0.22 : (ehp.hitFlash > 0 ? (Math.random()>.5?1:.3) : 1);
     ctx.save(); ctx.globalAlpha=alpha;
-     if (type==='utensil')  drawUtensil(epos, ehp, ai, frozen)
-  else if (type==='mask')    drawMask(epos, ehp, ai, frozen);
-  else if (type==='giftBox')    drawGiftBox(epos, ehp, ai, frozen);
-    else if (type==='partyHat')   drawPartyHat(epos, ehp, frozen);
-    else if (type==='boss')       drawBoss(epos, ehp, frozen);
-    else if (type==='cannonball') drawCannonball(epos, ehp, ai, frozen);
-    else if (type==='ringmaster') drawRingmaster(epos, ehp, ai, frozen);
-          else if (type==='juggler') drawJuggler(epos, ehp, ai, frozen);
-
+    if (type==='utensil')     drawUtensil(epos, ehp, ai, frozen);
+    else if (type==='mask')        drawMask(epos, ehp, ai, frozen);
+    else if (type==='giftBox')     drawGiftBox(epos, ehp, ai, frozen);
+    else if (type==='partyHat')    drawPartyHat(epos, ehp, frozen);
+    else if (type==='boss')        drawBoss(epos, ehp, frozen);
+    else if (type==='cannonball')  drawCannonball(epos, ehp, ai, frozen);
+    else if (type==='ringmaster')  drawRingmaster(epos, ehp, ai, frozen);
+    else if (type==='juggler')     drawJuggler(epos, ehp, ai, frozen);
     ctx.restore();
   }
 
-  // Muzzle flash — positioned at gun tip
+  // Muzzle flash
   if (muzzleFlash > 0) {
-    // Gun tip is ~(GUN_W - GRIP_OFFSET_X) ahead along gunAngle from gun center
- const tipDist = 90 * 0.68;
+    const tipDist = 90 * 0.68;
     const mx = gunX + Math.cos(gunAngle) * tipDist;
     const my = gunY + Math.sin(gunAngle) * tipDist;
     ctx.save(); ctx.globalAlpha=muzzleFlash/10;
@@ -656,6 +621,24 @@ function draw() {
   }
 
   drawPlayer();
+
+  // ── Clownish sound waves (two expanding rings after nose blast) ──
+  if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
+    const ppos2 = ECS.get(gs.playerId, 'pos');
+    for (const w of gs.clownSoundWaves) {
+      const progress = w.r / w.maxR;
+      ctx.save();
+      ctx.globalAlpha = (1 - progress) * 0.7;
+      ctx.strokeStyle = '#4488ff';
+      ctx.lineWidth = 3 - progress * 2;
+      ctx.shadowColor = '#4488ff';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
 
   // Knocking Pins overlay
   if (gs.knockingPinsActive) {
@@ -749,7 +732,7 @@ function draw() {
     const progress = meleeSwingTimer / CFG.MELEE_SWING_FRAMES;
     ctx.save();
     ctx.translate(ppos.x, ppos.y);
-    ctx.rotate(gunAngle + (progress * 2.8 - 1.4)); // swing arc follows gun angle
+    ctx.rotate(gunAngle + (progress * 2.8 - 1.4));
     ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 30;
     ctx.fillStyle = '#00ff88';
     ctx.fillRect(32, -9, 38, 18);
@@ -793,7 +776,7 @@ function draw() {
     }
   }
 
-  // Glow explosion ring (from reflected bullet detonation)
+  // Glow explosion ring
   if (gs.glowExplosionTimer && gs.glowExplosionTimer > 0) {
     const progress = 1 - (gs.glowExplosionTimer / 10);
     const ringR = 20 + progress * 80;
@@ -813,7 +796,7 @@ function draw() {
     ctx.fill();
     ctx.restore();
   }
-  
+
   // Vignette
   const g=ctx.createRadialGradient(CFG.W/2,CFG.H/2,CFG.H*.28,CFG.W/2,CFG.H/2,CFG.H*.9);
   g.addColorStop(0,'transparent');
