@@ -820,7 +820,7 @@ function spawnEnemy() {
   let type='utensil';
   const roll=Math.random();
   if (gs.floor===2) {
-    if (gs.wave>=15){if(roll<0.30)type='ringmaster';else if(roll<0.62)type='cannonball';else type='juggler';}
+    if (gs.wave>=20){if(roll<0.30)type='ringmaster';else if(roll<0.62)type='cannonball';else type='juggler';}
     else{if(roll<0.45)type='cannonball';else type='juggler';}
   } else if (gs.wave>=6){
     if(roll<0.30)type='mask';else if(roll<0.52)type='giftBox';else if(roll<0.72)type='partyHat';
@@ -902,11 +902,28 @@ function checkWave() {
       gs.bossActive=true; spawnBoss();
       gs.spawnInterval=Math.max(120,CFG.SPAWN_INTERVAL_BASE*2);
       showMsg('BOSS INCOMING — WAVE '+gs.wave+'!');
-    } else if (completed%3===0) {
+    } else if (gs.wave === CFG.BOSS2_WAVE && gs.floor === 2) {
+      gs.bossActive = true;
+      // spawn boss2
+      const ppos = ECS.get(gs.playerId, 'pos');
+      const x = ppos.x > worldW/2 ? 160 : worldW - 160;
+      const y = ppos.y > worldH/2 ? 160 : worldH - 160;
+      const id = ECS.createEntity();
+      ECS.add(id, 'enemy', { type: 'boss2' });
+      ECS.add(id, 'pos', { x, y, angle: 0 });
+      ECS.add(id, 'vel', { vx: 0, vy: 0 });
+      const b2hp = CFG.BOSS_BASE_HP + gs.wave * 16;
+      ECS.add(id, 'hp', { hp: b2hp, maxHp: b2hp, hitFlash: 0 });
+      ECS.add(id, 'physics', { speed: CFG.BOSS_SPEED * 1.1 });
+      ECS.add(id, 'ai', { bossPhase: 'IDLE', phaseTimer: 100, spiralAngle: 0, volleyCount: 0, volleyTimer: 0 });
+      gs.bossId = id;
+      showMsg('THE RINGMASTER BOSS — WAVE ' + gs.wave + '!');
+    } else if (completed % 3 === 0) {
       setTimeout(()=>offerItemChoice(),300);
     } else {
       showMsg(`WAVE ${gs.wave} - INCOMING!`); trySpawnFieldItems();
     }
+    
   }
 }
 
