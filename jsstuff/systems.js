@@ -723,6 +723,8 @@ function sysTimers() {
     });
   }
 
+}
+
 function sysSpawner() {
   gs.spawnTimer++;
   if (gs.spawnTimer>=gs.spawnInterval){gs.spawnTimer=0;spawnEnemy();}
