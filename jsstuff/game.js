@@ -2,7 +2,7 @@
 // CLIPBLAST: PARTY HUNTER — Game Core
 // ECS, game state, input, loop, HUD, pause, game over
 // ============================================================
-
+ 
 let gameRunning = false;
 let animId = null;
 let msgTimeout = null;
