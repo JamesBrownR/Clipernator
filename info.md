@@ -25,7 +25,7 @@ Make enemies more interactive overall:
   * Should replace the mask enemy with two pixel art sprites instead of the draw function... though not sure how I would do the crying or state change animation
   * need to replace the scissors with a fork, knife, and spoon enemy (randomly chooses one to attack from, and it launches across the screen until it hits something then comes back and goes back to its idle animation of the three utencilts spinning around. the fork does no damage but grabs entities, the spoon knocks back entities and deals, the knife deals more damage (UPDATE: mostly works but the utensil enemy does not interact with other enemies, only the player. also the spoon does not seem to knock the player back, at least not noticably)
   * When you throw the giftbox enemy at another enemy and it deals damage, it works fine. However if you throw it at a enemy and it kills that enemy, the game crashes
-  * the pause menu should have a way of changing keybinds, if possible
+  * the pause menu should have a way of changing keybinds, if possible (UPDATE: this notw has not been removed because you cannot change the keybinds of glowsticks or throwing entities)
   * the item displays on the pause menu are too big, and kind of dumb. There item slots should be smaller, it should only show the item description on hover, and it should not be capitalized or so short that it barely communicated information, for example
   * if possible, there should be a animation of the stage getting bigger after you kill boss one, rather than a instant transition.
 
