@@ -229,8 +229,9 @@ function renderPauseMenu() {
   const dmg = gs.hasQuadCake ? 4 : gs.hasTripleCake ? 3 : gs.hasDoubleCake ? 2 : 1;
   const dmgLabel = gs.hasQuadCake ? '4x (50% dud)' : gs.hasTripleCake ? '3x (45% dud)' :
                    gs.hasDoubleCake ? '2x (40% dud)' : '1x';
-  const speedMult = gs.speedBoostTimer > 0 ? (gs.speedBoostMult || CFG.SPEED_BOOST_MULT) : 1;
-  const speedVal  = (CFG.PLAYER_SPEED * speedMult).toFixed(1);
+ const speedMult = gs.speedBoostTimer > 0 ? (gs.speedBoostMult || CFG.SPEED_BOOST_MULT) : 
+                    gs.hasTightropeBoots ? 1.25 : 1;
+  const speedVal = speedMult.toFixed(2) + 'x';
   const bulletsPerShot = CFG.BULLET_COUNT + (gs.hasCursedCandles ? gs.candlesLit * 2 : 0);
 
   let statLines = [
@@ -238,8 +239,8 @@ function renderPauseMenu() {
     `WAVE ............ ${gs.wave}`,
     `SCORE ........... ${gs.score}`,
     `DAMAGE .......... ${dmgLabel}`,
-    `SPEED ........... ${speedVal}${speedMult > 1 ? ' (BOOSTED)' : ''}`,
-    `CLIP SIZE ....... ${gs.maxAmmo}`,
+   `SPEED ...... ${speedVal}`,   
+   `CLIP SIZE ....... ${gs.maxAmmo}`,
     `BULLETS/SHOT .... ${bulletsPerShot}`,
   ];
   if (gs.hasCursedCandles)  statLines.push(`CANDLES ......... ${gs.candlesLit}/5 LIT`);
