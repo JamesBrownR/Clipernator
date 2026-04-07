@@ -62,6 +62,7 @@ function detonateExplosiveBullet(b, hitX, hitY) {
     }
   }
   for (const eid of toKill) {
+    if (!ECS.has(eid, 'pos')) continue;
     const epos = ECS.get(eid,'pos');
     if (epos) spawnParticles(epos.x, epos.y, '#ff2222', 18);
     ECS.destroyEntity(eid);
@@ -169,6 +170,28 @@ function swingGlowsticks() {
   const muzzle=gunMuzzlePos(); spawnParticles(muzzle.x,muzzle.y,'#00ff88',14);
 }
 
+// ── Helper: try to fire a Mirror Maze ricochet from a kill position ──
+function _mirrorMazeRicochet(fromX, fromY, skipId, dmg) {
+  let nearest = null, nearDist = 999999;
+  for (const oid of ECS.query('enemy', 'pos')) {
+    if (oid === skipId) continue;
+    const od = Math.hypot(ECS.get(oid,'pos').x - fromX, ECS.get(oid,'pos').y - fromY);
+    if (od < nearDist) { nearDist = od; nearest = ECS.get(oid,'pos'); }
+  }
+  if (nearest) {
+    const rd = Math.hypot(nearest.x - fromX, nearest.y - fromY) || 1;
+    gs.bullets.push({
+      x: fromX, y: fromY,
+      vx: (nearest.x - fromX) / rd * CFG.BULLET_SPEED,
+      vy: (nearest.y - fromY) / rd * CFG.BULLET_SPEED,
+      angle: Math.atan2(nearest.y - fromY, nearest.x - fromX),
+      life: 999, maxLife: 999,
+      damageMult: dmg, isDud: false, isMirrorRicochet: true
+    });
+    spawnParticles(fromX, fromY, '#ccddff', 10);
+  }
+}
+
 function sysPlayerMovement() {
   const pId=gs.playerId, pos=ECS.get(pId,'pos'), vel=ECS.get(pId,'vel');
   const dashing=gs.dashTimer>0, slowed=gs.confettiSlowTimer>0;
@@ -189,10 +212,21 @@ function sysPlayerMovement() {
       if (keys[KEYBINDS.moveDown]||keys['ArrowDown']) iy++;
     }
     if (ix&&iy){ix*=0.707;iy*=0.707;}
-    if (ix||iy){vel.vx+=ix*0.38*topSpd;vel.vy+=iy*0.38*topSpd;}
-    else{vel.vx*=0.82;vel.vy*=0.82;}
-    const spd=Math.hypot(vel.vx,vel.vy);
-    if (spd>topSpd){vel.vx=vel.vx/spd*topSpd;vel.vy=vel.vy/spd*topSpd;}
+
+    // ── Spoon knockback: bypass friction for a few frames ──
+    if (gs.spoonKnockbackTimer > 0) {
+      gs.spoonKnockbackTimer--;
+      // Don't apply movement input friction — let the knockback carry through
+      // but still allow the player to steer slightly
+      if (ix||iy) { vel.vx+=ix*0.15*topSpd; vel.vy+=iy*0.15*topSpd; }
+      // Minimal drag only
+      vel.vx *= 0.96; vel.vy *= 0.96;
+    } else {
+      if (ix||iy){vel.vx+=ix*0.38*topSpd;vel.vy+=iy*0.38*topSpd;}
+      else{vel.vx*=0.82;vel.vy*=0.82;}
+      const spd=Math.hypot(vel.vx,vel.vy);
+      if (spd>topSpd){vel.vx=vel.vx/spd*topSpd;vel.vy=vel.vy/spd*topSpd;}
+    }
   }
   pos.x+=vel.vx; pos.y+=vel.vy;
   const bouncy=gs.bouncyHouse;
@@ -221,6 +255,22 @@ function sysPlayerMovement() {
 
 function sysAI() {
   gs.frozen=gs.partyFreezeTimer>0;
+
+  // ── Clean up juggled flags for any enemy whose juggler has died ──
+  for (const id of ECS.query('enemy','ai')) {
+    const ai2 = ECS.get(id,'ai');
+    if (ai2.juggled && ai2.juggledBy !== undefined) {
+      if (!ECS.has(ai2.juggledBy, 'pos')) {
+        // Juggler is gone — free this enemy
+        ai2.juggled = false;
+        ai2.juggledBy = null;
+        // Restore normal physics so the enemy can move again
+        const evel = ECS.get(id,'vel');
+        if (evel) { evel.vx = (Math.random()-.5)*2; evel.vy = (Math.random()-.5)*2; }
+      }
+    }
+  }
+
   for (const id of ECS.query('enemy','pos','vel','ai','physics')) {
     const ai2=ECS.get(id,'ai');
     if (ai2&&ai2.juggled) {
@@ -247,7 +297,7 @@ function sysAI() {
     if (ai2&&ai2.reflectedByGlowstick&&type==='cannonball') {
       const hitWall=pos.x<30||pos.x>worldW-30||pos.y<30||pos.y>worldH-30;
       let hitEnemy=false;
-      for (const oid of ECS.query('enemy','pos','hp')) {
+      for (const oid of ECS.query('enemy','pos')) {
         if (oid===id) continue;
         if (Math.hypot(ECS.get(oid,'pos').x-pos.x,ECS.get(oid,'pos').y-pos.y)<40){hitEnemy=true;break;}
       }
@@ -332,7 +382,7 @@ function sysAI() {
 
 function sysBullets() {
   gs.bullets=gs.bullets.filter(b=>{
-    // Funhouse Distortion: meaningful homing force (was 0.28, now 1.1)
+    // Funhouse Distortion: meaningful homing force
     if (gs.hasFunhouseDistortion) {
       let nearest=null,nearDist=999999;
       for (const eid of ECS.query('enemy','pos')) {
@@ -382,6 +432,7 @@ function sysBulletEnemyCollision() {
         const dmg=b.damageMult||1;
         ehp.hp-=dmg; ehp.hitFlash=12; b.life=0;
         spawnParticles(b.x,b.y,dmg>1?'#ff44ff':'#ff6644',6);
+
         if (gs.popcornFrenzyTimer>0) {
           spawnParticles(b.x,b.y,'#ffdd00',12);
           for (const aoeId of ECS.query('enemy','pos','hp')) {
@@ -390,30 +441,15 @@ function sysBulletEnemyCollision() {
             if (Math.hypot(ap.x-b.x,ap.y-b.y)<55){const ah=ECS.get(aoeId,'hp');ah.hp-=dmg*0.6;ah.hitFlash=8;}
           }
         }
+
+        // ── Mirror Maze: ricochet on EVERY hit, not just kills ──
+        if (gs.hasMirrorMaze && !b.isMirrorRicochet) {
+          _mirrorMazeRicochet(epos.x, epos.y, id, dmg);
+        }
+
         if (ehp.hp<=0) {
           const type=ECS.get(id,'enemy').type;
           if (type==='boss') handleBossDeath(id);
-
-          // Mirror Maze: ricochet a bullet from kill pos toward nearest enemy
-          if (gs.hasMirrorMaze) {
-            let nearest=null,nearDist=999999;
-            for (const oid of ECS.query('enemy','pos')) {
-              if (oid===id) continue;
-              const od=Math.hypot(ECS.get(oid,'pos').x-epos.x,ECS.get(oid,'pos').y-epos.y);
-              if (od<nearDist){nearDist=od;nearest=ECS.get(oid,'pos');}
-            }
-            if (nearest) {
-              const rd=Math.hypot(nearest.x-epos.x,nearest.y-epos.y)||1;
-              gs.bullets.push({
-                x:epos.x,y:epos.y,
-                vx:(nearest.x-epos.x)/rd*CFG.BULLET_SPEED,
-                vy:(nearest.y-epos.y)/rd*CFG.BULLET_SPEED,
-                angle:Math.atan2(nearest.y-epos.y,nearest.x-epos.x),
-                life:999,maxLife:999,damageMult:dmg,isDud:false,isMirrorRicochet:true
-              });
-              spawnParticles(epos.x,epos.y,'#ccddff',10);
-            }
-          }
 
           if (gs.ricochetActive) {
             let nearest=null,nearDist=999999;
@@ -458,12 +494,37 @@ function sysDashCollision() {
 }
 
 function sysEnemyPlayerCollision() {
-  if (gs.invincible>0||gs.frozen||(gs.dashTimer>0&&gs.hasTightropeBoots)) return;
+  // Tightrope Boots: intangible while dashing
+  if (gs.dashTimer > 0 && gs.hasTightropeBoots) return;
+  if (gs.invincible>0||gs.frozen) return;
   const ppos=ECS.get(gs.playerId,'pos'); if (!ppos) return;
   for (const id of ECS.query('enemy','pos')) {
     const epos=ECS.get(id,'pos');
     if (Math.hypot(ppos.x-epos.x,ppos.y-epos.y)<28) {
-      gs.health-=gs.knockingPinsActive?8:20; gs.invincible=CFG.INVINCIBLE_FRAMES;
+      // Knocking Pins: reduced contact damage (8 instead of 20),
+      // and the bowl itself damages the enemy it rams into
+      if (gs.knockingPinsActive) {
+        gs.health-=8; gs.invincible=CFG.INVINCIBLE_FRAMES;
+        gs.shakeX=8;gs.shakeY=8; gs.flawlessThisWave=false;
+        // Deal damage to the enemy being bowled into
+        const ehp=ECS.get(id,'hp');
+        if (ehp) {
+          ehp.hp-=baseBulletDamage()*3; ehp.hitFlash=14;
+          spawnParticles(epos.x,epos.y,'#3333cc',10);
+          if (ehp.hp<=0){
+            spawnParticles(epos.x,epos.y,'#ff2222',18);
+            ECS.destroyEntity(id);
+            gs.score+=Math.round(12*gs.wave); gs.waveKills++;
+            tryDropTicket(); gs.health=Math.min(gs.maxHealth,gs.health+CFG.HEALTH_REGEN); updateHUD(); checkWave();
+            if (gs.health<=0){gameOver();return;}
+            return;
+          }
+        }
+        triggerSFPHit(); spawnParticles(ppos.x,ppos.y,'#3333cc',10); updateHUD();
+        if (gs.health<=0){gameOver();return;} return;
+      }
+
+      gs.health-=20; gs.invincible=CFG.INVINCIBLE_FRAMES;
       gs.shakeX=16;gs.shakeY=16; gs.flawlessThisWave=false;
       triggerSFPHit(); spawnParticles(ppos.x,ppos.y,'#ff3333',14); updateHUD();
       if (gs.health<=0){gameOver();return;} return;
@@ -507,7 +568,6 @@ function sysEnemyBullets() {
       if (eb.y<=4){eb.y=4;eb.vy=Math.abs(eb.vy);bounced=true;}
       if (eb.y>=worldH-4){eb.y=worldH-4;eb.vy=-Math.abs(eb.vy);bounced=true;}
       if (bounced&&!eb.friendlyFire) {
-        // Enemy bullet hits wall → convert to player bullet
         eb.bounces=(eb.bounces||0)+1;
         spawnParticles(eb.x,eb.y,'#88ffdd',3);
         gs.bullets.push({
@@ -576,14 +636,12 @@ function sysTimers() {
       worldW=gs.transitionEndW; worldH=gs.transitionEndH;
       renderScale=CFG.W/worldW; canvas.height=Math.round(worldH*renderScale);
       gs.transitionDone=true; gs.transitioning=false;
-      // Auto-switch to floor 2 inline — no "Descend" panel
       gs.floor=2;
       unlockGlowsticks(); trySpawnFieldItems();
       showMsg('WELCOME TO THE BIG TOP!');
       const hint=document.getElementById('bottom-hint');
       if (hint) hint.textContent=`WASD:MOVE | MOUSE:AIM | CLICK:SHOOT | ${formatKey(KEYBINDS.reload)}:RELOAD | SHIFT:DASH | ${formatKey(KEYBINDS.prizeWheel)}:PRIZE WHEEL (3 TICKETS)`;
       updateHUD();
-      // gameRunning stays true — loop continues
     }
     return;
   }
@@ -593,6 +651,7 @@ function sysTimers() {
   if (gs.confettiSlowTimer>0) gs.confettiSlowTimer--;
   if (gs.invincible>0) gs.invincible--;
   if (gs.glowCooldown>0) gs.glowCooldown--;
+  if (gs.spoonKnockbackTimer>0) gs.spoonKnockbackTimer--;
 
   if (gs.explosionFreezeTimer>0){gs.explosionFreezeTimer--;return;}
   if (gs.glowExplosionTimer>0) gs.glowExplosionTimer--;
@@ -667,7 +726,7 @@ function sysTimers() {
 
   if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
 
-// Clownish: nose grows, blasts bullets + spawns waves; WAVES confuse enemies on contact
+  // Clownish: nose grows, blasts bullets + spawns waves; WAVES confuse enemies on contact
   if (gs.hasClownish) {
     if (gs.clownNoseHonkTimer > 0) gs.clownNoseHonkTimer--;
     gs.clownNoseTimer++;
@@ -675,7 +734,6 @@ function sysTimers() {
     if (gs.clownNoseTimer >= gs.clownNoseMax) {
       gs.clownNoseTimer = 0; gs.clownNoseSize = 0;
       const ppos3 = ECS.get(gs.playerId, 'pos');
-      // Always fire — no enemy-count gate (was requiring 2+ nearby which felt bad)
       const bulletCount = gs.hasClownishUpgrade ? 8 : 2;
       for (let bi = 0; bi < bulletCount; bi++) {
         const ba = gs.hasClownishUpgrade
@@ -683,25 +741,24 @@ function sysTimers() {
           : gunAngle + (bi === 0 ? -0.5 : 0.5);
         gs.bullets.push({ x: ppos3.x, y: ppos3.y, vx: Math.cos(ba)*8, vy: Math.sin(ba)*8, life: 80, maxLife: 80, angle: ba, damageMult: gs.hasClownishUpgrade ? 3 : 2, isDud: false });
       }
-      // Two waves — the second lags behind so they're visually distinct
-      // hitEnemies tracks which enemies each wave has already confused
+      // Two waves with distinct speeds so they're clearly separate
       gs.clownSoundWaves = [
-        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 260, life: 38, maxLife: 38, hitEnemies: new Set() },
-        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 260, life: 30, maxLife: 38, hitEnemies: new Set() },
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 220, life: 52, maxLife: 52, speed: 5.5, hitEnemies: new Set() },
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 220, life: 44, maxLife: 52, speed: 3.8, hitEnemies: new Set() },
       ];
-      gs.clownNoseHonkTimer = 14; // drives squish animation in draw.js
+      gs.clownNoseHonkTimer = 14;
       spawnPartyParticles(ppos3.x, ppos3.y);
       showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! WAVES CONFUSE ENEMIES!' : 'CLOWN NOSE BLAST! TOUCH THE WAVES TO CONFUSE!');
     }
   }
 
-  // Tick sound wave rings — enemies that the wave radius passes through get confused
+  // Tick sound wave rings — enemies the wave front passes through get confused
   if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
     const confuseDur = gs.hasClownishUpgrade ? 480 : 300;
-    const waveThickness = 22; // px band — enemy must be within this of the wave front
+    const waveThickness = 18; // px band — enemy must be within this of the wave front
     gs.clownSoundWaves = gs.clownSoundWaves.filter(w => {
-      // Expand ring
-      w.r += (w.maxR - w.r) * 0.12 + 2.5;
+      // Expand ring at its own fixed speed rather than easing
+      w.r = Math.min(w.maxR, w.r + w.speed);
       w.life--;
       // Check each enemy against this wave's leading edge
       for (const eid of ECS.query('enemy', 'pos', 'ai')) {
@@ -722,7 +779,6 @@ function sysTimers() {
       return w.life > 0 && w.r < w.maxR;
     });
   }
-
 }
 
 function sysSpawner() {
@@ -938,7 +994,6 @@ function spinPrizeWheel() {
 function handleBossDeath(id) {
   if (gs.bossId!==id) return;
   gs.bossActive=false; gs.bossId=null;
-  // Start arena growth — floor switch is automatic in sysTimers, no panel shown
   gs.transitioning=true; gs.transitionT=0;
   gs.transitionStartW=worldW; gs.transitionStartH=worldH;
   gs.transitionEndW=1050; gs.transitionEndH=690;
