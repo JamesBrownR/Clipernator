@@ -88,6 +88,7 @@ function initGameState() {
     pendingChoice: false,
     heldGiftBox: null,
     forkGrabbed: false,
+   
 
     // Item flags
     bouncyHouse: false,
@@ -122,6 +123,13 @@ function initGameState() {
 
     // Floor tracking
     floor: 1,
+    transitioning: false,
+    transitionT: 0,
+    transitionDone: false,
+    transitionStartW: CFG.W,
+    transitionStartH: CFG.H,
+    transitionEndW: 1050,
+    transitionEndH: 690,
 
     // Tickets / prize wheel (Floor 2)
     tickets: 0,
@@ -129,6 +137,8 @@ function initGameState() {
     sugarRushActive: false,
     ricochetActive: false,
     cursedSpinTimer: 0,
+
+   
   };
 
   const pId = ECS.createEntity();
