@@ -720,37 +720,47 @@ function sysTimers() {
         const ep=ECS.get(eid,'pos'),d=Math.hypot(ep.x-ppos.x,ep.y-ppos.y);
         if (d<nearDist){nearDist=d;nearest=ep;}
       }
-      if (nearest){const dx=nearest.x-ppos.x,dy=nearest.y-ppos.y,dist=Math.hypot(dx,dy)||1;pvel.vx=(dx/dist)*CFG.PLAYER_SPEED*2.2;pvel.vy=(dy/dist)*CFG.PLAYER_SPEED*2.2;}
-    }
+if (nearest) {
+        const dx = nearest.x - ppos.x, dy = nearest.y - ppos.y, dist = Math.hypot(dx, dy) || 1;
+        pvel.vx = (dx / dist) * CFG.PLAYER_SPEED * 4.5;
+        pvel.vy = (dy / dist) * CFG.PLAYER_SPEED * 4.5;
+      }    }
   }
-
-  if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
 
   // Clownish: nose grows, blasts bullets + spawns waves; WAVES confuse enemies on contact
-  if (gs.hasClownish) {
-    if (gs.clownNoseHonkTimer > 0) gs.clownNoseHonkTimer--;
-    gs.clownNoseTimer++;
-    gs.clownNoseSize = gs.clownNoseTimer / gs.clownNoseMax;
-    if (gs.clownNoseTimer >= gs.clownNoseMax) {
-      gs.clownNoseTimer = 0; gs.clownNoseSize = 0;
-      const ppos3 = ECS.get(gs.playerId, 'pos');
-      const bulletCount = gs.hasClownishUpgrade ? 8 : 2;
-      for (let bi = 0; bi < bulletCount; bi++) {
-        const ba = gs.hasClownishUpgrade
-          ? (bi / bulletCount) * Math.PI * 2
-          : gunAngle + (bi === 0 ? -0.5 : 0.5);
-        gs.bullets.push({ x: ppos3.x, y: ppos3.y, vx: Math.cos(ba)*8, vy: Math.sin(ba)*8, life: 80, maxLife: 80, angle: ba, damageMult: gs.hasClownishUpgrade ? 3 : 2, isDud: false });
-      }
-      // Two waves with distinct speeds so they're clearly separate
-      gs.clownSoundWaves = [
-        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 220, life: 52, maxLife: 52, speed: 5.5, hitEnemies: new Set() },
-        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 220, life: 44, maxLife: 52, speed: 3.8, hitEnemies: new Set() },
-      ];
+if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
+
+ if (gs.hasClownish) {
+  if (gs.clownNoseHonkTimer > 0) gs.clownNoseHonkTimer--;
+  gs.clownNoseTimer++;
+  gs.clownNoseSize = gs.clownNoseTimer / gs.clownNoseMax;
+
+  if (gs.clownNoseTimer >= gs.clownNoseMax) {
+    // Only blast if there's an enemy within 100px
+    const ppos3 = ECS.get(gs.playerId, 'pos');
+    const nearbyEnemy = ECS.query('enemy', 'pos').some(eid => {
+      const ep = ECS.get(eid, 'pos');
+      return Math.hypot(ep.x - ppos3.x, ep.y - ppos3.y) < 100;
+    });
+
+    if (nearbyEnemy) {
+      gs.clownNoseTimer = 0;
+      gs.clownNoseSize = 0;
       gs.clownNoseHonkTimer = 14;
+
+      // Two waves with different speeds — NO stray bullets
+      gs.clownSoundWaves = [
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 220, life: 60, maxLife: 60, speed: 3.2, hitEnemies: new Set() },
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 220, life: 52, maxLife: 60, speed: 2.0, hitEnemies: new Set() },
+      ];
       spawnPartyParticles(ppos3.x, ppos3.y);
-      showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! WAVES CONFUSE ENEMIES!' : 'CLOWN NOSE BLAST! TOUCH THE WAVES TO CONFUSE!');
+      showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! WAVES CONFUSE ENEMIES!' : 'HONK! WAVES CONFUSE NEARBY ENEMIES!');
+    } else {
+      // No enemy nearby — hold at full, don't reset, keep honk timer ticking
+      gs.clownNoseTimer = gs.clownNoseMax; // stay full, don't overflow
     }
   }
+}
 
   // Tick sound wave rings — enemies the wave front passes through get confused
   if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
