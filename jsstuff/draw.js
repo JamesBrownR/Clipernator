@@ -441,18 +441,30 @@ function drawPlayer() {
 
   if (gunRecoil > 0) gunRecoil = Math.max(0, gunRecoil - 0.08);
 
-  // ── Clownish nose — capped at a small radius so it doesn't dominate the screen ──
-  if (gs.hasClownish && gs.clownNoseSize > 0) {
-    // Max visual radius is 8px (was 4+size*14 which could reach 18px — too big)
-    const noseR = 3 + gs.clownNoseSize * 8;
-    ctx.save();
-    ctx.translate(ppos.x, ppos.y - 10);
-    ctx.shadowColor = '#4488ff';
-    ctx.shadowBlur = 8 + gs.clownNoseSize * 12;
-    ctx.fillStyle = gs.clownNoseSize > 0.85 ? '#ffffff' : '#4488ff';
-    ctx.globalAlpha = 0.7 + gs.clownNoseSize * 0.3;
-    ctx.beginPath(); ctx.arc(0, 0, noseR, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+ // ── Clownish nose — grows as timer fills, honks (squishes) on blast ──
+  if (gs.hasClownish) {
+    const honking = gs.clownNoseHonkTimer > 0;
+    const honkProgress = honking ? gs.clownNoseHonkTimer / 14 : 0;
+    // Nose is only visible while growing OR briefly during honk
+    const visible = gs.clownNoseSize > 0 || honking;
+    if (visible) {
+      const baseR = 2.5 + gs.clownNoseSize * 5; // max ~7.5px — smaller than before
+      ctx.save();
+      ctx.translate(ppos.x, ppos.y - 10);
+      if (honking) {
+        // Squish: wide and flat immediately after blast, then spring back
+        const squishX = 1 + honkProgress * 0.9;  // stretches wide
+        const squishY = 1 - honkProgress * 0.55; // flattens vertically
+        ctx.scale(squishX, squishY);
+      }
+      ctx.shadowColor = '#4488ff';
+      ctx.shadowBlur = honking ? 20 : 6 + gs.clownNoseSize * 10;
+      ctx.fillStyle = honking ? '#ffffff' : (gs.clownNoseSize > 0.85 ? '#aaccff' : '#4488ff');
+      ctx.globalAlpha = honking ? 1.0 : 0.65 + gs.clownNoseSize * 0.35;
+      const drawR = honking ? Math.max(baseR, 4) : baseR;
+      ctx.beginPath(); ctx.arc(0, 0, drawR, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
   }
 
   ctx.globalAlpha = 1;
