@@ -74,7 +74,7 @@ function initGameState() {
   ECS.clear();
 
   gs = {
-    score: 0, wave: 10,
+    score: 0, wave: 1,
     health: CFG.MAX_HEALTH, maxHealth: CFG.MAX_HEALTH,
     ammo: CFG.MAX_AMMO, maxAmmo: CFG.MAX_AMMO,
     reloading: false, reloadTimer: 0,
@@ -91,7 +91,7 @@ function initGameState() {
    
 
     // Item flags
-    bouncyHouse: false,
+    bouncyHouse: true,
     hasDoubleCake: false, hasTripleCake: false, hasQuadCake: false,
     hasDash: false,
     dashCharges: 0, dashMaxCharges: CFG.DASH_MAX_CHARGES,
