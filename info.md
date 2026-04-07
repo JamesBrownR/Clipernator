@@ -24,6 +24,7 @@ Make enemies more interactive overall:
   * Should replace the mask enemy with two pixel art sprites instead of the draw function if possinle... though not sure how I would do the crying or state change animation
   * need to replace the scissors with a fork, knife, and spoon enemy (randomly chooses one to attack from, and it launches across the screen until it hits something then comes back and goes back to its idle animation of the three utencilts spinning around. the fork does no damage but grabs entities, the spoon knocks back entities and deals, the knife deals more damage (UPDATE: mostly works but the utensil enemy does not interact with other enemies, only the player, when it does hit a enemy the game crashes)
   * When you throw the giftbox enemy at another enemy and it deals damage, it works fine. However if you throw it at a enemy and it kills that enemy, the game crashes
+  * The juggler enemy is a bit mindless, always chases the player instead of trying to keep distance 
   * if possible, there should be a animation of the stage getting bigger after you kill boss one, rather than a instant transition (UPDATE: This works but the note has not been removed since the game still pauses briefly before continuing; it should be instant and have no pause)
 
 Item stuff
