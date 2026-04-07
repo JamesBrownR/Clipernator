@@ -115,7 +115,9 @@ function initGameState() {
     knockingPinsActive: false, knockingPinsTimer: 0,
     hasClownish: false,
     clownNoseSize: 0, clownNoseTimer: 0, clownNoseMax: 480,
+    clownNoseHonkTimer: 0,
     clownConfuseActive: false,
+    clownSoundWaves: [],
     speedBoostMult: CFG.SPEED_BOOST_MULT,
 
     // Boss
