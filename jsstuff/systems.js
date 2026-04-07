@@ -253,6 +253,9 @@ function swingGlowsticks() {
 // ================================================================
 // SYSTEM 1: Player Movement
 // ================================================================
+// ================================================================
+// SYSTEM 1: Player Movement  — REPLACE the existing sysPlayerMovement
+// ================================================================
 function sysPlayerMovement() {
   const pId = gs.playerId;
   const pos = ECS.get(pId, 'pos');
@@ -275,12 +278,13 @@ function sysPlayerMovement() {
     vel.vx = gs.dashVx;
     vel.vy = gs.dashVy;
   } else {
- let ix = 0, iy = 0;
+    let ix = 0, iy = 0;
     if (!gs.forkGrabbed) {
-      if (keys['ArrowLeft']  || keys['a'] || keys['A']) ix--;
-      if (keys['ArrowRight'] || keys['d'] || keys['D']) ix++;
-      if (keys['ArrowUp']    || keys['w'] || keys['W']) iy--;
-      if (keys['ArrowDown']  || keys['s'] || keys['S']) iy++;
+      // Primary binds from KEYBINDS; arrow keys always work as fallback
+      if (keys[KEYBINDS.moveLeft]  || keys['ArrowLeft'])  ix--;
+      if (keys[KEYBINDS.moveRight] || keys['ArrowRight']) ix++;
+      if (keys[KEYBINDS.moveUp]    || keys['ArrowUp'])    iy--;
+      if (keys[KEYBINDS.moveDown]  || keys['ArrowDown'])  iy++;
     }
     if (ix && iy) { ix *= 0.707; iy *= 0.707; }
     if (ix || iy) { vel.vx += ix * 0.38 * topSpd; vel.vy += iy * 0.38 * topSpd; }
@@ -306,8 +310,8 @@ function sysPlayerMovement() {
     while (da > Math.PI)  da -= Math.PI * 2;
     while (da < -Math.PI) da += Math.PI * 2;
     playerMoveAngle += da * 0.04;
-  } 
-  
+  }
+
   if (moveSpd > 0.5) {
     playerBobTimer += moveSpd * 0.08;
   } else {
@@ -334,18 +338,17 @@ function sysPlayerMovement() {
 
   gs.dashTrail = gs.dashTrail.filter(t => { t.life--; return t.life > 0; });
 
-   if (gs.heldGiftBox !== null) {
-     if (!ECS.has(gs.heldGiftBox, 'pos')) {
-       gs.heldGiftBox = null;
-     } else {
-       const hbpos = ECS.get(gs.heldGiftBox, 'pos');
-       const ppos = ECS.get(gs.playerId, 'pos');
-       hbpos.x = ppos.x + Math.cos(gunAngle) * 36;
-       hbpos.y = ppos.y + Math.sin(gunAngle) * 36;
+  if (gs.heldGiftBox !== null) {
+    if (!ECS.has(gs.heldGiftBox, 'pos')) {
+      gs.heldGiftBox = null;
+    } else {
+      const hbpos = ECS.get(gs.heldGiftBox, 'pos');
+      const ppos = ECS.get(gs.playerId, 'pos');
+      hbpos.x = ppos.x + Math.cos(gunAngle) * 36;
+      hbpos.y = ppos.y + Math.sin(gunAngle) * 36;
     }
-   }
+  }
 }
-
 // ================================================================
 // SYSTEM 2: AI (Behavior Trees)
 // ================================================================
