@@ -1324,13 +1324,17 @@ function handleBossDeath(id) {
   if (gs.bossId !== id) return;
   gs.bossActive = false;
   gs.bossId     = null;
-  gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
 
-  gameRunning = false;
-  cancelAnimationFrame(animId);
+  gs.transitioning     = true;
+  gs.transitionT       = 0;
+  gs.transitionStartW  = worldW;
+  gs.transitionStartH  = worldH;
+  gs.transitionEndW    = 1050;
+  gs.transitionEndH    = 690;
+  gs.transitionDone    = false;
 
-  const ft = document.getElementById('floor-transition');
   document.getElementById('floor-hud').textContent = 'FLOOR 1 CLEARED';
-  ft.querySelector('h2').innerHTML = '⬇️ DESCENDING TO<br>FLOOR 2 ⬇️';
-  ft.style.display = 'flex';
+  document.getElementById('floor-transition').querySelector('h2').innerHTML =
+    '⬇️ DESCENDING TO<br>FLOOR 2 ⬇️';
+  // Don't show the panel yet — show it once the animation finishes
 }
