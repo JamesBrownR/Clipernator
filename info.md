@@ -34,4 +34,4 @@ Item stuff
   * SFP does not seem to stack with other damage modifiers
   * Extra clips does not seem to stack with other ammo modifiers. For example, you have gotten to 12 max ammo (most likely because of perfect baking) and you have extra clips, you only get 14 max ammo instead of 15. 25% of 10 is 2 and 25% of 12 is 3, so if it was stacking you should have 15 max ammo in this situation. the same thing probably is broken with the health, but this is harder to see without any other prominent health buffs
   * clownish and popcorn bucket will have upgrades when they are working correctly, the current upgrades are placeholders
-  
+  * what the hell is inferno rounds?
