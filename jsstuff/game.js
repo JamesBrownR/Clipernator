@@ -1,12 +1,8 @@
 // ============================================================
 // CLIPBLAST: PARTY HUNTER — Game Core
-// ECS, game state, input, loop, HUD, pause, game  over
+// ECS, game state, input, loop, HUD, pause, game over
 // ============================================================
 
-// ── Global runtime variables ──
-
-
- 
 let gameRunning = false;
 let animId = null;
 let msgTimeout = null;
@@ -62,8 +58,6 @@ const ECS = {
   }
 };
 
-
-
 // ── Helper ──
 function playerPos(gs) {
   const ids = ECS.query('player', 'pos');
@@ -78,7 +72,6 @@ let gs = {};
 
 function initGameState() {
   ECS.clear();
- 
 
   gs = {
     score: 0, wave: 1,
@@ -162,14 +155,13 @@ function updateHUD() {
     document.getElementById('ticket-val').textContent = gs.tickets || 0;
   }
 
-  // Floor 2: circus border color cycle
   const f2 = gs.floor === 2;
   const t = Date.now() / 600;
   const circus = f2 ? ['#ff2200','#ff6600','#ffcc00','#ff6600'][Math.floor(t) % 4] : null;
-  const primary  = f2 ? circus : 'var(--green)';
-  const glow1    = f2 ? circus : 'var(--green2)';
-  const glowRgba = f2 ? 'rgba(255,80,0,0.15)'  : 'rgba(0,255,100,0.1)';
-  const insetRgba= f2 ? 'rgba(255,60,0,0.06)'  : 'rgba(0,255,100,0.04)';
+  const primary   = f2 ? circus : 'var(--green)';
+  const glow1     = f2 ? circus : 'var(--green2)';
+  const glowRgba  = f2 ? 'rgba(255,80,0,0.15)'  : 'rgba(0,255,100,0.1)';
+  const insetRgba = f2 ? 'rgba(255,60,0,0.06)'  : 'rgba(0,255,100,0.04)';
 
   const wrapper = document.getElementById('wrapper');
   const hud     = document.getElementById('hud');
@@ -253,28 +245,179 @@ function renderPauseMenu() {
     empty.style.fontSize = '8px';
     empty.textContent = '(No items unlocked yet)';
     container.appendChild(empty);
-    return;
+  } else {
+    gs.unlockedItems.forEach(id => {
+      if (id === 'doubledCake' && (gs.hasTripleCake || gs.hasQuadCake)) return;
+      if (id === 'tripleCake' && gs.hasQuadCake) return;
+      const def = ITEM_DEFS[id];
+      if (!def) return;
+
+      const card = document.createElement('div');
+      card.style.cssText = `
+        position:relative; width:54px; height:54px;
+        border:1px solid #00cc44; background:#001a10;
+        display:flex; align-items:center; justify-content:center;
+        font-size:22px; cursor:default;
+        box-shadow:0 0 8px rgba(0,255,100,0.2);
+      `;
+      if (id === 'doubledCake')    { card.style.borderColor='#4488ff';  card.style.background='#001133'; }
+      else if (id === 'tripleCake') { card.style.borderColor='#cc44ff'; card.style.background='#220022'; }
+      else if (id === 'quadCake')   { card.style.borderColor='#ff3333'; card.style.background='#220000'; }
+      else if (id === 'cursedCandles') { card.style.borderColor='#ff8800'; card.style.background='#1a0a00'; }
+
+      card.textContent = def.icon;
+
+      // Tooltip on hover
+      const tip = document.createElement('div');
+      tip.style.cssText = `
+        display:none; position:absolute; bottom:calc(100% + 6px); left:50%;
+        transform:translateX(-50%);
+        background:#001a10; border:1px solid #00cc44;
+        padding:8px 10px; white-space:nowrap; z-index:99;
+        font-family:'Press Start 2P',monospace; font-size:6px;
+        color:var(--green); line-height:1.9; text-align:left;
+        box-shadow:0 0 12px rgba(0,255,100,0.3);
+        pointer-events:none;
+      `;
+      tip.innerHTML = `<span style="color:var(--yellow)">${def.label.replace(/\n/g,' ')}</span><br>${def.desc.replace(/\n/g,'<br>')}`;
+      card.appendChild(tip);
+      card.addEventListener('mouseenter', () => { tip.style.display = 'block'; });
+      card.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
+      container.appendChild(card);
+    });
   }
 
-  gs.unlockedItems.forEach(id => {
-    if (id === 'doubledCake' && (gs.hasTripleCake || gs.hasQuadCake)) return;
-    if (id === 'tripleCake' && gs.hasQuadCake) return;
-    const def = ITEM_DEFS[id];
-    if (!def) return;
-    const card = document.createElement('div');
-    card.style.cssText = 'width:130px;border:2px solid #00cc44;background:#001a10;padding:10px 8px;text-align:center;box-shadow:0 0 12px rgba(0,255,100,0.3);';
-    if (id === 'doubledCake') { card.style.background='#001133'; card.style.borderColor='#4488ff'; }
-    else if (id === 'tripleCake') { card.style.background='#220022'; card.style.borderColor='#cc44ff'; }
-    else if (id === 'quadCake')   { card.style.background='#220000'; card.style.borderColor='#ff3333'; }
-    else if (id === 'cursedCandles') { card.style.background='#1a0a00'; card.style.borderColor='#ff8800'; }
-    card.innerHTML = `
-      <div style="font-size:22px;margin-bottom:5px;">${def.icon}</div>
-      <div style="font-size:7px;color:var(--yellow);line-height:1.4;">${def.label.replace(/\n/g,'<br>')}</div>
-      <div style="font-size:6px;color:var(--green2);margin-top:6px;">${def.desc.replace(/\n/g,'<br>')}</div>
+  // Keybind button
+  let kbBtn = document.getElementById('pause-keybind-btn');
+  if (!kbBtn) {
+    kbBtn = document.createElement('button');
+    kbBtn.id = 'pause-keybind-btn';
+    kbBtn.style.cssText = `
+      font-family:'Press Start 2P',monospace; font-size:8px;
+      color:#000; background:var(--green); border:none;
+      padding:10px 22px; cursor:pointer;
+      box-shadow:3px 3px 0 var(--green2); margin-top:14px; letter-spacing:1px;
     `;
-    container.appendChild(card);
-  });
+    kbBtn.textContent = 'KEYBINDS';
+    kbBtn.addEventListener('click', openKeybindScreen);
+    document.getElementById('pause-menu').appendChild(kbBtn);
+  }
 }
+
+// ================================================================
+// KEYBIND SCREEN
+// ================================================================
+let _listeningAction = null;
+let _keybindKeyHandler = null;
+
+function openKeybindScreen() {
+  document.getElementById('pause-menu').style.display = 'none';
+  const screen = document.getElementById('keybind-screen');
+  screen.style.display = 'flex';
+  renderKeybindRows();
+}
+
+function closeKeybindScreen() {
+  document.getElementById('keybind-screen').style.display = 'none';
+  document.getElementById('pause-menu').style.display = 'flex';
+  cancelKeybindListen();
+}
+
+function renderKeybindRows() {
+  const container = document.getElementById('keybind-rows');
+  container.innerHTML = '';
+
+  for (const action of Object.keys(KEYBIND_DEFAULTS)) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:24px;';
+
+    const label = document.createElement('span');
+    label.style.cssText = 'font-size:7px; color:var(--green); letter-spacing:1px;';
+    label.textContent = KEYBIND_LABELS[action];
+
+    const btn = document.createElement('button');
+    btn.id = `kb-btn-${action}`;
+    btn.style.cssText = `
+      font-family:'Press Start 2P',monospace; font-size:7px;
+      color:var(--yellow); background:#002200; border:1px solid var(--gray);
+      padding:5px 12px; cursor:pointer; min-width:80px; text-align:center;
+      letter-spacing:1px; transition:border-color 0.15s, color 0.15s;
+    `;
+    btn.textContent = formatKey(KEYBINDS[action]);
+    btn.dataset.action = action;
+
+    btn.addEventListener('click', () => startKeybindListen(action));
+
+    row.appendChild(label);
+    row.appendChild(btn);
+    container.appendChild(row);
+  }
+}
+
+function startKeybindListen(action) {
+  cancelKeybindListen();
+  _listeningAction = action;
+
+  // Highlight the button being remapped
+  const btn = document.getElementById(`kb-btn-${action}`);
+  if (btn) {
+    btn.style.color = '#ff4400';
+    btn.style.borderColor = '#ff4400';
+    btn.textContent = '...';
+  }
+
+  const hint = document.getElementById('keybind-listening-hint');
+  hint.style.opacity = '1';
+
+  _keybindKeyHandler = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.key === 'Escape') {
+      cancelKeybindListen();
+      return;
+    }
+
+    const newKey = e.key;
+
+    // If another action already uses this key, swap them
+    for (const other of Object.keys(KEYBINDS)) {
+      if (other !== action && KEYBINDS[other] === newKey) {
+        KEYBINDS[other] = KEYBINDS[action]; // swap
+        const otherBtn = document.getElementById(`kb-btn-${other}`);
+        if (otherBtn) otherBtn.textContent = formatKey(KEYBINDS[other]);
+      }
+    }
+
+    KEYBINDS[action] = newKey;
+    saveKeybinds();
+
+    cancelKeybindListen();
+    renderKeybindRows(); // full re-render to reflect all changes cleanly
+  };
+
+  document.addEventListener('keydown', _keybindKeyHandler, { capture: true });
+}
+
+function cancelKeybindListen() {
+  if (_keybindKeyHandler) {
+    document.removeEventListener('keydown', _keybindKeyHandler, { capture: true });
+    _keybindKeyHandler = null;
+  }
+  _listeningAction = null;
+  const hint = document.getElementById('keybind-listening-hint');
+  if (hint) hint.style.opacity = '0';
+}
+
+document.getElementById('keybind-back-btn').addEventListener('click', closeKeybindScreen);
+
+document.getElementById('keybind-reset-btn').addEventListener('click', () => {
+  for (const k of Object.keys(KEYBIND_DEFAULTS)) KEYBINDS[k] = KEYBIND_DEFAULTS[k];
+  saveKeybinds();
+  renderKeybindRows();
+  cancelKeybindListen();
+});
 
 // ================================================================
 // GAME LOOP
@@ -305,36 +448,35 @@ function startGame() {
   loop();
 }
 
- function tryPickUpGiftBox() {
-   const ppos = ECS.get(gs.playerId, 'pos');
-   if (gs.heldGiftBox !== null) {
-     // Throw it
-     throwGiftBox();
-     return;
-   }
-    for (const id of ECS.query('enemy', 'pos', 'ai')) {
-     const type = ECS.get(id, 'enemy').type;
-       if (type !== 'giftBox') continue;
-       const epos = ECS.get(id, 'pos');
-       if (Math.hypot(epos.x - ppos.x, epos.y - ppos.y) < 48) {
-         gs.heldGiftBox = id;
-       ECS.get(id, 'ai').heldByPlayer = true;
-        ECS.get(id, 'vel').vx = 0;
-        ECS.get(id, 'vel').vy = 0;
-        showMsg('GIFT BOX GRABBED! RIGHT-CLICK TO THROW!');
-        return;
-      }
+function tryPickUpGiftBox() {
+  const ppos = ECS.get(gs.playerId, 'pos');
+  if (gs.heldGiftBox !== null) {
+    throwGiftBox();
+    return;
+  }
+  for (const id of ECS.query('enemy', 'pos', 'ai')) {
+    const type = ECS.get(id, 'enemy').type;
+    if (type !== 'giftBox') continue;
+    const epos = ECS.get(id, 'pos');
+    if (Math.hypot(epos.x - ppos.x, epos.y - ppos.y) < 48) {
+      gs.heldGiftBox = id;
+      ECS.get(id, 'ai').heldByPlayer = true;
+      ECS.get(id, 'vel').vx = 0;
+      ECS.get(id, 'vel').vy = 0;
+      showMsg('GIFT BOX GRABBED! RIGHT-CLICK TO THROW!');
+      return;
     }
   }
-  
-  function throwGiftBox() {
+}
+
+function throwGiftBox() {
   if (gs.heldGiftBox === null) return;
   const id = gs.heldGiftBox;
   if (!ECS.has(id, 'pos')) { gs.heldGiftBox = null; return; }
   const ai  = ECS.get(id, 'ai');
   const vel = ECS.get(id, 'vel');
   ai.heldByPlayer = false;
-  ai.thrown = true;          // ← NEW: prevents BT from reclaiming velocity
+  ai.thrown = true;
   gs.heldGiftBox = null;
   const epos = ECS.get(id, 'pos');
   const dx = mouse.x - epos.x, dy = mouse.y - epos.y;
@@ -348,11 +490,11 @@ function startGame() {
 // INPUT
 // ================================================================
 canvas.addEventListener('contextmenu', e => {
-     e.preventDefault();
-     if (!gameRunning) return;
-    if (gs.hasGlowsticks) { swingGlowsticks(); return; }  // glowsticks take priority
-    tryPickUpGiftBox();
-  });
+  e.preventDefault();
+  if (!gameRunning) return;
+  if (gs.hasGlowsticks) { swingGlowsticks(); return; }
+  tryPickUpGiftBox();
+});
 
 canvas.addEventListener('mousemove', e => {
   const rect = canvas.getBoundingClientRect();
@@ -361,10 +503,14 @@ canvas.addEventListener('mousemove', e => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key.toLowerCase() === 'p') {
+  // Keybind screen intercepts its own keys via capture listener — don't handle here
+  if (document.getElementById('keybind-screen').style.display === 'flex') return;
+
+  if (e.key === KEYBINDS.pause) {
     togglePause();
     return;
   }
+
   if (isPaused) {
     if (e.key === 'Escape') {
       document.getElementById('pause-menu').style.display = 'none';
@@ -374,10 +520,14 @@ document.addEventListener('keydown', e => {
     }
     return;
   }
+
   keys[e.key] = true;
-  if (e.key === 'r' || e.key === 'R') { if (gameRunning) startReload(); }
-  if (e.key === 'q' || e.key === 'Q') { if (gameRunning) spinPrizeWheel(); e.preventDefault(); }
-  if (e.key === 'Shift') { if (gameRunning) tryDash(); e.preventDefault(); }
+
+  if (!gameRunning) return;
+
+  if (e.key === KEYBINDS.reload)     { startReload(); }
+  if (e.key === KEYBINDS.prizeWheel) { spinPrizeWheel(); e.preventDefault(); }
+  if (e.key === KEYBINDS.dash)       { tryDash(); e.preventDefault(); }
 });
 
 document.addEventListener('keyup', e => { keys[e.key] = false; });
@@ -392,14 +542,14 @@ document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('floor-btn').addEventListener('click', () => {
   document.getElementById('floor-transition').style.display = 'none';
   gs.floor = 2;
-   worldW = 1050;
+  worldW = 1050;
   worldH = 690;
   renderScale = CFG.W / worldW;
   unlockGlowsticks();
   trySpawnFieldItems();
   showMsg('WELCOME TO THE BIG TOP!');
   const hint = document.getElementById('bottom-hint');
-  if (hint) hint.textContent = 'WASD:MOVE | MOUSE:AIM | CLICK:SHOOT | R:RELOAD | SHIFT:DASH | Q:PRIZE WHEEL (3 TICKETS)';
+  if (hint) hint.textContent = `WASD:MOVE | MOUSE:AIM | CLICK:SHOOT | ${formatKey(KEYBINDS.reload)}:RELOAD | SHIFT:DASH | ${formatKey(KEYBINDS.prizeWheel)}:PRIZE WHEEL (3 TICKETS)`;
   updateHUD();
   gameRunning = true;
   loop();
