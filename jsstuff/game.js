@@ -74,7 +74,7 @@ function initGameState() {
   ECS.clear();
 
   gs = {
-    score: 0, wave: 1,
+    score: 0, wave: 10,
     health: CFG.MAX_HEALTH, maxHealth: CFG.MAX_HEALTH,
     ammo: CFG.MAX_AMMO, maxAmmo: CFG.MAX_AMMO,
     reloading: false, reloadTimer: 0,
@@ -91,7 +91,7 @@ function initGameState() {
    
 
     // Item flags
-    bouncyHouse: true,
+    bouncyHouse: false,
     hasDoubleCake: false, hasTripleCake: false, hasQuadCake: false,
     hasDash: false,
     dashCharges: 0, dashMaxCharges: CFG.DASH_MAX_CHARGES,
@@ -103,17 +103,17 @@ function initGameState() {
     hasShakeFizzlePop: false,
     sfpMeter: 0, sfpMax: 600, sfpFull: false,
     hasFlawlessBaking: true,
-    flawlessThisWave: true,
+    flawlessThisWave: false,
     hasCursedCandles: false,
     candlesLit: 0, candleHpTimer: 0, candleRelightDelay: 0,
-    hasInfernoRounds: true,
-    hasMirrorMaze: true,
+    hasInfernoRounds: false,
+    hasMirrorMaze: false,
     hasPopcornBucket: false, popcornKernels: [], popcornFrenzyTimer: 0,
     _kernelsCollected: 0,
-    hasFunhouseDistortion: true,
+    hasFunhouseDistortion: false,
     hasTightropeBoots: false,
     knockingPinsActive: false, knockingPinsTimer: 0,
-    hasClownish: true,
+    hasClownish: false,
     clownNoseSize: 0, clownNoseTimer: 0, clownNoseMax: 480,
     clownConfuseActive: false,
     speedBoostMult: CFG.SPEED_BOOST_MULT,
