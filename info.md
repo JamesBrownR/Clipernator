@@ -20,12 +20,14 @@ Changes (I need to make a lot of changes, not sure where to start):
 
   
 Make enemies more interactive overall:
-  * The enemy that wiggles and balances on a sphere while juggling balls above it. I would like a mechanic where it can pick up other enemies and juggle them also, while they can attack as they are being juggegled, and if close enough to the player it throws the enemy at them. If it throws a cannonball enemy it immedietly goes into its dashing mode toward the player. It would also be funny to see it juggiling enemies that are also juggiling balls as they collectively throw balls toward the player (UPDATE: this works but the juggler should instantly shoot the enemies it is holding, prioritizing them over regular bullets. not sure if that is implimented)
   * Should replace the mask enemy with two pixel art sprites instead of the draw function if possinle... though not sure how I would do the crying or state change animation
   * the wave 11 boss fight is boring, party because the bullet it shoots do not go far enough. it is currently possible to dodge now but the boss still shoots too few bullets too slowly (UPDATE: Honestly the boss fight should be completely redesigned lol, not even sure what the current boss visual is supposed to be)
 
   * need to replace the scissors with a fork, knife, and spoon enemy (randomly chooses one to attack from, and it launches across the screen until it hits something then comes back and goes back to its idle animation of the three utencilts spinning around. the fork does no damage but grabs entities, the spoon knocks back entities and deals, the knife deals more damage (UPDATE: mostly works but the utensil enemy does not interact with other enemies, only the player, when it does hit a enemy the game crashes)
-  * When you throw the giftbox enemy at another enemy and it deals damage, it works fine. However if you throw it at a enemy and it kills that enemy, the game crashes
+  * When you throw the giftbox enemy at another enemy and it deals damage, it works fine. However if you throw it at a enemy and it kills that enemy, the game crashes (Uncaught TypeError: Cannot read properties of undefined (reading 'type')
+    at sysAI (systems.js:292:35)
+    at update (systems.js:790:24)
+    at loop (game.js:440:3))
   * The juggler enemy is a bit mindless, always chases the player instead of trying to keep distance 
   * if possible, there should be a animation of the stage getting bigger after you kill boss one, rather than a instant transition (UPDATE: This works but the note has not been removed since the game still pauses briefly before continuing; it should be instant and have no pause)
 
