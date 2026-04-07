@@ -102,34 +102,36 @@ const BT_UTENSIL = new BTSelector(
       ai.uTravelTimer++;
 
       const hitWall   = ai.uTipX < 20 || ai.uTipX > worldW - 20 || ai.uTipY < 20 || ai.uTipY > worldH - 20;
-      const ppos2     = ECS.get(gs.playerId, 'pos');
-      const playerHit = ppos2 && Math.hypot(ai.uTipX - ppos2.x, ai.uTipY - ppos2.y) < 22;
       const maxTravel = ai.uTravelTimer > 65;
       const subtype   = utensils[ai.uActiveIdx];
 
+      // ── Check player hit ──
+      const ppos2 = ECS.get(gs.playerId, 'pos');
+      const playerHit = ppos2 && Math.hypot(ai.uTipX - ppos2.x, ai.uTipY - ppos2.y) < 22;
+
       if (playerHit && gs.invincible <= 0) {
         if (subtype === 'knife') {
-          // High damage + bleed debuff
           gs.health -= 25; gs.invincible = CFG.INVINCIBLE_FRAMES;
           gs.shakeX = 16; gs.shakeY = 16;
           gs.flawlessThisWave = false;
-          gs.knifeBleedTimer = 180; // 3 seconds of 1 dmg/sec bleed
+          gs.knifeBleedTimer = 180;
           triggerSFPHit(); updateHUD();
           showMsg('KNIFE SLASH! YOU\'RE BLEEDING!');
           spawnParticles(ppos2.x, ppos2.y, '#ff2244', 16);
           if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
         } else if (subtype === 'spoon') {
-          // Moderate damage + strong knockback on player AND nearby enemies
           gs.health -= 14; gs.invincible = CFG.INVINCIBLE_FRAMES;
           gs.shakeX = 22; gs.shakeY = 22;
           gs.flawlessThisWave = false;
           triggerSFPHit(); updateHUD();
-          // Launch the player away from the tip
+          // Strong knockback — set velocity directly and use an override timer
+          // so player friction in sysPlayerMovement doesn't kill it immediately
           const pvel = ECS.get(gs.playerId, 'vel');
           if (pvel) {
             const kd = Math.hypot(ppos2.x - ai.uTipX, ppos2.y - ai.uTipY) || 1;
-            pvel.vx += ((ppos2.x - ai.uTipX) / kd) * 18;
-            pvel.vy += ((ppos2.y - ai.uTipY) / kd) * 18;
+            pvel.vx = ((ppos2.x - ai.uTipX) / kd) * 22;
+            pvel.vy = ((ppos2.y - ai.uTipY) / kd) * 22;
+            gs.spoonKnockbackTimer = 18; // frames to resist friction damping
           }
           // Also knock nearby enemies
           for (const eid of ECS.query('enemy', 'pos', 'vel')) {
@@ -146,16 +148,56 @@ const BT_UTENSIL = new BTSelector(
           showMsg('SPOON LAUNCHED! KNOCKED AWAY!');
           if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
         } else if (subtype === 'fork') {
-          // No damage — grabs and roots the player
           gs.invincible = CFG.INVINCIBLE_FRAMES;
           ai.uForkGrabTimer = 75;
           gs.forkGrabbed = true;
           showMsg('FORK GRABBED YOU! WIGGLE FREE!');
           spawnParticles(ai.uTipX, ai.uTipY, '#ffcc88', 14);
         }
+        ai.uState = 'RETURN';
+        return BT.RUNNING;
       }
 
-      if (hitWall || maxTravel || playerHit) {
+      // ── Check enemy hits (fork grabs, knife/spoon damage other enemies) ──
+      if (!playerHit) {
+        for (const eid of ECS.query('enemy', 'pos', 'hp', 'vel')) {
+          if (eid === id) continue;
+          const epos = ECS.get(eid, 'pos');
+          const ehp  = ECS.get(eid, 'hp');
+          const evel = ECS.get(eid, 'vel');
+          if (Math.hypot(ai.uTipX - epos.x, ai.uTipY - epos.y) < 24) {
+            if (subtype === 'knife') {
+              ehp.hp -= 15; ehp.hitFlash = 12;
+              spawnParticles(epos.x, epos.y, '#ff2244', 8);
+              if (ehp.hp <= 0) {
+                spawnParticles(epos.x, epos.y, '#ff2222', 14);
+                ECS.destroyEntity(eid);
+                gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+                tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+                updateHUD(); checkWave();
+              }
+            } else if (subtype === 'spoon') {
+              ehp.hp -= 8; ehp.hitFlash = 10;
+              const kd = Math.hypot(epos.x - ai.uTipX, epos.y - ai.uTipY) || 1;
+              evel.vx += ((epos.x - ai.uTipX) / kd) * 14;
+              evel.vy += ((epos.y - ai.uTipY) / kd) * 14;
+              spawnParticles(epos.x, epos.y, '#aaddff', 8);
+              if (ehp.hp <= 0) {
+                spawnParticles(epos.x, epos.y, '#ff2222', 14);
+                ECS.destroyEntity(eid);
+                gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+                tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+                updateHUD(); checkWave();
+              }
+            }
+            // fork: no damage to enemies, just bounces off
+            ai.uState = 'RETURN';
+            return BT.RUNNING;
+          }
+        }
+      }
+
+      if (hitWall || maxTravel) {
         ai.uState = 'RETURN';
       }
     }
@@ -234,8 +276,6 @@ const BT_MASK = new BTSelector(
 );
 
 // ── Floor 2: Juggler ──
-// FIX: juggleBalls starts at 4 (not 6), juggleMax is 8 (not 6).
-// This leaves slots available for capturing nearby enemies.
 const BT_JUGGLER = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
@@ -243,14 +283,15 @@ const BT_JUGGLER = new BTSelector(
     const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    // FIX: 4 starting balls, max 8 total slots (leaves room for up to 4 captured enemies)
     if (ai.juggleBalls   === undefined) ai.juggleBalls    = 4;
     if (ai.juggleMax     === undefined) ai.juggleMax      = 8;
     if (!ai.juggleSlots)               ai.juggleSlots    = [];
     if (!ai.regenTimer)                ai.regenTimer     = 0;
     if (!ai.throwCooldown)             ai.throwCooldown  = 60;
     if (!ai.sphereAngle)               ai.sphereAngle    = 0;
-    if (ai.ballShootTimer === undefined) ai.ballShootTimer = 45;
+    // Separate shoot timers: enemies shoot faster than balls
+    if (ai.enemyShootTimer === undefined) ai.enemyShootTimer = 25;
+    if (ai.ballShootTimer  === undefined) ai.ballShootTimer  = 55;
 
     // Fill ball slots up to juggleBalls count (but never exceed juggleMax)
     const currentBalls = ai.juggleSlots.filter(s => s.type === 'ball').length;
@@ -301,34 +342,46 @@ const BT_JUGGLER = new BTSelector(
       }
     }
 
-    // Juggled enemies shoot at player periodically
-    ai.ballShootTimer--;
-    if (ai.ballShootTimer <= 0) {
-      ai.ballShootTimer = 45;
-      for (const slot of ai.juggleSlots) {
-        if (slot.type !== 'enemy') continue;
-        if (!ECS.has(slot.id, 'pos')) continue;
-        const epos = ECS.get(slot.id, 'pos');
-        const etype = ECS.get(slot.id, 'enemy').type;
-        const edx = pp.x - epos.x, edy = pp.y - epos.y;
-        const edist = Math.hypot(edx, edy) || 1;
-        const aim = Math.atan2(edy, edx);
-        gs.enemyBullets.push({
-          x: epos.x, y: epos.y,
-          vx: Math.cos(aim) * 1.4,
-          vy: Math.sin(aim) * 1.4,
-          life: 130, maxLife: 130,
-          color: etype === 'mask' ? '#44aaff' : '#ffdd44',
-        });
-        spawnParticles(epos.x, epos.y, '#ffdd00', 3);
+    // ── Prioritize juggled ENEMY shooting over ball shooting ──
+    const enemySlots = ai.juggleSlots.filter(s => s.type === 'enemy' && ECS.has(s.id, 'pos'));
+    if (enemySlots.length > 0) {
+      ai.enemyShootTimer--;
+      if (ai.enemyShootTimer <= 0) {
+        ai.enemyShootTimer = 25; // shoot every 25 frames (~2.5/sec) — fast and aggressive
+        for (const slot of enemySlots) {
+          const epos = ECS.get(slot.id, 'pos');
+          const etype = ECS.get(slot.id, 'enemy').type;
+          const edx = pp.x - epos.x, edy = pp.y - epos.y;
+          const aim = Math.atan2(edy, edx);
+          gs.enemyBullets.push({
+            x: epos.x, y: epos.y,
+            vx: Math.cos(aim) * 1.2,
+            vy: Math.sin(aim) * 1.2,
+            life: 130, maxLife: 130,
+            color: etype === 'mask' ? '#44aaff' : '#ffdd44',
+          });
+          spawnParticles(epos.x, epos.y, '#ffdd00', 3);
+        }
+      }
+    } else {
+      // No enemies held — fall back to slower ball lob
+      ai.ballShootTimer--;
+      if (ai.ballShootTimer <= 0) {
+        ai.ballShootTimer = 55;
+        // (balls shoot themselves via throw logic below, this is a soft reminder only)
       }
     }
 
-    // Throw at player when close enough
+    // Throw at player — PREFER enemy slots first
     ai.throwCooldown--;
-    if (ai.throwCooldown <= 0 && dist < 200 && ai.juggleSlots.length > 0) {
-      ai.throwCooldown = 55;
-      const slot = ai.juggleSlots.shift();
+    if (ai.throwCooldown <= 0 && dist < 220 && ai.juggleSlots.length > 0) {
+      ai.throwCooldown = 50;
+
+      // Find the first enemy slot to throw; fall back to a ball if none
+      const enemyIdx = ai.juggleSlots.findIndex(s => s.type === 'enemy');
+      const slotIdx  = enemyIdx >= 0 ? enemyIdx : 0;
+      const slot = ai.juggleSlots.splice(slotIdx, 1)[0];
+
       if (slot.type === 'ball') {
         const throwSpd = 2.2;
         gs.enemyBullets.push({
@@ -353,10 +406,10 @@ const BT_JUGGLER = new BTSelector(
       }
     }
 
-    // Regen balls up to juggleBalls max (but only if total < juggleMax)
+    // Regen balls
     if (currentBalls < ai.juggleBalls) {
       ai.regenTimer++;
-      if (ai.regenTimer >= 540) { ai.regenTimer = 0; /* ball added at top of tick */ }
+      if (ai.regenTimer >= 540) { ai.regenTimer = 0; }
     }
 
     // Clean up dead juggled enemies
@@ -443,6 +496,7 @@ function _giftBoxExplode(id, pos, gs) {
     if (gs.health <= 0) { gameOver(); return; }
   }
 
+  // Collect kills before destroying anything
   const toKill = [];
   for (const eid of ECS.query('enemy', 'pos', 'hp')) {
     if (eid === id) continue;
@@ -453,7 +507,10 @@ function _giftBoxExplode(id, pos, gs) {
       if (eh.hp <= 0) toKill.push(eid);
     }
   }
+
+  // Kill collected enemies first
   for (const eid of toKill) {
+    if (!ECS.has(eid, 'pos')) continue; // guard: already destroyed
     const ep = ECS.get(eid, 'pos');
     if (ep) spawnParticles(ep.x, ep.y, '#ff2222', 14);
     ECS.destroyEntity(eid);
@@ -463,6 +520,7 @@ function _giftBoxExplode(id, pos, gs) {
     updateHUD();
   }
 
+  // Now destroy the gift box itself
   if (ECS.has(id, 'pos')) {
     ECS.destroyEntity(id);
     gs.waveKills++;
@@ -592,7 +650,8 @@ const BT_BOSS = new BTSelector(
       if (phase2) {
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * Math.PI * 2;
-          gs.enemyBullets.push({ x: ai.slamTarget.x, y: ai.slamTarget.y, vx: Math.cos(a)*1.75, vy: Math.sin(a)*1.75, life: 120, maxLife: 120, color: '#cc00ff' });
+          // Fewer, slower bullets — more dodgeable
+          gs.enemyBullets.push({ x: ai.slamTarget.x, y: ai.slamTarget.y, vx: Math.cos(a)*1.0, vy: Math.sin(a)*1.0, life: 140, maxLife: 140, color: '#cc00ff' });
         }
       }
       if (ai.phaseTimer <= 0) {
@@ -613,15 +672,16 @@ const BT_BOSS = new BTSelector(
     else if (ai.bossPhase === BOSS_PHASE.SPIRAL) {
       vel.vx *= 0.92; vel.vy *= 0.92;
       ai.phaseTimer--;
-      const spiralRate = phase2 ? 4 : 6;
+      // Slower rate and fewer arms for better dodgeability
+      const spiralRate = phase2 ? 7 : 10;
       if (ai.phaseTimer % spiralRate === 0) {
-        const arms = phase2 ? 4 : 3;
+        const arms = phase2 ? 3 : 2;
         for (let arm = 0; arm < arms; arm++) {
           const a = ai.spiralAngle + (arm / arms) * Math.PI * 2;
-          const spd2 = phase2 ? 1.1 : 0.9;
-          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*spd2, vy: Math.sin(a)*spd2, life: 140, maxLife: 140, color: '#cc00ff' });
+          const spd2 = phase2 ? 0.75 : 0.6;
+          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*spd2, vy: Math.sin(a)*spd2, life: 180, maxLife: 180, color: '#cc00ff' });
         }
-        ai.spiralAngle += phase2 ? 0.18 : 0.14;
+        ai.spiralAngle += phase2 ? 0.14 : 0.11;
       }
       if (ai.phaseTimer <= 0) {
         ai.bossPhase = BOSS_PHASE.IDLE;
@@ -633,15 +693,18 @@ const BT_BOSS = new BTSelector(
       ai.volleyTimer--;
       if (ai.volleyTimer <= 0 && ai.volleyCount > 0) {
         const aim = Math.atan2(dy, dx);
-        const count = phase2 ? 9 : 7;
+        // Fewer bullets per volley with bigger gaps between them
+        const count = phase2 ? 5 : 4;
         for (let i = 0; i < count; i++) {
-          const spread = phase2 ? 0.55 : 0.45;
+          const spread = phase2 ? 0.9 : 0.7;
           const a = aim + (i / (count - 1) - 0.5) * spread * 2;
-          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*1.4, vy: Math.sin(a)*1.4, life: 110, maxLife: 110, color: '#ff44ff' });
+          // Slow bullets so the player can move into the gaps
+          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*0.85, vy: Math.sin(a)*0.85, life: 160, maxLife: 160, color: '#ff44ff' });
         }
         spawnParticles(pos.x, pos.y, '#ff00ff', 10);
         ai.volleyCount--;
-        ai.volleyTimer = phase2 ? 22 : 30;
+        // Longer delay between volleys
+        ai.volleyTimer = phase2 ? 40 : 55;
         if (ai.volleyCount === 0) {
           ai.bossPhase = BOSS_PHASE.IDLE;
           ai.phaseTimer = phase2 ? 40 : 70;
