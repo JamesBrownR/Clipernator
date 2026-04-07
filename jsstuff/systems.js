@@ -778,6 +778,28 @@ function sysPopcorn() {
 // SYSTEM 10: Timers
 // ================================================================
 function sysTimers() {
+  // Stage growth animation
+  if (gs.transitioning && !gs.transitionDone) {
+    gs.transitionT = Math.min(1, gs.transitionT + 1 / 90); // 90 frames ≈ 1.5 sec
+    const t = gs.transitionT;
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // ease-in-out quad
+    worldW = gs.transitionStartW + (gs.transitionEndW - gs.transitionStartW) * ease;
+    worldH = gs.transitionStartH + (gs.transitionEndH - gs.transitionStartH) * ease;
+    renderScale = CFG.W / worldW;
+    canvas.height = Math.round(worldH * renderScale); // keep canvas aspect correct
+
+    if (gs.transitionT >= 1) {
+      worldW = gs.transitionEndW;
+      worldH = gs.transitionEndH;
+      renderScale = CFG.W / worldW;
+      gs.transitionDone = true;
+      gs.transitioning  = false;
+      gameRunning = false;
+      cancelAnimationFrame(animId);
+      document.getElementById('floor-transition').style.display = 'flex';
+    }
+    return; // skip all other timer logic while transitioning
+  }
   if (gs.partyFreezeTimer > 0) gs.partyFreezeTimer--;
   if (gs.speedBoostTimer > 0)  gs.speedBoostTimer--;
   if (gs.confettiSlowTimer > 0) gs.confettiSlowTimer--;
