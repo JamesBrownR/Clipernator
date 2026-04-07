@@ -113,7 +113,7 @@ function initGameState() {
     hasFunhouseDistortion: false,
     hasTightropeBoots: false,
     knockingPinsActive: false, knockingPinsTimer: 0,
-    hasClownish: false,
+    hasClownish: true,
     clownNoseSize: 0, clownNoseTimer: 0, clownNoseMax: 480,
     clownNoseHonkTimer: 0,
     clownConfuseActive: false,
