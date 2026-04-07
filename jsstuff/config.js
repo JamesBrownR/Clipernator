@@ -86,3 +86,61 @@ let playerMoveAngle = 0; // angle body faces — updated in sysPlayerMovement
 let gunX = 0;   
 let gunY = 0; 
 let playerBobTimer = 0;
+
+// ================================================================
+// KEYBINDS — defaults + localStorage persistence
+// ================================================================
+
+const KEYBIND_DEFAULTS = {
+  moveLeft:   'a',
+  moveRight:  'd',
+  moveUp:     'w',
+  moveDown:   's',
+  reload:     'r',
+  dash:       'Shift',
+  prizeWheel: 'q',
+  pause:      'p',
+};
+
+const KEYBIND_LABELS = {
+  moveLeft:   'Move Left',
+  moveRight:  'Move Right',
+  moveUp:     'Move Up',
+  moveDown:   'Move Down',
+  reload:     'Reload',
+  dash:       'Dash',
+  prizeWheel: 'Prize Wheel',
+  pause:      'Pause',
+};
+
+// Load saved binds from localStorage, falling back to defaults
+function loadKeybinds() {
+  try {
+    const saved = localStorage.getItem('clipblast_keybinds');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Only accept keys that exist in defaults (guards against stale saves)
+      for (const action of Object.keys(KEYBIND_DEFAULTS)) {
+        if (parsed[action]) KEYBINDS[action] = parsed[action];
+      }
+    }
+  } catch(e) { /* ignore */ }
+}
+
+function saveKeybinds() {
+  try { localStorage.setItem('clipblast_keybinds', JSON.stringify(KEYBINDS)); }
+  catch(e) { /* ignore */ }
+}
+
+// Mutable copy — this is what the game reads
+const KEYBINDS = { ...KEYBIND_DEFAULTS };
+loadKeybinds();
+
+// ── Helper: format a key name for display ──
+function formatKey(k) {
+  if (k === ' ')      return 'SPACE';
+  if (k === 'Shift')  return 'SHIFT';
+  if (k === 'Control')return 'CTRL';
+  if (k === 'Alt')    return 'ALT';
+  return k.toUpperCase();
+}
