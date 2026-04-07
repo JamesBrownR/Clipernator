@@ -104,7 +104,7 @@ function initGameState() {
     sfpMeter: 0, sfpMax: 600, sfpFull: false,
     hasFlawlessBaking: true,
     flawlessThisWave: false,
-    hasCursedCandles: true,
+    hasCursedCandles: false,
     candlesLit: 0, candleHpTimer: 0, candleRelightDelay: 0,
     hasInfernoRounds: false,
     hasMirrorMaze: true,
