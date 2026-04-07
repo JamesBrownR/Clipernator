@@ -1,6 +1,7 @@
 
 - "Entities" usually refers to both the player and enemies, but can also refer to bosses or projectiles.
 - Goal is to make floor 1&2 as good as possible before adding more
+- When suggesting changes, tell me what part of the code to add or change, do not remake entire files unless neccessary
 
 Item Rules: 
 
