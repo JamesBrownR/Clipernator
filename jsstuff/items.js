@@ -390,7 +390,7 @@ const ITEM_DEFS = {
 
   popcornBucket: {
     id: 'popcornBucket', label: 'POPCORN\nBUCKET', icon: '🍿',
-    desc: 'COLLECT POPCORN FROM KILLS\nFOR A 4-SEC\nBULLET EXPLOSION FRENZY',
+    desc: 'COLLECT POPCORN FROM KILLS FOR A 4-SEC BULLET EXPLOSION FRENZY',
     color: '#ffcc44', shadowColor: '#ffaa00', spawnCooldown: 999999999,
     effect(gs) { gs.hasPopcornBucket = true; gs.popcornKernels = []; showMsg('POPCORN BUCKET! COLLECT KERNELS FOR FRENZY!'); },
     draw(fi) {
