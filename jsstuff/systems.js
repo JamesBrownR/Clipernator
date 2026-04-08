@@ -116,6 +116,7 @@ function swingGlowsticks() {
   const ppos = ECS.get(gs.playerId,'pos');
   const meleeDmg = baseBulletDamage()*3;
 
+let didReflect = false;
   for (let i = gs.enemyBullets.length-1; i >= 0; i--) {
     const eb = gs.enemyBullets[i];
     if (Math.hypot(eb.x-ppos.x, eb.y-ppos.y) < CFG.MELEE_RANGE) {
@@ -130,7 +131,13 @@ function swingGlowsticks() {
       });
       gs.enemyBullets.splice(i,1);
       spawnParticles(eb.x, eb.y, '#00ff88', 8);
+      didReflect = true;
     }
+  }
+  if (didReflect) {
+    gs.glowCooldown = 0;                 // instant cooldown reset on reflect
+    gs.explosionFreezeTimer = (gs.explosionFreezeTimer || 0) + 3; // brief freeze like hitflash
+    gs.shakeX = 6; gs.shakeY = 6;
   }
 
   for (const id of ECS.query('enemy','pos','hp','ai')) {
