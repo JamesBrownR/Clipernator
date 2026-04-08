@@ -1,5 +1,5 @@
 // ============================================================
-// CLIPBLAST: PARTY HUNTER — Draw Functions
+// CLIPBLAST: PARTY HUNTER — Draw Functions 
 // ============================================================
 
 function _drawUtensilShape(ctx, type, color, scale = 1) {
