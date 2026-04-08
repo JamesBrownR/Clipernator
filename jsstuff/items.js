@@ -361,17 +361,21 @@ const ITEM_DEFS = {
     }
   },
 
-  mirrorMaze: {
-    id: 'mirrorMaze', label: 'MIRROR\nMAZE', icon: '🪞',
-    desc: 'BULLETS BOUNCE\nFROM ENEMY TO ENEMY',
-    color: '#ccddff', shadowColor: '#8899ff', spawnCooldown: 999999999,
-    effect(gs) {
-      gs.hasMirrorMaze = true;
-      gs.bouncyHouse = true;
-      // Add bouncy to unlocked if not present
-      if (!gs.unlockedItems.includes('bouncy')) gs.unlockedItems.push('bouncy');
-      showMsg('MIRROR MAZE! BULLETS SPLIT ON BOUNCE!');
-    },
+ mirrorMaze: {
+  id: 'mirrorMaze', label: 'MIRROR\nMAZE', icon: '🪞',
+  desc: 'SHOOT THE SHARD\nTO REDIRECT BULLETS\nKILLS SPAWN NEW SHARDS',
+  color: '#ccddff', shadowColor: '#8899ff', spawnCooldown: 999999999,
+  effect(gs) {
+    gs.hasMirrorMaze = true;
+    // Remove the bouncyHouse force and old flag
+    gs.mirrorShards = [];
+    gs.mirrorPlayerShardTimer = 0; // 0 = shard is active (orbiting), >0 = regenerating
+    // Spawn the first orbiting shard
+    gs.mirrorShards.push({ orbiting: true, angle: 0, x: 0, y: 0, life: -1 });
+    showMsg('MIRROR MAZE! SHOOT THE SHARD TO REDIRECT BULLETS!');
+  },
+  draw(fi) { /* unchanged */ }
+},
     draw(fi) {
       const {x,y,phase}=fi, t=Date.now()/260, bob=Math.sin(t+phase)*5;
       ctx.save(); ctx.translate(x,y+bob);
