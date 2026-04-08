@@ -906,7 +906,7 @@ function sysSpawner() {
 function update() {
   sysPlayerMovement(); sysAI(); sysBullets(); sysBulletEnemyCollision();
   sysDashCollision(); sysEnemyPlayerCollision(); sysEnemyBullets();
-  sysFieldItemPickup(); sysPopcorn(); sysTimers(); sysSpawner();
+  sysFieldItemPickup(); sysPopcorn(); sysMirrorMaze(); sysTimers(); sysSpawner();
 }
 
 function spawnEnemy() {
