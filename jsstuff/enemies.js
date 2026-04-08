@@ -341,6 +341,7 @@ const BT_JUGGLER = new BTSelector(
       const slotAngle = (i / Math.max(ai.juggleMax, 1)) * Math.PI * 2;
       const arcX = Math.cos(slotAngle + t) * 28;
       const arcY = -38 + Math.sin(slotAngle * 2 + t) * 18;
+    }
       // Add inside the slot positioning loop after epos assignment:
 if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
   const epos = ECS.get(slot.id,'pos');
