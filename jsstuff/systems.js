@@ -271,7 +271,7 @@ function sysMirrorMaze() {
           angle: Math.atan2(dy, dx),
           life: CFG.BULLET_LIFE + 30,
           maxLife: CFG.BULLET_LIFE + 30,
-          damageMult: (b.damageMult || 1) * 3.0,
+          damageMult: (b.damageMult || 1) * 5.0,
           isDud: false,
           isRedirected: true,
           chainDepth: (b.chainDepth || 0) + 1,
