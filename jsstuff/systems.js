@@ -884,10 +884,14 @@ function tryDash() {
 function checkWave() {
   if (gs.waveKills>=gs.waveEnemiesLeft&&ECS.query('enemy').length===0) {
     const completed=gs.wave;
-    if (gs.hasFlawlessBaking&&gs.flawlessThisWave) {
-      gs.maxAmmo+=2; gs.ammo=Math.min(gs.ammo+2,gs.maxAmmo); updateHUD();
-      showMsg('FLAWLESS BAKING! +2 MAX AMMO!'); spawnPartyParticles(CFG.W/2,CFG.H/2);
-    }
+    if (gs.hasFlawlessBaking && gs.flawlessThisWave) {
+  gs.maxAmmo += 2;
+  if (gs.hasExtraClips) gs.maxAmmo = Math.ceil(gs.maxAmmo * 1.25);
+  gs.ammo = Math.min(gs.ammo + 2, gs.maxAmmo);
+  updateHUD();
+  showMsg('FLAWLESS BAKING! +2 MAX AMMO!');
+  spawnPartyParticles(CFG.W/2, CFG.H/2);
+}
     gs.wave++; gs.spawnInterval=Math.max(55,CFG.SPAWN_INTERVAL_BASE-gs.wave*CFG.WAVE_SPAWN_SPEEDUP);
     gs.waveEnemiesLeft=CFG.WAVE_ENEMIES_BASE+gs.wave*CFG.WAVE_ENEMIES_GROWTH;
     gs.waveKills=0; gs.flawlessThisWave=true;
