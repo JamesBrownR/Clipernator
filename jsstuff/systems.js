@@ -610,6 +610,12 @@ function sysEnemyPlayerCollision() {
   for (const id of ECS.query('enemy','pos')) {
     const epos=ECS.get(id,'pos');
     if (Math.hypot(ppos.x-epos.x,ppos.y-epos.y)<28) {
+      // Add before gs.health -= line, inside the enemy loop:
+const eaiCheck = ECS.get(id,'ai');
+if (eaiCheck && eaiCheck.criticalMass && gs.invincible <= 0) {
+  detonateExplosiveBullet({damageMult: eaiCheck.rmDmgMult || 3, life:1, isExplosive:true}, epos.x, epos.y);
+  return;
+}
       // Knocking Pins: reduced contact damage (8 instead of 20),
       // and the bowl itself damages the enemy it rams into
       if (gs.knockingPinsActive) {
@@ -633,7 +639,20 @@ function sysEnemyPlayerCollision() {
         if (gs.health<=0){gameOver();return;} return;
       }
 
-      gs.health-=20; gs.invincible=CFG.INVINCIBLE_FRAMES;
+      // Replace the gs.health -= 20 line (non-knocking-pins path):
+const contactDmg = 20 * ((() => {
+  // find the enemy that hit us
+  for (const id of ECS.query('enemy','pos')) {
+    const epos = ECS.get(id,'pos');
+    if (Math.hypot(ppos.x-epos.x, ppos.y-epos.y) < 28) {
+      const eai = ECS.get(id,'ai');
+      return eai && eai.rmDmgMult ? eai.rmDmgMult : 1;
+    }
+  }
+  return 1;
+})());
+gs.health -= contactDmg;
+      gs.invincible=CFG.INVINCIBLE_FRAMES;
       gs.shakeX=16;gs.shakeY=16; gs.flawlessThisWave=false;
       triggerSFPHit(); spawnParticles(ppos.x,ppos.y,'#ff3333',14); updateHUD();
       if (gs.health<=0){gameOver();return;} return;
