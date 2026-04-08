@@ -374,8 +374,7 @@ const ITEM_DEFS = {
     gs.mirrorShards.push({ orbiting: true, angle: 0, x: 0, y: 0, life: -1 });
     showMsg('MIRROR MAZE! SHOOT THE SHARD TO REDIRECT BULLETS!');
   },
-  draw(fi) { /* unchanged */ }
-},
+ 
     draw(fi) {
       const {x,y,phase}=fi, t=Date.now()/260, bob=Math.sin(t+phase)*5;
       ctx.save(); ctx.translate(x,y+bob);
