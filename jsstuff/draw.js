@@ -543,6 +543,58 @@ function draw() {
   // Field items
   for(const fi of gs.fieldItems) ITEM_DEFS[fi.id].draw(fi);
 
+  // Mirror shards
+if (gs.hasMirrorMaze && gs.mirrorShards) {
+  const t = Date.now() / 400;
+  for (const s of gs.mirrorShards) {
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(t + (s.angle || 0));
+    ctx.shadowColor = '#8899ff';
+    ctx.shadowBlur = 18 + Math.sin(t * 3) * 6;
+    ctx.strokeStyle = '#ccddff';
+    ctx.lineWidth = 2;
+    // Diamond shard shape
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.lineTo(7, 0);
+    ctx.lineTo(0, 12);
+    ctx.lineTo(-7, 0);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#8899ff';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Orbiting shard: pulsing ring to distinguish it
+    if (s.orbiting) {
+      ctx.globalAlpha = 0.4 + Math.sin(t * 4) * 0.2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+  // Regen timer arc under player
+  if (gs.mirrorPlayerShardTimer > 0) {
+    const ppos2 = ECS.get(gs.playerId, 'pos');
+    const progress = 1 - (gs.mirrorPlayerShardTimer / 900);
+    ctx.save();
+    ctx.strokeStyle = '#8899ff';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.5;
+    ctx.shadowColor = '#8899ff';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(ppos2.x, ppos2.y, 82, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
   // Popcorn kernels
   if (gs.hasPopcornBucket && gs.popcornKernels) {
     for (const k of gs.popcornKernels) {
