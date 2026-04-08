@@ -227,8 +227,8 @@ function togglePause() {
 function renderPauseMenu() {
   const statsEl = document.getElementById('pause-stat-lines');
   const dmg = gs.hasQuadCake ? 4 : gs.hasTripleCake ? 3 : gs.hasDoubleCake ? 2 : 1;
-  const dmgLabel = gs.hasQuadCake ? '4x (50% dud)' : gs.hasTripleCake ? '3x (45% dud)' :
-                   gs.hasDoubleCake ? '2x (40% dud)' : '1x';
+const dmgLabel = gs.hasQuadCake ? '4.00x (50% dud)' : gs.hasTripleCake ? '3.00x (45% dud)' :
+                 gs.hasDoubleCake ? '2.00x (40% dud)' : '1.00x';
  const speedMult = gs.speedBoostTimer > 0 ? (gs.speedBoostMult || CFG.SPEED_BOOST_MULT) : 
                     gs.hasTightropeBoots ? 1.25 : 1;
   const speedVal = speedMult.toFixed(2) + 'x';
