@@ -185,7 +185,7 @@ function sysMirrorMaze() {
   const ORBIT_R = 120;
   const REDIRECT_RANGE = 200;
   const SHARD_HIT_R = 14;
-  const CHAIN_MAX = 6;
+  const CHAIN_MAX = 10;
   const REGEN_FRAMES = 900; // 15 seconds at 60fps
 
   // ── Tick player shard regen ──
