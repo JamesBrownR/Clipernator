@@ -5,7 +5,7 @@
 const ITEM_DEFS = {
   birthday: {
     id: 'birthday', label: 'BIRTHDAY\nPARTY', icon: '🎂',
-    desc: 'ALL\nENEMIES\nMOVE SLOWLY\nFOR 3 SECONDS',
+    desc: 'ALL ENEMIES\nLOSE MOVMENT CONTROL\nFOR 3 SECONDS',
     color: '#ff69b4', shadowColor: '#ff69b4', spawnCooldown: 18000,
     effect(gs) {
       gs.partyFreezeTimer = CFG.PARTY_FREEZE_FRAMES;
