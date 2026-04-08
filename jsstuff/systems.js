@@ -178,25 +178,118 @@ let didReflect = false;
 }
 
 // ── Helper: try to fire a Mirror Maze ricochet from a kill position ──
-function _mirrorMazeRicochet(fromX, fromY, skipId, dmg) {
-  let nearest = null, nearDist = 999999;
-  for (const oid of ECS.query('enemy', 'pos')) {
-    if (oid === skipId) continue;
-    const od = Math.hypot(ECS.get(oid,'pos').x - fromX, ECS.get(oid,'pos').y - fromY);
-    if (od < nearDist) { nearDist = od; nearest = ECS.get(oid,'pos'); }
+function sysMirrorMaze() {
+  if (!gs.hasMirrorMaze) return;
+  const ppos = ECS.get(gs.playerId, 'pos');
+  const MAX_SHARDS = 8;
+  const ORBIT_R = 80;
+  const REDIRECT_RANGE = 200;
+  const SHARD_HIT_R = 14;
+  const CHAIN_MAX = 6;
+  const REGEN_FRAMES = 900; // 15 seconds at 60fps
+
+  // ── Tick player shard regen ──
+  if (gs.mirrorPlayerShardTimer > 0) {
+    gs.mirrorPlayerShardTimer--;
+    if (gs.mirrorPlayerShardTimer === 0) {
+      gs.mirrorShards.push({ orbiting: true, angle: Math.random() * Math.PI * 2, x: 0, y: 0 });
+      showMsg('MIRROR SHARD RESTORED!');
+    }
   }
-  if (nearest) {
-    const rd = Math.hypot(nearest.x - fromX, nearest.y - fromY) || 1;
-    gs.bullets.push({
-      x: fromX, y: fromY,
-      vx: (nearest.x - fromX) / rd * CFG.BULLET_SPEED,
-      vy: (nearest.y - fromY) / rd * CFG.BULLET_SPEED,
-      angle: Math.atan2(nearest.y - fromY, nearest.x - fromX),
-      life: 999, maxLife: 999,
-      damageMult: dmg, isDud: false, isMirrorRicochet: true
-    });
-    spawnParticles(fromX, fromY, '#ccddff', 10);
+
+  // ── Update orbiting shard position ──
+  for (const s of gs.mirrorShards) {
+    if (s.orbiting) {
+      s.angle += 0.018;
+      s.x = ppos.x + Math.cos(s.angle) * ORBIT_R;
+      s.y = ppos.y + Math.sin(s.angle) * ORBIT_R;
+    }
   }
+
+  // ── Check player bullets vs shards ──
+  const shardsToRemove = new Set();
+  const bulletsToAdd = [];
+  const bulletsToKill = new Set();
+
+  for (let bi = 0; bi < gs.bullets.length; bi++) {
+    const b = gs.bullets[bi];
+    if (b.life <= 0) continue;
+    if ((b.chainDepth || 0) >= CHAIN_MAX) continue;
+
+    for (let si = 0; si < gs.mirrorShards.length; si++) {
+      const s = gs.mirrorShards[si];
+      if (shardsToRemove.has(si)) continue;
+
+      const dist = Math.hypot(b.x - s.x, b.y - s.y);
+      if (dist > SHARD_HIT_R) continue;
+
+      // Bullet hit this shard — find redirect target
+      // Priority 1: another shard within range
+      let targetX = null, targetY = null;
+      let nearestShardDist = 999999;
+      for (let si2 = 0; si2 < gs.mirrorShards.length; si2++) {
+        if (si2 === si) continue;
+        if (shardsToRemove.has(si2)) continue;
+        const s2 = gs.mirrorShards[si2];
+        const sd = Math.hypot(s2.x - s.x, s2.y - s.y);
+        if (sd < REDIRECT_RANGE && sd < nearestShardDist) {
+          nearestShardDist = sd;
+          targetX = s2.x;
+          targetY = s2.y;
+        }
+      }
+
+      // Priority 2: nearest enemy within range
+      if (targetX === null) {
+        let nearestEnemyDist = 999999;
+        for (const eid of ECS.query('enemy', 'pos')) {
+          const epos = ECS.get(eid, 'pos');
+          const ed = Math.hypot(epos.x - s.x, epos.y - s.y);
+          if (ed < REDIRECT_RANGE && ed < nearestEnemyDist) {
+            nearestEnemyDist = ed;
+            targetX = epos.x;
+            targetY = epos.y;
+          }
+        }
+      }
+
+      // Consume the shard
+      shardsToRemove.add(si);
+      if (s.orbiting) {
+        gs.mirrorPlayerShardTimer = REGEN_FRAMES;
+      }
+      spawnParticles(s.x, s.y, '#ccddff', 12);
+      bulletsToKill.add(bi);
+
+      if (targetX !== null) {
+        const dx = targetX - s.x, dy = targetY - s.y;
+        const dist2 = Math.hypot(dx, dy) || 1;
+        bulletsToAdd.push({
+          x: s.x, y: s.y,
+          vx: (dx / dist2) * CFG.BULLET_SPEED,
+          vy: (dy / dist2) * CFG.BULLET_SPEED,
+          angle: Math.atan2(dy, dx),
+          life: CFG.BULLET_LIFE + 30,
+          maxLife: CFG.BULLET_LIFE + 30,
+          damageMult: (b.damageMult || 1) * 1.5,
+          isDud: false,
+          isRedirected: true,
+          chainDepth: (b.chainDepth || 0) + 1,
+          isMirrorRicochet: true,
+        });
+        spawnParticles(s.x, s.y, '#8899ff', 8);
+      }
+      break; // one shard hit per bullet
+    }
+  }
+
+  // Apply removals
+  gs.mirrorShards = gs.mirrorShards.filter((_, i) => !shardsToRemove.has(i));
+  for (const bi of bulletsToKill) gs.bullets[bi].life = 0;
+  for (const nb of bulletsToAdd) gs.bullets.push(nb);
+
+  // ── Death shard spawning: check redirected bullet kills ──
+  // This is handled in sysBulletEnemyCollision via b.isRedirected flag (see below)
 }
 
 function sysPlayerMovement() {
@@ -449,10 +542,7 @@ function sysBulletEnemyCollision() {
           }
         }
 
-        // ── Mirror Maze: ricochet on EVERY hit, not just kills ──
-        if (gs.hasMirrorMaze && !b.isMirrorRicochet) {
-          _mirrorMazeRicochet(epos.x, epos.y, id, dmg);
-        }
+      
 
         if (ehp.hp<=0) {
           const type=ECS.get(id,'enemy').type;
@@ -476,6 +566,16 @@ function sysBulletEnemyCollision() {
           if (gs.hasPopcornBucket&&Math.random()<0.22)
             gs.popcornKernels.push({x:epos.x+(Math.random()-.5)*20,y:epos.y+(Math.random()-.5)*20});
           ECS.destroyEntity(id);
+          // Death shard from redirected bullet
+if (b.isRedirected && gs.hasMirrorMaze) {
+  const currentShards = gs.mirrorShards.length;
+  const hasOrbitShard = gs.mirrorShards.some(s => s.orbiting);
+  const staticCount = currentShards - (hasOrbitShard ? 1 : 0);
+  if (staticCount < 7) { // cap at 7 static + 1 orbiting = 8 total
+    gs.mirrorShards.push({ orbiting: false, x: epos.x, y: epos.y });
+    spawnParticles(epos.x, epos.y, '#ccddff', 10);
+  }
+}
           gs.score+=Math.round(10*gs.wave*(dmg>1?1.6:1)); gs.waveKills++;
           tryDropTicket(); gs.health=Math.min(gs.maxHealth,gs.health+CFG.HEALTH_REGEN); updateHUD(); checkWave();
         }
