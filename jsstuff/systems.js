@@ -183,7 +183,7 @@ function sysMirrorMaze() {
   const ppos = ECS.get(gs.playerId, 'pos');
   const MAX_SHARDS = 8;
   const ORBIT_R = 120;
-  const REDIRECT_RANGE = 200;
+  const REDIRECT_RANGE = 350;
   const SHARD_HIT_R = 14;
   const CHAIN_MAX = 10;
   const REGEN_FRAMES = 900; // 15 seconds at 60fps
