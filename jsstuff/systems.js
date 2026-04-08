@@ -970,13 +970,13 @@ function offerItemChoice() {
   const generalAvailable=GENERAL_ITEM_IDS.filter(id=>!gs.unlockedItems.includes(id));
   let offered=[],fi=0,gi=0;
   const shuffledFloor=shuffle(floorAvailable),shuffledGeneral=shuffle(generalAvailable);
-  for (let slot=0;slot<3;slot++) {
-    const useGeneral=generalAvailable.length>0&&gi<shuffledGeneral.length&&Math.random()<0.20;
+const slotCount = gs.floor === 2 ? 4 : 3;
+for (let slot=0;slot<slotCount;slot++) {    const useGeneral=generalAvailable.length>0&&gi<shuffledGeneral.length&&Math.random()<0.20;
     if(useGeneral)offered.push(shuffledGeneral[gi++]);
     else if(fi<shuffledFloor.length)offered.push(shuffledFloor[fi++]);
     else if(gi<shuffledGeneral.length)offered.push(shuffledGeneral[gi++]);
   }
-  offered=[...new Set(offered)].slice(0,3);
+offered=[...new Set(offered)].slice(0, gs.floor === 2 ? 4 : 3);
   for (const id of offered) {
     const def=ITEM_DEFS[id],isOwned=gs.unlockedItems.includes(id);
     const card=document.createElement('div');
