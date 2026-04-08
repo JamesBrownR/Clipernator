@@ -199,7 +199,7 @@ const ITEM_DEFS = {
 
   shakeFizzlePop: {
     id: 'shakeFizzlePop', label: 'SHAKE\nFIZZLE\nPOP!', icon: '🥤',
-    desc: 'FILL METER:\n+SPEED +DAMAGE\nHIT WHILE FULL:\nSHOCKWAVE BURST',
+    desc: 'PERMANENT:\nCLIPPY FIZZLES UNTIL BECOMING FULL\nWHILE FULL: + SPEED & DAMAGE\nWHEN HIT: SHOCKWAVE BURST',
     color: '#ff4400', shadowColor: '#ff8800', spawnCooldown: 999999999,
     effect(gs) {
       gs.hasShakeFizzlePop = true;
@@ -268,7 +268,7 @@ const ITEM_DEFS = {
 
   glowsticks: {
     id: 'glowsticks', label: 'GLOW\nSTICKS', icon: '🟢',
-    desc: 'RIGHT-CLICK:\nMELEE SWING\nREFLECTS BULLETS\n& CANNONBALLS!',
+    desc: 'RIGHT-CLICK:\nMELEE SWING\nREFLECTS PROJECTILES',
     color: '#00ff88', shadowColor: '#00ff00', spawnCooldown: 999999999,
     effect() {},
     draw() {}
@@ -312,7 +312,7 @@ const ITEM_DEFS = {
 
   extraClips: {
     id: 'extraClips', label: 'EXTRA\nCLIPS', icon: '📎',
-    desc: '+25% MAX HP\n+25% MAX AMMO\nFULL HEAL\nFULL RELOAD',
+    desc: '+25% MAX HP\n+25% MAX AMMO',
     color: '#ffdd00', shadowColor: '#ffaa00', spawnCooldown: 999999999,
     effect(gs) {
       gs.hasExtraClips = true;
@@ -363,7 +363,7 @@ const ITEM_DEFS = {
 
   mirrorMaze: {
     id: 'mirrorMaze', label: 'MIRROR\nMAZE', icon: '🪞',
-    desc: 'BULLETS SPLIT\nINTO 2 ON\nFIRST WALL BOUNCE\n(ENABLES BOUNCY)',
+    desc: 'BULLETS BOUNCE\nFROM ENEMY TO ENEMY',
     color: '#ccddff', shadowColor: '#8899ff', spawnCooldown: 999999999,
     effect(gs) {
       gs.hasMirrorMaze = true;
@@ -390,7 +390,7 @@ const ITEM_DEFS = {
 
   popcornBucket: {
     id: 'popcornBucket', label: 'POPCORN\nBUCKET', icon: '🍿',
-    desc: '22% CHANCE ON KILL\nTO DROP A KERNEL\nCOLLECT 5 FOR 4-SEC\nBULLET EXPLOSION FRENZY',
+    desc: 'COLLECT POPCORN FROM KILLS\nFOR A 4-SEC\nBULLET EXPLOSION FRENZY',
     color: '#ffcc44', shadowColor: '#ffaa00', spawnCooldown: 999999999,
     effect(gs) { gs.hasPopcornBucket = true; gs.popcornKernels = []; showMsg('POPCORN BUCKET! COLLECT KERNELS FOR FRENZY!'); },
     draw(fi) {
@@ -496,7 +496,7 @@ const ITEM_DEFS = {
 
   knockingPins: {
     id: 'knockingPins', label: 'KNOCKING\nPINS', icon: '🎳',
-    desc: 'AUTO-CHARGE\nNEAREST ENEMY\nLESS CONTACT DMG\nCAN STILL SHOOT',
+    desc: 'AUTO-CHARGE\nTO NEAREST ENEMY',
     color: '#ffffff', shadowColor: '#aaaaaa', spawnCooldown: 14000,
     effect(gs) {
       gs.knockingPinsActive = true;
@@ -518,7 +518,7 @@ const ITEM_DEFS = {
 
   tightropeBoots: {
     id: 'tightropeBoots', label: 'TIGHTROPE\nBOOTS', icon: '👢',
-    desc: '+25% MOVE SPEED\nDASH = INTANGIBLE\n(NO COLLISION\nWHILE DASHING)',
+    desc: '+25% MOVE SPEED\nDASH = INTANGIBLE',
     color: '#00ccff', shadowColor: '#0088aa', spawnCooldown: 999999999,
     effect(gs) { gs.hasTightropeBoots = true; showMsg('TIGHTROPE BOOTS! +SPEED, DASH = INTANGIBLE!'); },
     draw(fi) {
@@ -537,7 +537,7 @@ const ITEM_DEFS = {
 
   clownish: {
     id: 'clownish', label: 'CLOWNISH', icon: '🔵',
-    desc: 'BLUE NOSE GROWS\nEVERY 8 SECS\nNEAR 2+ ENEMIES:\nBLAST + CONFUSES THEM',
+    desc: 'GROW A NOSE THAT HONKS\nAND CONFUSES ENEMIES',
     color: '#4488ff', shadowColor: '#2266cc', spawnCooldown: 999999999,
     effect(gs) {
       gs.hasClownish = true;
