@@ -341,12 +341,24 @@ const BT_JUGGLER = new BTSelector(
       const slotAngle = (i / Math.max(ai.juggleMax, 1)) * Math.PI * 2;
       const arcX = Math.cos(slotAngle + t) * 28;
       const arcY = -38 + Math.sin(slotAngle * 2 + t) * 18;
-      if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
-        const epos = ECS.get(slot.id,'pos');
-        epos.x = pos.x + arcX;
-        epos.y = pos.y + arcY;
-      }
+      // Add inside the slot positioning loop after epos assignment:
+if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
+  const epos = ECS.get(slot.id,'pos');
+  epos.x = pos.x + arcX;
+  epos.y = pos.y + arcY;
+  // Inherit juggler's ringmaster stacks if juggler has them
+  const slotAi = ECS.get(slot.id,'ai');
+  const myAi   = ECS.get(id,'ai');
+  if (slotAi && myAi && myAi.rmStacks) {
+    slotAi.rmStacks = Math.max(slotAi.rmStacks || 0, myAi.rmStacks);
+    slotAi.rmSizeScale = myAi.rmSizeScale;
+    slotAi.rmDmgMult   = myAi.rmDmgMult;
+    if (myAi.criticalMass) {
+      slotAi.criticalMass      = true;
+      slotAi.criticalMassImmune = true;
     }
+  }
+}
 
     // ── Prioritize juggled ENEMY shooting over ball shooting ──
     const enemySlots = ai.juggleSlots.filter(s => s.type === 'enemy' && ECS.has(s.id, 'pos'));
@@ -988,15 +1000,38 @@ const BT_RINGMASTER = new BTSelector(
     const spd = Math.hypot(vel.vx,vel.vy);
     if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
 
-    for (const eid of ECS.query('enemy','pos','physics','ai')) {
-      if (eid === id) continue;
-      const epos = ECS.get(eid,'pos');
-      const eai  = ECS.get(eid,'ai');
-      if (Math.hypot(epos.x-pos.x, epos.y-pos.y) < AURA_RANGE) {
-        eai.ringmasterBuffed = true;
-        eai.ringmasterBuffTimer = 6;
-      }
+    // Replace the enemy aura loop in BT_RINGMASTER (the for...of ECS.query block)
+for (const eid of ECS.query('enemy','pos','physics','ai')) {
+  if (eid === id) continue;
+  const epos2 = ECS.get(eid,'pos');
+  const eai2  = ECS.get(eid,'ai');
+  const ephy2 = ECS.get(eid,'physics');
+  if (Math.hypot(epos2.x-pos.x, epos2.y-pos.y) < AURA_RANGE) {
+    eai2.ringmasterBuffed = true;
+    eai2.ringmasterBuffTimer = 6;
+
+    // Accumulate stacks
+    eai2.rmStacks = (eai2.rmStacks || 0) + 1;
+    const CRIT_THRESHOLD = 600; // ~10 seconds in aura at 60fps
+
+    if (!eai2.criticalMass && eai2.rmStacks >= CRIT_THRESHOLD) {
+      eai2.criticalMass = true;
+      eai2.criticalMassImmune = true; // immune to explosives
+      spawnParticles(epos2.x, epos2.y, '#ff0000', 20);
+      showMsg('⚠️ CRITICAL MASS! ENEMY IS EXPLOSIVE & IMMUNE!');
     }
+
+    if (!eai2.criticalMass) {
+      // Scale up size visually (stored as a multiplier, capped at 2.0x)
+      eai2.rmSizeScale = Math.min(2.0, 1.0 + (eai2.rmStacks / CRIT_THRESHOLD));
+      // Damage multiplier grows too
+      eai2.rmDmgMult = 1.0 + (eai2.rmStacks / CRIT_THRESHOLD) * 2.0; // up to 3x at crit
+    } else {
+      eai2.rmSizeScale = 2.0;
+      eai2.rmDmgMult  = 3.0;
+    }
+  }
+}
 
     ai.shootCooldown = (ai.shootCooldown||180) - 1;
     if (ai.shootCooldown <= 0 && dist < 280) {
