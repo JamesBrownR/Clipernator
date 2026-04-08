@@ -654,24 +654,56 @@ if (gs.hasMirrorMaze && gs.mirrorShards) {
 
   // Enemies
   const frozen = gs.partyFreezeTimer > 0;
-  for(const id of ECS.query('enemy','pos','hp')) {
-    const epos = ECS.get(id,'pos');
-    const ehp  = ECS.get(id,'hp');
-    const ai   = ECS.get(id,'ai');
-    const type = ECS.get(id,'enemy').type;
-    const isPhased = ai && ai.phased;
-    const alpha = isPhased ? 0.22 : (ehp.hitFlash > 0 ? (Math.random()>.5?1:.3) : 1);
-    ctx.save(); ctx.globalAlpha=alpha;
-    if (type==='utensil')     drawUtensil(epos, ehp, ai, frozen);
-    else if (type==='mask')        drawMask(epos, ehp, ai, frozen);
-    else if (type==='giftBox')     drawGiftBox(epos, ehp, ai, frozen);
-    else if (type==='partyHat')    drawPartyHat(epos, ehp, frozen);
-    else if (type==='boss')        drawBoss(epos, ehp, frozen);
-    else if (type==='cannonball')  drawCannonball(epos, ehp, ai, frozen);
-    else if (type==='ringmaster')  drawRingmaster(epos, ehp, ai, frozen);
-    else if (type==='juggler')     drawJuggler(epos, ehp, ai, frozen);
-    ctx.restore();
+ // Replace the enemies draw section (the for...of ECS.query loop):
+for(const id of ECS.query('enemy','pos','hp')) {
+  const epos = ECS.get(id,'pos');
+  const ehp  = ECS.get(id,'hp');
+  const ai   = ECS.get(id,'ai');
+  const type = ECS.get(id,'enemy').type;
+  const isPhased = ai && ai.phased;
+  const alpha = isPhased ? 0.22 : (ehp.hitFlash > 0 ? (Math.random()>.5?1:.3) : 1);
+  
+  const sizeScale = (ai && ai.rmSizeScale) ? ai.rmSizeScale : 1.0;
+  const isCritMass = ai && ai.criticalMass;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Scale up + red tint for buffed/critical mass enemies
+  if (sizeScale !== 1.0) {
+    const cx = epos.x, cy = epos.y;
+    ctx.translate(cx, cy);
+    ctx.scale(sizeScale, sizeScale);
+    ctx.translate(-cx, -cy);
   }
+  if (isCritMass) {
+    // Red overlay drawn after the enemy shape
+    ctx.globalCompositeOperation = 'source-atop'; // will apply after shape draws below
+  }
+
+  if (type==='utensil')     drawUtensil(epos, ehp, ai, frozen);
+  else if (type==='mask')        drawMask(epos, ehp, ai, frozen);
+  else if (type==='giftBox')     drawGiftBox(epos, ehp, ai, frozen);
+  else if (type==='partyHat')    drawPartyHat(epos, ehp, frozen);
+  else if (type==='boss')        drawBoss(epos, ehp, frozen);
+  else if (type==='cannonball')  drawCannonball(epos, ehp, ai, frozen);
+  else if (type==='ringmaster')  drawRingmaster(epos, ehp, ai, frozen);
+  else if (type==='juggler')     drawJuggler(epos, ehp, ai, frozen);
+
+  // Red critical mass overlay
+  if (isCritMass) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = alpha * 0.45;
+    ctx.fillStyle = '#ff0000';
+    ctx.shadowColor = '#ff2200';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(epos.x, epos.y, (ENEMY_DEFS[type]?.size || 28) * sizeScale, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
 
   // Muzzle flash
   if (muzzleFlash > 0) {
