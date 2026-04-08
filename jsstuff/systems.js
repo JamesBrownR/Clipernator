@@ -809,13 +809,10 @@ function spawnEnemy() {
   let x,y,attempts=0;
   const ppos=ECS.get(gs.playerId,'pos');
   do {
-    const side=Math.floor(Math.random()*4);
-    if(side===0){x=Math.random()*worldW;y=-40;}
-    else if(side===1){x=worldW+40;y=Math.random()*worldH;}
-    else if(side===2){x=Math.random()*worldW;y=worldH+40;}
-    else{x=-40;y=Math.random()*worldH;}
-    attempts++;
-  } while(Math.hypot(x-ppos.x,y-ppos.y)<CFG.SAFE_SPAWN_DIST&&attempts<8);
+  x = CFG.WALL_PAD + Math.random() * (worldW - CFG.WALL_PAD * 2);
+  y = CFG.WALL_PAD + Math.random() * (worldH - CFG.WALL_PAD * 2);
+  attempts++;
+} while (Math.hypot(x - ppos.x, y - ppos.y) < CFG.SAFE_SPAWN_DIST && attempts < 12);
 
   let type='utensil';
   const roll=Math.random();
@@ -835,6 +832,7 @@ function spawnEnemy() {
   ECS.add(id,'hp',{hp:Math.ceil(baseHp*def.hpMult),maxHp:Math.ceil(baseHp*def.hpMult),hitFlash:0});
   ECS.add(id,'physics',{speed:(1.2+Math.random()*0.6+gs.wave*0.12)*def.speedMult});
   ECS.add(id,'ai',{shootCooldown:120,ambushTimer:0,diveTimer:0,dashHit:false});
+  spawnParticles(x, y, '#ff4400', 10);
 }
 
 function spawnBoss() {
@@ -845,6 +843,7 @@ function spawnBoss() {
   ECS.add(id,'hp',{hp:CFG.BOSS_BASE_HP+gs.wave*12,maxHp:CFG.BOSS_BASE_HP+gs.wave*12,hitFlash:0});
   ECS.add(id,'physics',{speed:CFG.BOSS_SPEED});
   ECS.add(id,'ai',{shootCooldown:90,ambushTimer:0,diveTimer:0,dashHit:false,bossPhase:BOSS_PHASE.IDLE,phaseTimer:120,spiralAngle:0,volleyCount:0,volleyTimer:0,slamTarget:null,slamRadius:0,slamWarning:0});
+  spawnParticles(x, y, '#ff4400', 10);
   gs.bossId=id;
 }
 
