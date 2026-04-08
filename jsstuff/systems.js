@@ -54,6 +54,8 @@ function detonateExplosiveBullet(b, hitX, hitY) {
   gs.explosionFreezeTimer = (gs.explosionFreezeTimer||0) + 3;
   const toKill = [];
   for (const eid of ECS.query('enemy','pos','hp')) {
+  const eai = ECS.get(eid,'ai');
+  if (eai && eai.criticalMassImmune) continue;
     const epos = ECS.get(eid,'pos'), ehp = ECS.get(eid,'hp');
     if (Math.hypot(epos.x-hitX, epos.y-hitY) < EXPLODE_RADIUS) {
       ehp.hp -= EXPLODE_DMG; ehp.hitFlash = 14;
