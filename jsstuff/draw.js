@@ -676,10 +676,7 @@ for(const id of ECS.query('enemy','pos','hp')) {
     ctx.scale(sizeScale, sizeScale);
     ctx.translate(-cx, -cy);
   }
-  if (isCritMass) {
-    // Red overlay drawn after the enemy shape
-    ctx.globalCompositeOperation = 'source-atop'; // will apply after shape draws below
-  }
+ const isCritMass = ai && ai.criticalMass;
 
   if (type==='utensil')     drawUtensil(epos, ehp, ai, frozen);
   else if (type==='mask')        drawMask(epos, ehp, ai, frozen);
@@ -691,16 +688,18 @@ for(const id of ECS.query('enemy','pos','hp')) {
   else if (type==='juggler')     drawJuggler(epos, ehp, ai, frozen);
 
   // Red critical mass overlay
-  if (isCritMass) {
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = alpha * 0.45;
-    ctx.fillStyle = '#ff0000';
-    ctx.shadowColor = '#ff2200';
-    ctx.shadowBlur = 20;
-    ctx.beginPath();
-    ctx.arc(epos.x, epos.y, (ENEMY_DEFS[type]?.size || 28) * sizeScale, 0, Math.PI*2);
-    ctx.fill();
-  }
+  // Critical mass: pulsing red OUTLINE only, not a filled overlay
+if (isCritMass) {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 80) * 0.3;
+  ctx.strokeStyle = '#ff2200';
+  ctx.shadowColor = '#ff4400';
+  ctx.shadowBlur = 14;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(epos.x, epos.y, (ENEMY_DEFS[type]?.size || 28) * sizeScale + 4, 0, Math.PI * 2);
+  ctx.stroke();
+}
 
   ctx.restore();
 }
