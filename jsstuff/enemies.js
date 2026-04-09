@@ -262,18 +262,25 @@ const BT_MASK = new BTSelector(
         ai.cryBurst--;
         ai.cryBurstTimer = 22;
        const aim = Math.atan2(dy, dx);
+const aim = Math.atan2(dy, dx);
+const orient = ai.maskOrient || 0;
+// gravity direction rotated to match mask facing
+const gravAngle = orient * (Math.PI / 2); // 0=down, 1=left, 2=up, 3=right
+const gx = Math.sin(gravAngle) * 0.045;  // sin because rotating gravity vector
+const gy = Math.cos(gravAngle) * 0.045;
 for (const sa of [-0.28, 0, 0.28]) {
   const a = aim + sa;
-          gs.enemyBullets.push({
-            x: pos.x, y: pos.y,
-            vx: Math.cos(a) * 1.1,
-            vy: Math.sin(a) * 1.1,
-            life: 160, maxLife: 160,
-            color: '#44aaff',
-            isTear: true,
-            gravity: 0.045
-          });
-        }
+  gs.enemyBullets.push({
+    x: pos.x, y: pos.y,
+    vx: Math.cos(a) * 1.1,
+    vy: Math.sin(a) * 1.1,
+    life: 160, maxLife: 160,
+    color: '#44aaff',
+    isTear: true,
+    gravX: gx,
+    gravY: gy,
+  });
+}
         spawnParticles(pos.x, pos.y, '#44aaff', 5);
       }
       if (ai.maskTimer <= 0) {
