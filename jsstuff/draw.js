@@ -5,7 +5,7 @@
 
 function _drawUtensilShape(ctx, type, color, scale = 1) {
   ctx.strokeStyle = color;
-  ctx.fillStyle   = color;
+  ctx.fillStyle   = color; 
   ctx.lineWidth   = 2.5 * scale;
   ctx.lineCap     = 'round';
 
