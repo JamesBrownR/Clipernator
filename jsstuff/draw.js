@@ -174,30 +174,19 @@ function drawMask(epos, ehp, ai, frozen) {
 
 
 
- // Draw cross-fade with scale pop
-  const baseAlpha = frozen ? 0.7 : 1;
+ 
+
+ const baseAlpha = frozen ? 0.7 : 1;
   const orient = ai.maskOrient || 0;
   const orientAngle = orient * (Math.PI / 2);
 
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(orientAngle);
-
-  // Outgoing frame: fades out and scales down slightly
-  const outScale = 1.0 - blendT * 0.06;
-  ctx.save();
-  ctx.scale(outScale, outScale);
-  drawMaskFrame(frameIndex, 0, 0, baseAlpha * (1 - blendT));
+  drawMaskFrame(frameIndex, 0, 0, baseAlpha);
   ctx.restore();
 
-  // Incoming frame: fades in and scales up from slightly smaller
-  const inScale = 0.94 + blendT * 0.06;
-  ctx.save();
-  ctx.scale(inScale, inScale);
-  drawMaskFrame(nextFrameIndex, 0, 0, baseAlpha * blendT);
-  ctx.restore();
-
-  ctx.restore();
+ 
   if (frozen) {
     ctx.save();
     ctx.globalAlpha = 0.4;
