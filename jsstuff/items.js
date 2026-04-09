@@ -316,8 +316,8 @@ const ITEM_DEFS = {
     color: '#ffdd00', shadowColor: '#ffaa00', spawnCooldown: 999999999,
     effect(gs) {
   gs.hasExtraClips = true;
-  const hpBonus  = Math.ceil(gs.maxHealth * 0.25);
-  const ammoBonus = Math.ceil(gs.maxAmmo * 0.25);
+  const hpBonus  = Math.ceil(gs.maxHealth * 0.10);
+  const ammoBonus = Math.ceil(gs.maxAmmo * 0.10);
   gs.maxHealth += hpBonus;
   gs.maxAmmo   += ammoBonus;
   gs.health     = gs.maxHealth;
