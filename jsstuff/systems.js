@@ -945,7 +945,7 @@ function spawnEnemy() {
   let type='utensil';
   const roll=Math.random();
   if (gs.floor===2) {
-    if (gs.wave>=20){if(roll<0.30)type='ringmaster';else if(roll<0.62)type='cannonball';else type='juggler';}
+    if (gs.wave>=10){if(roll<0.30)type='ringmaster';else if(roll<0.62)type='cannonball';else type='juggler';}
     else{if(roll<0.45)type='cannonball';else type='juggler';}
   } else if (gs.wave>=6){
     if(roll<0.30)type='mask';else if(roll<0.52)type='giftBox';else if(roll<0.72)type='partyHat';
