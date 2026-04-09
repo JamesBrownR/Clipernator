@@ -1037,14 +1037,14 @@ for (const eid of ECS.query('enemy','pos','physics','ai')) {
 
       // After setting eai2.rmSizeScale and eai2.rmDmgMult:
 
-  const targetMaxHp = Math.round((eai2._baseMaxHp || ECS.get(eid,'hp').maxHp) * eai2.rmSizeScale);
-  const ehp2 = ECS.get(eid, 'hp');
-  if (!eai2._baseMaxHp) eai2._baseMaxHp = ehp2.maxHp; // store original on first buff
-  if (targetMaxHp > ehp2.maxHp) {
-    const diff = targetMaxHp - ehp2.maxHp;
-    ehp2.maxHp = targetMaxHp;
-    ehp2.hp = Math.min(ehp2.hp + diff, targetMaxHp); // heal by the difference added
-  }
+ const ehp2 = ECS.get(eid, 'hp');
+if (!eai2._baseMaxHp) eai2._baseMaxHp = ehp2.maxHp;
+const targetMaxHp = Math.round(eai2._baseMaxHp * eai2.rmSizeScale);
+if (targetMaxHp > ehp2.maxHp) {
+  const diff = targetMaxHp - ehp2.maxHp;
+  ehp2.maxHp = targetMaxHp;
+  ehp2.hp = Math.min(ehp2.hp + diff, targetMaxHp);
+}
 
       
       // Damage multiplier grows too
