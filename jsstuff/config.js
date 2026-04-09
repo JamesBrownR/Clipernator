@@ -80,14 +80,13 @@ maskSheetImg.src = '/Clipernator/sprites/MaskSheet.png';
 
 const MASK_FRAME_W = 640;
 const MASK_FRAME_H = 640;
-const MASK_COLS = 4;
+const MASK_COLS = 5;  // changed from 4 to 5
 
-// Frame index mapping
-// 0-1: smile idle, 2-3: transition to neutral, 4-7: cry buildup, 8: full cry, 9-10: return, 11: smile
-const MASK_SMILE_FRAMES  = [0, 1];
-const MASK_TO_CRY_FRAMES = [2, 3, 4, 5, 6, 7];
-const MASK_CRY_FRAMES    = [8, 9];
-const MASK_TO_SMILE_FRAMES = [10, 11];
+// Updated frame mappings for 5-col, 5-row sheet (25 frames)
+const MASK_SMILE_FRAMES    = [0, 1, 2, 3, 4];   // row 0: happy loop
+const MASK_TO_CRY_FRAMES   = [5, 6, 7, 8, 9];   // row 1: smile → sad transition
+const MASK_CRY_FRAMES      = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]; // rows 2-3: crying loop
+const MASK_TO_SMILE_FRAMES = [20, 21, 22, 23];   // row 4: return to neutral
 
 // ================================================================
 // KEYBINDS
