@@ -23,7 +23,6 @@ Make enemies more interactive overall:
   * the wave 11 boss fight is boring, party because the bullet it shoots do not go far enough. it is currently possible to dodge now but the boss still shoots too few bullets too slowly (UPDATE: Honestly the boss fight should be completely redesigned lol, not even sure what the current boss visual is supposed to be)
 
   
-  * after the utensil enemy hits you, sometimes you become unable to move
  
   * The juggler enemy is a bit mindless, always chases the player instead of trying to keep distance. it should try and stay a certain distance away from the player, however if there is a ringmaster nearby it should go to it and circle around it to gain buffs
   * The ringmaster should not only make enemies faster, but it should increase their size, damage & health over time, until they reach a 'critial mass' and turn red - they are immune to explosives and all their attacks are explosive (and stop getting bigger). The buffs should also apply to enemies that  juggler is holding, if the juggler is getting the buffs. (UPDATE: Works but there is a giant red circle around critical enemies that makes it impossible to see anything, and buffed enemies dont seem to gain health
