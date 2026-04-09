@@ -184,7 +184,7 @@ function sysMirrorMaze() {
   if (!gs.hasMirrorMaze) return;
   const ppos = ECS.get(gs.playerId, 'pos');
   const MAX_SHARDS = 8;
-  const ORBIT_R = 120;
+  const ORBIT_R = 130;
   const REDIRECT_RANGE = 350;
   const SHARD_HIT_R = 14;
   const CHAIN_MAX = 10;
