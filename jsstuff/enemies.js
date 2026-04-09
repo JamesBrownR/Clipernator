@@ -1,5 +1,5 @@
 // ============================================================
-// CLIPBLAST: PARTY HUNTER — Enemy Definitions + Behavior Trees
+// CLIPBLAST: PARTY HUNTER — Enemy Definitions + Behavior Trees 
 // ============================================================
 
 const BOSS_PHASE = {
