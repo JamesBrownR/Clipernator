@@ -511,46 +511,52 @@ function _giftBoxExplode(id, pos, gs) {
   spawnParticles(pos.x, pos.y, '#ff4400', 30);
   gs.shakeX = 22; gs.shakeY = 22;
 
+  // Handle player hit — but defer triggerSFPHit until after all enemy loops
+  let triggerSFP = false;
   const ppos = ECS.get(gs.playerId, 'pos');
   if (ppos && Math.hypot(pos.x - ppos.x, pos.y - ppos.y) < 110 && gs.invincible <= 0) {
     gs.health -= 30; gs.invincible = CFG.INVINCIBLE_FRAMES;
     gs.flawlessThisWave = false;
-    triggerSFPHit(); updateHUD();
+    triggerSFP = true;
+    updateHUD();
     if (gs.health <= 0) { gameOver(); return; }
   }
 
-  // Collect kills before destroying anything
+  // Collect damaged and killed enemies — never destroy inside the loop
   const toKill = [];
   for (const eid of ECS.query('enemy', 'pos', 'hp')) {
     if (eid === id) continue;
+    if (!ECS.has(eid, 'pos')) continue;          // guard: may already be gone
     const ep = ECS.get(eid, 'pos');
     const eh = ECS.get(eid, 'hp');
     if (Math.hypot(ep.x - pos.x, ep.y - pos.y) < 110) {
       eh.hp -= 8; eh.hitFlash = 14;
-      if (eh.hp <= 0) toKill.push(eid);
+      if (eh.hp <= 0) toKill.push({ eid, x: ep.x, y: ep.y });
     }
   }
 
-  // Kill collected enemies — guard each with ECS.has in case already destroyed
-  for (const eid of toKill) {
-    if (!ECS.has(eid, 'pos')) continue;
-    const ep = ECS.get(eid, 'pos');
-    if (ep) spawnParticles(ep.x, ep.y, '#ff2222', 14);
+  // Destroy collected enemies after loop exits
+  for (const { eid, x, y } of toKill) {
+    if (!ECS.has(eid, 'pos')) continue;          // guard: another explosion may have beaten us
+    spawnParticles(x, y, '#ff2222', 14);
     ECS.destroyEntity(eid);
-    gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+    gs.score += Math.round(10 * gs.wave);
+    gs.waveKills++;
     tryDropTicket();
     gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
   }
 
-  // Destroy the gift box itself — only count waveKills if it still exists
+  // Destroy the gift box itself
   if (ECS.has(id, 'pos')) {
     ECS.destroyEntity(id);
     gs.waveKills++;
   }
 
-  // Single HUD update + deferred wave check after all mutations
+  // Now safe to trigger SFP — all entity loops are done
+  if (triggerSFP) triggerSFPHit();
+
   updateHUD();
-  setTimeout(() => checkWave(), 0); // CRASH FIX: was inline checkWave()
+  setTimeout(() => checkWave(), 0);
 }
 
 // ── PartyHat: fast + periodic speed dives ──
