@@ -84,13 +84,13 @@ function drawMaskFrame(frameIndex, x, y, alpha = 1) {
   if (!maskSheetImg.complete || maskSheetImg.naturalWidth === 0) return;
   const col = frameIndex % MASK_COLS;
   const row = Math.floor(frameIndex / MASK_COLS);
-  const DRAW_SIZE = 48;
+  const DRAW_SIZE = 56;  // slightly larger since sheet has more detail
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.drawImage(
     maskSheetImg,
     col * MASK_FRAME_W, row * MASK_FRAME_H, MASK_FRAME_W, MASK_FRAME_H,
-    x - DRAW_SIZE / 2, y - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE  // works for both absolute and relative
+    x - DRAW_SIZE / 2, y - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
   );
   ctx.restore();
 }
@@ -207,7 +207,7 @@ function drawMask(epos, ehp, ai, frozen) {
   }
 
   // Health bar
-  const bw = 40;
+  const bw = 50;
   ctx.fillStyle = '#330000';
   ctx.fillRect(x - bw/2, y - 36, bw, 5);
   ctx.fillStyle = ai.confused ? '#00ffff' : (ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#4488ff');
