@@ -677,8 +677,10 @@ function sysEnemyBullets() {
   const ppos=ECS.get(gs.playerId,'pos');
   gs.enemyBullets=gs.enemyBullets.filter(eb=>{
     if (!gs.frozen){eb.x+=eb.vx;eb.y+=eb.vy;eb.life--;}
-    if (eb.isTear&&eb.gravity) eb.vy+=eb.gravity;
-    if (eb.homing) {
+if (eb.isTear) {
+  if (eb.gravX !== undefined) { eb.vx += eb.gravX; eb.vy += eb.gravY; }
+  else if (eb.gravity) eb.vy += eb.gravity;
+}    if (eb.homing) {
       const dx=ppos.x-eb.x,dy=ppos.y-eb.y,dist=Math.hypot(dx,dy)||1;
       eb.vx+=(dx/dist)*(eb.homingStrength||0.04); eb.vy+=(dy/dist)*(eb.homingStrength||0.04);
       const spd=Math.hypot(eb.vx,eb.vy); if (spd>2){eb.vx=eb.vx/spd*2;eb.vy=eb.vy/spd*2;}
