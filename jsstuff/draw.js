@@ -179,8 +179,7 @@ function drawMask(epos, ehp, ai, frozen) {
 
   ctx.save();
   ctx.translate(x, y);
-  const orient = ai.maskOrient || 0;
-const orientAngle = orient * (Math.PI / 2);
+  
   // tears flip too if you want — add ctx.scale(1,-1) for upside down variant
   drawMaskFrame(frameIndex,     0, 0, baseAlpha * (1 - blendT));
   drawMaskFrame(nextFrameIndex, 0, 0, baseAlpha * blendT);
