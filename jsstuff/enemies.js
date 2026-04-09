@@ -158,51 +158,54 @@ const BT_UTENSIL = new BTSelector(
 
       // ── Check enemy hits (knife/spoon damage other enemies) ──
       // CRASH FIX: use setTimeout for checkWave, break loop after kill
-      if (!playerHit) {
-        let hitEnemy = false;
-        for (const eid of ECS.query('enemy', 'pos', 'hp', 'vel')) {
-          if (eid === id) continue;
-          if (!ECS.has(eid, 'pos')) continue; // guard: may have been destroyed
-          const epos = ECS.get(eid, 'pos');
-          const ehp  = ECS.get(eid, 'hp');
-          const evel = ECS.get(eid, 'vel');
-          if (Math.hypot(ai.uTipX - epos.x, ai.uTipY - epos.y) < 24) {
-            if (subtype === 'knife') {
-              ehp.hp -= 15; ehp.hitFlash = 12;
-              spawnParticles(epos.x, epos.y, '#ff2244', 8);
-              if (ehp.hp <= 0) {
-                spawnParticles(epos.x, epos.y, '#ff2222', 14);
-                ECS.destroyEntity(eid);
-                gs.score += Math.round(10 * gs.wave); gs.waveKills++;
-                tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-                updateHUD();
-                setTimeout(() => checkWave(), 0); // CRASH FIX: deferred
-              }
-            } else if (subtype === 'spoon') {
-              ehp.hp -= 8; ehp.hitFlash = 10;
-              const kd = Math.hypot(epos.x - ai.uTipX, epos.y - ai.uTipY) || 1;
-              evel.vx += ((epos.x - ai.uTipX) / kd) * 14;
-              evel.vy += ((epos.y - ai.uTipY) / kd) * 14;
-              spawnParticles(epos.x, epos.y, '#aaddff', 8);
-              if (ehp.hp <= 0) {
-                spawnParticles(epos.x, epos.y, '#ff2222', 14);
-                ECS.destroyEntity(eid);
-                gs.score += Math.round(10 * gs.wave); gs.waveKills++;
-                tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-                updateHUD();
-                setTimeout(() => checkWave(), 0); // CRASH FIX: deferred
-              }
-            }
-            // fork: no damage to enemies, just bounces off
-            hitEnemy = true;
-            break; // CRASH FIX: stop iterating after first enemy hit
-          }
-        }
-        if (hitEnemy) {
-          ai.uState = 'RETURN';
-          return BT.RUNNING;
-        }
+     if (!playerHit) {
+  let hitEnemy = false;
+  let killedEnemy = null;
+
+  for (const eid of ECS.query('enemy', 'pos', 'hp', 'vel')) {
+    if (eid === id) continue;
+    if (!ECS.has(eid, 'pos')) continue;
+    const epos = ECS.get(eid, 'pos');
+    const ehp  = ECS.get(eid, 'hp');
+    const evel = ECS.get(eid, 'vel');
+    if (Math.hypot(ai.uTipX - epos.x, ai.uTipY - epos.y) < 24) {
+      if (subtype === 'knife') {
+        ehp.hp -= 15; ehp.hitFlash = 12;
+        spawnParticles(epos.x, epos.y, '#ff2244', 8);
+        if (ehp.hp <= 0) killedEnemy = { eid, x: epos.x, y: epos.y };
+      } else if (subtype === 'spoon') {
+        ehp.hp -= 8; ehp.hitFlash = 10;
+        const kd = Math.hypot(epos.x - ai.uTipX, epos.y - ai.uTipY) || 1;
+        evel.vx += ((epos.x - ai.uTipX) / kd) * 14;
+        evel.vy += ((epos.y - ai.uTipY) / kd) * 14;
+        spawnParticles(epos.x, epos.y, '#aaddff', 8);
+        if (ehp.hp <= 0) killedEnemy = { eid, x: epos.x, y: epos.y };
       }
+      hitEnemy = true;
+      break;
+    }
+  }
+
+  // Process kill AFTER the loop exits — never destroy mid-iteration
+  if (killedEnemy) {
+    const { eid, x, y } = killedEnemy;
+    if (ECS.has(eid, 'pos')) {
+      spawnParticles(x, y, '#ff2222', 14);
+      ECS.destroyEntity(eid);
+      gs.score += Math.round(10 * gs.wave);
+      gs.waveKills++;
+      tryDropTicket();
+      gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+      updateHUD();
+      setTimeout(() => checkWave(), 0);
+    }
+  }
+
+  if (hitEnemy) {
+    ai.uState = 'RETURN';
+    return BT.RUNNING;
+  }
+}
 
       if (hitWall || maxTravel) {
         ai.uState = 'RETURN';
