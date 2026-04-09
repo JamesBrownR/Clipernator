@@ -239,14 +239,12 @@ const BT_MASK = new BTSelector(
 
     // Smoothly rotate orient angle toward player
 const adx = pp.x - pos.x, ady = pp.y - pos.y;
-const targetAngle = Math.atan2(ady, adx) - Math.PI / 2; // offset so "down" faces player
+const targetAngle = Math.atan2(ady, adx) - Math.PI / 2;
 if (ai.orientAngle === undefined) ai.orientAngle = 0;
 let angleDelta = targetAngle - ai.orientAngle;
 while (angleDelta >  Math.PI) angleDelta -= Math.PI * 2;
 while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
-ai.orientAngle += angleDelta * 0.008; // 0.008 = rotation speed, tune this
-ai.maskOrient = Math.round(ai.orientAngle / (Math.PI / 2)) % 4;
-if (ai.maskOrient < 0) ai.maskOrient += 4;
+ai.orientAngle += angleDelta * 0.008;
     
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
 
@@ -275,8 +273,8 @@ if (ai.maskOrient < 0) ai.maskOrient += 4;
 const aim = Math.atan2(dy, dx);
 const orient = ai.maskOrient || 0;
 // gravity direction rotated to match mask facing
-const gravAngle = orient * (Math.PI / 2); // 0=down, 1=left, 2=up, 3=right
-const gx = Math.sin(gravAngle) * 0.045;  // sin because rotating gravity vector
+cconst gravAngle = ai.orientAngle || 0;
+const gx = Math.sin(gravAngle) * 0.045;
 const gy = Math.cos(gravAngle) * 0.045;
 for (const sa of [-0.28, 0, 0.28]) {
   const a = aim + sa;
