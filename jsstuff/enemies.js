@@ -261,7 +261,6 @@ const BT_MASK = new BTSelector(
       if (ai.cryBurstTimer <= 0 && ai.cryBurst > 0) {
         ai.cryBurst--;
         ai.cryBurstTimer = 22;
-       const aim = Math.atan2(dy, dx);
 const aim = Math.atan2(dy, dx);
 const orient = ai.maskOrient || 0;
 // gravity direction rotated to match mask facing
