@@ -90,7 +90,7 @@ function drawMaskFrame(frameIndex, x, y, alpha = 1) {
   ctx.drawImage(
     maskSheetImg,
     col * MASK_FRAME_W, row * MASK_FRAME_H, MASK_FRAME_W, MASK_FRAME_H,
-    x - DRAW_SIZE / 2, y - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
+    x - DRAW_SIZE / 2, y - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE  // works for both absolute and relative
   );
   ctx.restore();
 }
@@ -174,8 +174,16 @@ function drawMask(epos, ehp, ai, frozen) {
 
   // Draw cross-fade
   const baseAlpha = frozen ? 0.7 : 1;
-  drawMaskFrame(frameIndex,     x, y, baseAlpha * (1 - blendT));
-  drawMaskFrame(nextFrameIndex, x, y, baseAlpha * blendT);
+ const orient = ai.maskOrient || 0;
+  const orientAngle = orient * (Math.PI / 2);
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(orientAngle);
+  // tears flip too if you want — add ctx.scale(1,-1) for upside down variant
+  drawMaskFrame(frameIndex,     0, 0, baseAlpha * (1 - blendT));
+  drawMaskFrame(nextFrameIndex, 0, 0, baseAlpha * blendT);
+  ctx.restore();
   if (frozen) {
     ctx.save();
     ctx.globalAlpha = 0.4;
