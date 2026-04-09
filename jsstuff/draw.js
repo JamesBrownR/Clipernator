@@ -2,6 +2,7 @@
 // CLIPBLAST: PARTY HUNTER — Draw Functions
 // ============================================================
 
+
 function _drawUtensilShape(ctx, type, color, scale = 1) {
   ctx.strokeStyle = color;
   ctx.fillStyle   = color;
@@ -77,63 +78,108 @@ function drawUtensil(epos, ehp, ai, frozen) {
   ctx.fillRect(x - bw/2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
 }
 
-function drawMask(epos, ehp, ai, frozen) {
-  const {x,y} = epos;
-  const t = Date.now()/400;
-  const isCrying = ai.maskState === 'CRY';
-  // ── Confused tint: blue overlay ──
-  const isConfused = ai.confused;
 
-  ctx.save(); ctx.translate(x, y);
-  if (frozen) { ctx.globalAlpha=0.7; ctx.shadowColor='#aaccff'; }
-  else if (isConfused) { ctx.shadowColor='#00ffff'; ctx.shadowBlur=20; }
-  else { ctx.shadowColor = isCrying ? '#44aaff' : '#ffdd44'; ctx.shadowBlur = 16; }
 
-  ctx.fillStyle = frozen ? '#4488cc' : isConfused ? '#2255cc' : (isCrying ? '#2255aa' : '#ddcc44');
-  ctx.beginPath(); ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI*2); ctx.fill();
-
-  // Blue confused shimmer
-  if (isConfused) {
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = '#00ffff';
-    ctx.beginPath(); ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-
-  ctx.fillStyle = '#000033';
-  ctx.beginPath(); ctx.ellipse(-6, -5, 4, 5, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(6, -5, 4, 5, 0, 0, Math.PI*2); ctx.fill();
-
-  ctx.strokeStyle = '#000033'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
-  ctx.beginPath();
-  if (isCrying) {
-    ctx.arc(0, 12, 7, Math.PI*0.15, Math.PI*0.85);
-  } else {
-    ctx.arc(0, 4, 7, Math.PI*1.15, Math.PI*1.85);
-  }
-  ctx.stroke();
-
-  if (isCrying) {
-    const tearDrip = Math.sin(t * 3) * 0.5 + 0.5;
-    ctx.fillStyle = '#44aaff'; ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.ellipse(-6, 5 + tearDrip * 12, 2, 3 + tearDrip * 4, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(6, 5 + tearDrip * 12, 2, 3 + tearDrip * 4, 0, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  ctx.strokeStyle = frozen ? '#aaddff' : isConfused ? '#00ffff' : (isCrying ? '#6688ff' : '#ffee88');
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI*2); ctx.stroke();
-
+function drawMaskFrame(frameIndex, x, y, alpha = 1) {
+  if (!maskSheetImg.complete || maskSheetImg.naturalWidth === 0) return;
+  const col = frameIndex % MASK_COLS;
+  const row = Math.floor(frameIndex / MASK_COLS);
+  const DRAW_SIZE = 48;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(
+    maskSheetImg,
+    col * MASK_FRAME_W, row * MASK_FRAME_H, MASK_FRAME_W, MASK_FRAME_H,
+    x - DRAW_SIZE / 2, y - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
+  );
   ctx.restore();
+}
 
+function drawMask(epos, ehp, ai, frozen) {
+  const { x, y } = epos;
+
+  // Init animation state
+  if (ai.maskAnimFrame  === undefined) ai.maskAnimFrame  = 0;
+  if (ai.maskAnimTimer  === undefined) ai.maskAnimTimer  = 0;
+  if (ai.maskAnimState  === undefined) ai.maskAnimState  = 'SMILE';
+  const ANIM_SPEED = 8; // frames per sprite frame
+
+  const prevState = ai.maskAnimState;
+
+  // Sync animation state to behavior state
+  if (ai.maskState === 'SMILE' && ai.maskAnimState === 'CRY') {
+    ai.maskAnimState = 'TO_SMILE';
+    ai.maskAnimFrame = 0;
+    ai.maskAnimTimer = 0;
+  } else if (ai.maskState === 'CRY' && ai.maskAnimState === 'SMILE') {
+    ai.maskAnimState = 'TO_CRY';
+    ai.maskAnimFrame = 0;
+    ai.maskAnimTimer = 0;
+  }
+
+  // Advance animation timer
+  ai.maskAnimTimer++;
+  if (ai.maskAnimTimer >= ANIM_SPEED) {
+    ai.maskAnimTimer = 0;
+    ai.maskAnimFrame++;
+
+    // Handle state transitions
+    if (ai.maskAnimState === 'SMILE') {
+      if (ai.maskAnimFrame >= MASK_SMILE_FRAMES.length)
+        ai.maskAnimFrame = 0; // loop
+    } else if (ai.maskAnimState === 'TO_CRY') {
+      if (ai.maskAnimFrame >= MASK_TO_CRY_FRAMES.length) {
+        ai.maskAnimState = 'CRY';
+        ai.maskAnimFrame = 0;
+      }
+    } else if (ai.maskAnimState === 'CRY') {
+      if (ai.maskAnimFrame >= MASK_CRY_FRAMES.length)
+        ai.maskAnimFrame = 0; // loop
+    } else if (ai.maskAnimState === 'TO_SMILE') {
+      if (ai.maskAnimFrame >= MASK_TO_SMILE_FRAMES.length) {
+        ai.maskAnimState = 'SMILE';
+        ai.maskAnimFrame = 0;
+      }
+    }
+  }
+
+  // Pick sprite frame index
+  let frameIndex;
+  if      (ai.maskAnimState === 'SMILE')    frameIndex = MASK_SMILE_FRAMES[ai.maskAnimFrame];
+  else if (ai.maskAnimState === 'TO_CRY')   frameIndex = MASK_TO_CRY_FRAMES[ai.maskAnimFrame];
+  else if (ai.maskAnimState === 'CRY')      frameIndex = MASK_CRY_FRAMES[ai.maskAnimFrame];
+  else if (ai.maskAnimState === 'TO_SMILE') frameIndex = MASK_TO_SMILE_FRAMES[ai.maskAnimFrame];
+
+  // Frozen tint — draw with blue overlay
+  const alpha = frozen ? 0.7 : 1;
+  drawMaskFrame(frameIndex, x, y, alpha);
+  if (frozen) {
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#aaccff';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 24, 24, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Confused tint
+  if (ai.confused) {
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#00ffff';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 24, 24, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Health bar
   const bw = 40;
-  ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2, y-36, bw, 5);
-  ctx.fillStyle = isConfused ? '#00ffff' : (ehp.hp<ehp.maxHp/2?'#ff6666':'#4488ff');
-  ctx.fillRect(x-bw/2, y-36, bw*(ehp.hp/ehp.maxHp), 5);
+  ctx.fillStyle = '#330000';
+  ctx.fillRect(x - bw/2, y - 36, bw, 5);
+  ctx.fillStyle = ai.confused ? '#00ffff' : (ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#4488ff');
+  ctx.fillRect(x - bw/2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
 }
 
 function drawGiftBox(epos, ehp, ai, frozen) {
