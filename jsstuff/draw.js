@@ -102,7 +102,7 @@ function drawMask(epos, ehp, ai, frozen) {
   if (ai.maskAnimFrame  === undefined) ai.maskAnimFrame  = 0;
   if (ai.maskAnimTimer  === undefined) ai.maskAnimTimer  = 0;
   if (ai.maskAnimState  === undefined) ai.maskAnimState  = 'SMILE';
-  const ANIM_SPEED = 8; // frames per sprite frame
+  const ANIM_SPEED = 12; // frames per sprite frame
 
   const prevState = ai.maskAnimState;
 
