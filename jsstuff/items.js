@@ -1,5 +1,5 @@
 // ============================================================
-// CLIPBLAST: PARTY HUNTER — Item Definitions
+// CLIPBLAST: PARTY HUNTER — Item Definitions 
 // ============================================================
 
 const ITEM_DEFS = {
