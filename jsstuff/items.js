@@ -315,15 +315,17 @@ const ITEM_DEFS = {
     desc: '+25% MAX HP\n+25% MAX AMMO',
     color: '#ffdd00', shadowColor: '#ffaa00', spawnCooldown: 999999999,
     effect(gs) {
-      gs.hasExtraClips = true;
-      gs.maxHealth = Math.ceil(gs.maxHealth * 1.25);
-      gs.maxAmmo   = Math.ceil(gs.maxAmmo   * 1.25);
-      gs.health    = gs.maxHealth;
-      gs.ammo      = gs.maxAmmo;
-      gs.reloading = false;
-      updateHUD();
-      showMsg('EXTRA CLIPS! +25% HP & AMMO, FULL HEAL!');
-    },
+  gs.hasExtraClips = true;
+  const hpBonus  = Math.ceil(gs.maxHealth * 0.25);
+  const ammoBonus = Math.ceil(gs.maxAmmo * 0.25);
+  gs.maxHealth += hpBonus;
+  gs.maxAmmo   += ammoBonus;
+  gs.health     = gs.maxHealth;
+  gs.ammo       = gs.maxAmmo;
+  gs.reloading  = false;
+  updateHUD();
+  showMsg('EXTRA CLIPS! +25% HP & AMMO, FULL HEAL!');
+},
     draw(fi) {
       const {x,y,phase}=fi, t=Date.now()/300, bob=Math.sin(t+phase)*5, spin=Math.sin(t*.6+phase)*.1;
       ctx.save(); ctx.translate(x,y+bob); ctx.rotate(spin);
