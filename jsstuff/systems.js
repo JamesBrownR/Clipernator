@@ -977,8 +977,7 @@ function spawnEnemy() {
   ECS.add(id,'pos',{x,y,angle:0}); ECS.add(id,'vel',{vx:0,vy:0});
   ECS.add(id,'hp',{hp:Math.ceil(baseHp*def.hpMult),maxHp:Math.ceil(baseHp*def.hpMult),hitFlash:0});
   ECS.add(id,'physics',{speed:(1.2+Math.random()*0.6+gs.wave*0.12)*def.speedMult});
-  ECS.add(id,'ai',{shootCooldown:120,ambushTimer:0,diveTimer:0,dashHit:false});
-  spawnParticles(x, y, '#ff4400', 10);
+ECS.add(id,'ai',{shootCooldown:120,ambushTimer:0,diveTimer:0,dashHit:false,maskOrient:type==='mask'?Math.floor(Math.random()*4):0});  spawnParticles(x, y, '#ff4400', 10);
 }
 
 function spawnBoss() {
