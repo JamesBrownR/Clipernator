@@ -74,6 +74,21 @@ let gunX = 0;
 let gunY = 0;
 let playerBobTimer = 0;
 
+// At the top of draw.js, add this with the other image loaders (near playerImg/shotgunImg)
+const maskSheetImg = new Image();
+maskSheetImg.src = '/Clipernator/sprites/MaskSheet.png';
+
+const MASK_FRAME_W = 640;
+const MASK_FRAME_H = 640;
+const MASK_COLS = 4;
+
+// Frame index mapping
+// 0-1: smile idle, 2-3: transition to neutral, 4-7: cry buildup, 8: full cry, 9-10: return, 11: smile
+const MASK_SMILE_FRAMES  = [0, 1];
+const MASK_TO_CRY_FRAMES = [2, 3, 4, 5, 6, 7];
+const MASK_CRY_FRAMES    = [8, 9];
+const MASK_TO_SMILE_FRAMES = [10, 11];
+
 // ================================================================
 // KEYBINDS
 // ================================================================
