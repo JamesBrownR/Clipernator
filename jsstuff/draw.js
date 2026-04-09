@@ -676,7 +676,6 @@ for(const id of ECS.query('enemy','pos','hp')) {
     ctx.scale(sizeScale, sizeScale);
     ctx.translate(-cx, -cy);
   }
- const isCritMass = ai && ai.criticalMass;
 
   if (type==='utensil')     drawUtensil(epos, ehp, ai, frozen);
   else if (type==='mask')        drawMask(epos, ehp, ai, frozen);
