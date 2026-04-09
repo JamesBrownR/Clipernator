@@ -261,8 +261,7 @@ const BT_MASK = new BTSelector(
       if (ai.cryBurstTimer <= 0 && ai.cryBurst > 0) {
         ai.cryBurst--;
         ai.cryBurstTimer = 22;
-       const orientOffset = (ai.maskOrient || 0) * (Math.PI / 2);
-const aim = Math.atan2(dy, dx) + orientOffset;
+       const aim = Math.atan2(dy, dx);
 for (const sa of [-0.28, 0, 0.28]) {
   const a = aim + sa;
           gs.enemyBullets.push({
