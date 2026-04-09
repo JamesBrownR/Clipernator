@@ -237,6 +237,17 @@ const BT_MASK = new BTSelector(
     const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
+    // Smoothly rotate orient angle toward player
+const adx = pp.x - pos.x, ady = pp.y - pos.y;
+const targetAngle = Math.atan2(ady, adx) - Math.PI / 2; // offset so "down" faces player
+if (ai.orientAngle === undefined) ai.orientAngle = 0;
+let angleDelta = targetAngle - ai.orientAngle;
+while (angleDelta >  Math.PI) angleDelta -= Math.PI * 2;
+while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+ai.orientAngle += angleDelta * 0.008; // 0.008 = rotation speed, tune this
+ai.maskOrient = Math.round(ai.orientAngle / (Math.PI / 2)) % 4;
+if (ai.maskOrient < 0) ai.maskOrient += 4;
+    
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
 
     ai.maskState = ai.maskState || 'SMILE';
