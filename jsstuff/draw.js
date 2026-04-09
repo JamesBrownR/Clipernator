@@ -144,15 +144,38 @@ function drawMask(epos, ehp, ai, frozen) {
   }
 
   // Pick sprite frame index
-  let frameIndex;
-  if      (ai.maskAnimState === 'SMILE')    frameIndex = MASK_SMILE_FRAMES[ai.maskAnimFrame];
-  else if (ai.maskAnimState === 'TO_CRY')   frameIndex = MASK_TO_CRY_FRAMES[ai.maskAnimFrame];
-  else if (ai.maskAnimState === 'CRY')      frameIndex = MASK_CRY_FRAMES[ai.maskAnimFrame];
-  else if (ai.maskAnimState === 'TO_SMILE') frameIndex = MASK_TO_SMILE_FRAMES[ai.maskAnimFrame];
+// Pick current and next frame index for cross-fade
+  let frameIndex, nextFrameIndex;
+  const blendT = ai.maskAnimTimer / ANIM_SPEED; // 0→1 over each frame
 
-  // Frozen tint — draw with blue overlay
-  const alpha = frozen ? 0.7 : 1;
-  drawMaskFrame(frameIndex, x, y, alpha);
+  function getFrameList(state) {
+    if (state === 'SMILE')    return MASK_SMILE_FRAMES;
+    if (state === 'TO_CRY')   return MASK_TO_CRY_FRAMES;
+    if (state === 'CRY')      return MASK_CRY_FRAMES;
+    if (state === 'TO_SMILE') return MASK_TO_SMILE_FRAMES;
+    return MASK_SMILE_FRAMES;
+  }
+
+  const currentList = getFrameList(ai.maskAnimState);
+  frameIndex = currentList[ai.maskAnimFrame] ?? currentList[0];
+
+  // Next frame — wrap or peek into next state
+  const nextFramePos = ai.maskAnimFrame + 1;
+  if (nextFramePos < currentList.length) {
+    nextFrameIndex = currentList[nextFramePos];
+  } else {
+    // Peek at first frame of next state
+    if      (ai.maskAnimState === 'SMILE')    nextFrameIndex = MASK_TO_CRY_FRAMES[0];
+    else if (ai.maskAnimState === 'TO_CRY')   nextFrameIndex = MASK_CRY_FRAMES[0];
+    else if (ai.maskAnimState === 'CRY')      nextFrameIndex = MASK_TO_SMILE_FRAMES[0];
+    else if (ai.maskAnimState === 'TO_SMILE') nextFrameIndex = MASK_SMILE_FRAMES[0];
+    else nextFrameIndex = frameIndex;
+  }
+
+  // Draw cross-fade
+  const baseAlpha = frozen ? 0.7 : 1;
+  drawMaskFrame(frameIndex,     x, y, baseAlpha * (1 - blendT));
+  drawMaskFrame(nextFrameIndex, x, y, baseAlpha * blendT);
   if (frozen) {
     ctx.save();
     ctx.globalAlpha = 0.4;
