@@ -25,7 +25,7 @@ Make enemies more interactive overall:
   
  
   * The juggler enemy is a bit mindless, always chases the player instead of trying to keep distance. it should try and stay a certain distance away from the player, however if there is a ringmaster nearby it should go to it and circle around it to gain buffs
-  * The ringmaster should not only make enemies faster, but it should increase their size, damage & health over time, until they reach a 'critial mass' and turn red - they are immune to explosives and all their attacks are explosive (and stop getting bigger). The buffs should also apply to enemies that  juggler is holding, if the juggler is getting the buffs. (UPDATE: Works but there is a giant red circle around critical enemies that makes it impossible to see anything, and buffed enemies dont seem to gain health
+  * The ringmaster should not only make enemies faster, but it should increase their size, damage & health over time, until they reach a 'critial mass' and turn red - they are immune to explosives and all their attacks are explosive (and stop getting bigger). The buffs should also apply to enemies that  juggler is holding, if the juggler is getting the buffs. (UPDATE: Works but buffed enemies dont seem to gain health)
   * if possible, there should be a animation of the stage getting bigger after you kill boss one, rather than a instant transition (UPDATE: This works but the note has not been removed since the game still pauses bullets briefly before continuing; it should be instant and have no pause)
   *  the wave scaling in floor two in kind of weird
   
