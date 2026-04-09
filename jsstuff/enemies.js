@@ -273,7 +273,7 @@ ai.orientAngle += angleDelta * 0.008;
 const aim = Math.atan2(dy, dx);
 const orient = ai.maskOrient || 0;
 // gravity direction rotated to match mask facing
-cconst gravAngle = ai.orientAngle || 0;
+const gravAngle = ai.orientAngle || 0;
 const gx = Math.sin(gravAngle) * 0.045;
 const gy = Math.cos(gravAngle) * 0.045;
 for (const sa of [-0.28, 0, 0.28]) {
