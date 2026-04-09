@@ -360,6 +360,7 @@ function sysAI() {
 
   // ── Clean up juggled flags for any enemy whose juggler has died ──
   for (const id of ECS.query('enemy','ai')) {
+    if (!ECS.has(id, 'enemy')) continue;
     const ai2 = ECS.get(id,'ai');
     if (ai2.juggled && ai2.juggledBy !== undefined) {
       if (!ECS.has(ai2.juggledBy, 'pos')) {
@@ -374,6 +375,11 @@ function sysAI() {
   }
 
   for (const id of ECS.query('enemy','pos','vel','ai','physics')) {
+
+     // Guard: entity may have been destroyed mid-iteration
+    if (!ECS.has(id, 'enemy') || !ECS.has(id, 'pos')) continue;
+
+    
     const ai2=ECS.get(id,'ai');
     if (ai2&&ai2.juggled) {
       const type=ECS.get(id,'enemy').type;
@@ -396,7 +402,7 @@ function sysAI() {
     if (!ECS.has(id,'pos')||!ECS.has(id,'vel')) continue;
     const pos=ECS.get(id,'pos'),vel=ECS.get(id,'vel');
 
-    if (ai2&&ai2.reflectedByGlowstick&&type==='cannonball') {
+if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type==='cannonball') {
       const hitWall=pos.x<30||pos.x>worldW-30||pos.y<30||pos.y>worldH-30;
       let hitEnemy=false;
       for (const oid of ECS.query('enemy','pos')) {
