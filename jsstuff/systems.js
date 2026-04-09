@@ -51,7 +51,6 @@ function detonateExplosiveBullet(b, hitX, hitY) {
   spawnParticles(hitX, hitY, '#ffffff', 12);
   gs.shakeX = 18; gs.shakeY = 18;
   gs.glowExplosionX = hitX; gs.glowExplosionY = hitY; gs.glowExplosionTimer = 10;
-  gs.explosionFreezeTimer = (gs.explosionFreezeTimer||0) + 3;
   const toKill = [];
   for (const eid of ECS.query('enemy','pos','hp')) {
   const eai = ECS.get(eid,'ai');
@@ -619,18 +618,26 @@ function sysEnemyPlayerCollision() {
       // Add before gs.health -= line, inside the enemy loop:
 const eaiCheck = ECS.get(id,'ai');
 if (eaiCheck && eaiCheck.criticalMass && gs.invincible <= 0) {
-  detonateExplosiveBullet({damageMult: eaiCheck.rmDmgMult || 3, life:1, isExplosive:true}, epos.x, epos.y);
+  if (!eaiCheck.explodeCooldown || eaiCheck.explodeCooldown <= 0) {
+    eaiCheck.explodeCooldown = 120;
+    detonateExplosiveBullet({damageMult: eaiCheck.rmDmgMult || 3, life:1, isExplosive:true}, epos.x, epos.y);
+    gs.health -= 20;
+    gs.invincible = CFG.INVINCIBLE_FRAMES;
+    gs.flawlessThisWave = false;
+    updateHUD();
+    if (gs.health <= 0) { gameOver(); return; }
+  }
   return;
 }
       // Knocking Pins: reduced contact damage (8 instead of 20),
       // and the bowl itself damages the enemy it rams into
       if (gs.knockingPinsActive) {
-        gs.health-=8; gs.invincible=CFG.INVINCIBLE_FRAMES;
+        gs.health-=4; gs.invincible=CFG.INVINCIBLE_FRAMES;
         gs.shakeX=8;gs.shakeY=8; gs.flawlessThisWave=false;
         // Deal damage to the enemy being bowled into
         const ehp=ECS.get(id,'hp');
         if (ehp) {
-          ehp.hp-=baseBulletDamage()*3; ehp.hitFlash=14;
+          ehp.hp-=baseBulletDamage()*30; ehp.hitFlash=14;
           spawnParticles(epos.x,epos.y,'#3333cc',10);
           if (ehp.hp<=0){
             spawnParticles(epos.x,epos.y,'#ff2222',18);
@@ -826,6 +833,11 @@ function sysTimers() {
     }
   }
 
+  for (const id of ECS.query('enemy','ai')) {
+  const eai = ECS.get(id,'ai');
+  if (eai.explodeCooldown > 0) eai.explodeCooldown--;
+}
+  
   for (const p of gs.particles){p.x+=p.vx;p.y+=p.vy;p.vx*=0.91;p.vy*=0.91;p.life--;}
   gs.particles=gs.particles.filter(p=>p.life>0);
   gs.shakeX*=0.72; gs.shakeY*=0.72;
@@ -856,8 +868,8 @@ function sysTimers() {
       }
 if (nearest) {
         const dx = nearest.x - ppos.x, dy = nearest.y - ppos.y, dist = Math.hypot(dx, dy) || 1;
-        pvel.vx = (dx / dist) * CFG.PLAYER_SPEED * 4.5;
-        pvel.vy = (dy / dist) * CFG.PLAYER_SPEED * 4.5;
+        pvel.vx = (dx / dist) * CFG.PLAYER_SPEED * 10;
+        pvel.vy = (dy / dist) * CFG.PLAYER_SPEED * 10;
       }    }
   }
 
@@ -990,11 +1002,19 @@ function shoot() {
   const totalBullets=CFG.BULLET_COUNT+(gs.hasCursedCandles?gs.candlesLit*2:0);
   for (let i=0;i<totalBullets;i++) {
     const a=gunAngle+(Math.random()-.5)*.32;
-    let damageMult=1,isDud=false;
-    if(gs.hasQuadCake){if(Math.random()<0.50)isDud=true;else{damageMult=4;doubleCount++;}}
-    else if(gs.hasTripleCake){if(Math.random()<0.45)isDud=true;else{damageMult=3;doubleCount++;}}
-    else if(gs.hasDoubleCake){if(Math.random()<0.40)isDud=true;else{damageMult=2;doubleCount++;}}
-    gs.bullets.push({x:muzzle.x,y:muzzle.y,vx:Math.cos(a)*CFG.BULLET_SPEED,vy:Math.sin(a)*CFG.BULLET_SPEED,angle:a,life:CFG.BULLET_LIFE,damageMult:isDud?1:damageMult*(gs.sfpFull?1.5:1),isDud});
+    let damageMult = baseBulletDamage();
+let isDud = false;
+if (gs.hasQuadCake)        { if (Math.random() < 0.50) isDud = true; }
+else if (gs.hasTripleCake) { if (Math.random() < 0.45) isDud = true; }
+else if (gs.hasDoubleCake) { if (Math.random() < 0.40) isDud = true; }
+const finalMult = isDud ? 1 : damageMult * (gs.sfpFull ? 1.5 : 1);
+gs.bullets.push({
+  x: muzzle.x, y: muzzle.y,
+  vx: Math.cos(a) * CFG.BULLET_SPEED,
+  vy: Math.sin(a) * CFG.BULLET_SPEED,
+  angle: a, life: CFG.BULLET_LIFE,
+  damageMult: finalMult, isDud
+});
   }
   spawnParticles(muzzle.x,muzzle.y,doubleCount>0?'#ff44ff':'#ff8800',doubleCount>0?8:6);
 }
