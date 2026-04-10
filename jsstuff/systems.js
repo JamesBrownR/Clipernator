@@ -653,18 +653,16 @@ if (eaiCheck && eaiCheck.criticalMass && gs.invincible <= 0) {
       }
 
       // Replace the gs.health -= 20 line (non-knocking-pins path):
-const contactDmg = 20 * ((() => {
-  // find the enemy that hit us
-  for (const id of ECS.query('enemy','pos')) {
-    const epos = ECS.get(id,'pos');
-    if (Math.hypot(ppos.x-epos.x, ppos.y-epos.y) < 28) {
-      const eai = ECS.get(id,'ai');
-      return eai && eai.rmDmgMult ? eai.rmDmgMult : 1;
-    }
+let contactMult = 1;
+for (const cid of ECS.query('enemy','pos')) {
+  const cepos = ECS.get(cid,'pos');
+  if (Math.hypot(ppos.x-cepos.x, ppos.y-cepos.y) < 28) {
+    const ceai = ECS.get(cid,'ai');
+    if (ceai && ceai.rmDmgMult) contactMult = ceai.rmDmgMult;
+    break;
   }
-  return 1;
-})());
-gs.health -= contactDmg;
+}
+gs.health -= Math.round(20 * contactMult);
       gs.invincible=CFG.INVINCIBLE_FRAMES;
       gs.shakeX=16;gs.shakeY=16; gs.flawlessThisWave=false;
       triggerSFPHit(); spawnParticles(ppos.x,ppos.y,'#ff3333',14); updateHUD();
@@ -695,7 +693,7 @@ if (eb.isArcBall) {
     spawnParticles(eb.x, eb.y, '#ff8800', 12);
     gs.shakeX = 10; gs.shakeY = 10;
     if (gs.invincible <= 0 && Math.hypot(eb.x - ppos.x, eb.y - ppos.y) < 55) {
-      gs.health -= 18; gs.invincible = CFG.INVINCIBLE_FRAMES;
+      gs.health -= Math.round(18 * (eb.rmDmgMult || 1)); gs.invincible = CFG.INVINCIBLE_FRAMES;
       gs.shakeX = 16; gs.shakeY = 16;
       gs.flawlessThisWave = false;
       triggerSFPHit(); updateHUD();
@@ -752,7 +750,9 @@ if (eb.isArcBall) {
     }
 
     if (!eb.friendlyFire&&gs.invincible<=0&&Math.hypot(eb.x-ppos.x,eb.y-ppos.y)<20) {
-      gs.health-=15; gs.invincible=CFG.INVINCIBLE_FRAMES; gs.shakeX=10;gs.shakeY=10;
+      const bulletDmg = Math.round(15 * (eb.rmDmgMult || 1));
+      gs.health -= bulletDmg;
+      gs.invincible=CFG.INVINCIBLE_FRAMES; gs.shakeX=10;gs.shakeY=10;
       gs.flawlessThisWave=false; triggerSFPHit();
       spawnParticles(ppos.x,ppos.y,'#ff69b4',10); updateHUD();
       if (gs.health<=0){gameOver();return false;} return false;
