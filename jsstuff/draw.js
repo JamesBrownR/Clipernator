@@ -837,8 +837,30 @@ if (gs.hasMirrorMaze && gs.mirrorShards) {
   }
 
   // Player bullets
-  for(const b of gs.bullets) drawBullet(b);
-
+for (const b of gs.bullets) {
+  if (b.isArcBall) {
+    // Shadow
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.ellipse(b.shadowX, b.shadowY || b.y, 18, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // Ball
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.fillStyle = '#00ff88';
+    ctx.shadowColor = '#00ffaa';
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    drawBullet(b);
+  }
+}
   // Enemy bullets
   for(const eb of gs.enemyBullets) {
     ctx.save(); ctx.globalAlpha=eb.life/eb.maxLife;
