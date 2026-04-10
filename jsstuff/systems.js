@@ -131,10 +131,10 @@ let didReflect = false;
   const GRAVITY = 0.15;
   const HANG_TIME = Math.max(55, Math.min(110, Math.hypot(targetX - eb.x, targetY - eb.y) / 5));
   
-  // Check if any mirror shard is near the reflect point — if so, consume it and upgrade immediately
-  let shardHit = -1;
-  if (gs.hasMirrorMaze && gs.mirrorShards) {
-    for (let si = 0; si < gs.mirrorShards.length; si++) {
+  // Check if any mirror shard is near the reflect point — only for arc balls
+let shardHit = -1;
+if (isArc && gs.hasMirrorMaze && gs.mirrorShards) {
+  for (let si = 0; si < gs.mirrorShards.length; si++) {
       const s = gs.mirrorShards[si];
       if (Math.hypot(eb.x - s.x, eb.y - s.y) < 80) { // generous radius since it's intentional
         shardHit = si;
