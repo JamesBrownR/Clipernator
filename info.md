@@ -24,7 +24,7 @@ Make enemies more interactive overall:
 
   
  
-  * WHen the player reflects juggler thrown balls they become normal straight projectiles. make is so when a player reflected a projectiled it inherents the same projectile type
+  * WHen the player reflects juggler thrown balls they become normal straight projectiles. make is so when a player reflected a projectiled it inherents the same projectile type. FOr example when a player reflects a lobbed projectile it should lob back as their own projectile whereever the cursor currently is
 
 
   * if possible, there should be a animation of the stage getting bigger after you kill boss one, rather than a instant transition (UPDATE: This works but the note has not been removed since the game still pauses bullets briefly before continuing; it should be instant and have no pause)
