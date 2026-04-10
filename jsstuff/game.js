@@ -74,7 +74,7 @@ function initGameState() {
   ECS.clear();
 
   gs = {
-    score: 0, wave: 2,
+    score: 0, wave: 10,
     health: CFG.MAX_HEALTH, maxHealth: CFG.MAX_HEALTH,
     ammo: CFG.MAX_AMMO, maxAmmo: CFG.MAX_AMMO,
     reloading: false, reloadTimer: 0,
@@ -115,7 +115,7 @@ function initGameState() {
     hasFunhouseDistortion: false,
     hasTightropeBoots: false,
     knockingPinsActive: false, knockingPinsTimer: 0,
-    hasClownish: false,
+    hasClownish: true,
     clownNoseSize: 0, clownNoseTimer: 0, clownNoseMax: 480,
     clownNoseHonkTimer: 0,
     clownConfuseActive: false,
