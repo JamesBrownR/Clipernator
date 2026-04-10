@@ -132,11 +132,29 @@ let didReflect = false;
         damageMult: baseBulletDamage() * 2, isDud: false,
         isReflected: true, isExplosive: true,
         // Inherit arc ball properties so it still explodes on impact
-        ...(isArc ? {
-          isArcBall: true, // fly straight now, but still explosive
-          sizeScale: eb.sizeScale || 1.0,
-          isCannonball: eb.isCannonball || false,
-        } : {}),
+       if (isArc) {
+  const targetX = mouse.x, targetY = mouse.y;
+  const GRAVITY = 0.15;
+  const HANG_TIME = Math.max(55, Math.min(110, Math.hypot(targetX - eb.x, targetY - eb.y) / 5));
+  gs.bullets.push({
+    x: eb.x, y: eb.y,
+    vx: (targetX - eb.x) / HANG_TIME,
+    vy: -HANG_TIME * GRAVITY * 0.5,
+    vyHoriz: (targetY - eb.y) / HANG_TIME,
+    gravity: GRAVITY,
+    angle: Math.atan2(targetY - eb.y, targetX - eb.x),
+    life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
+    damageMult: baseBulletDamage() * 2,
+    isDud: false, isReflected: true, isExplosive: true,
+    isArcBall: true,
+    targetX, targetY,
+    startX: eb.x, startY: eb.y,
+    shadowX: eb.x, shadowY: targetY,
+    sizeScale: eb.sizeScale || 1.0,
+  });
+} else {
+  gs.bullets.push({ normal reflected bullet... });
+}
       });
       gs.enemyBullets.splice(i,1);
       spawnParticles(eb.x, eb.y, '#00ff88', 8);
@@ -515,19 +533,21 @@ if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type
 function sysBullets() {
   gs.bullets=gs.bullets.filter(b=>{
     // Funhouse Distortion: meaningful homing force
-    if (gs.hasFunhouseDistortion) {
-      let nearest=null,nearDist=999999;
-      for (const eid of ECS.query('enemy','pos')) {
-        const ep=ECS.get(eid,'pos'),d=Math.hypot(ep.x-b.x,ep.y-b.y);
-        if (d<nearDist){nearDist=d;nearest=ep;}
-      }
-      if (nearest&&nearDist<300) {
-        const dx=nearest.x-b.x,dy=nearest.y-b.y,dist=Math.hypot(dx,dy)||1;
-        b.vx+=(dx/dist)*1.1; b.vy+=(dy/dist)*1.1;
-        const spd=Math.hypot(b.vx,b.vy);
-        if (spd>CFG.BULLET_SPEED*1.2){b.vx=b.vx/spd*CFG.BULLET_SPEED*1.2;b.vy=b.vy/spd*CFG.BULLET_SPEED*1.2;}
-      }
-    }
+   if (gs.hasFunhouseDistortion) {
+  let nearest = null, nearDist = 999999;
+  for (const eid of ECS.query('enemy', 'pos')) {
+    const ep = ECS.get(eid, 'pos'), d = Math.hypot(ep.x - b.x, ep.y - b.y);
+    if (d < nearDist) { nearDist = d; nearest = ep; }
+  }
+  if (nearest && nearDist < 400) {
+    const dx = nearest.x - b.x, dy = nearest.y - b.y, dist = Math.hypot(dx, dy) || 1;
+    b.vx += (dx / dist) * 0.18;
+    b.vy += (dy / dist) * 0.18;
+    const spd = Math.hypot(b.vx, b.vy);
+    const cap = CFG.BULLET_SPEED * 0.75; // slower = more floaty/readable
+    if (spd > cap) { b.vx = b.vx / spd * cap; b.vy = b.vy / spd * cap; }
+  }
+}
     b.x+=b.vx; b.y+=b.vy; b.life--;
     if (gs.bouncyHouse) {
       let bounced=false;
@@ -1111,6 +1131,8 @@ function shoot() {
   for (let i=0;i<totalBullets;i++) {
     const a=gunAngle+(Math.random()-.5)*.32;
     let damageMult = baseBulletDamage();
+
+    if (gs.hasFunhouseDistortion) {life: CFG.BULLET_LIFE * 2}
 let isDud = false;
 if (gs.hasQuadCake)        { if (Math.random() < 0.50) isDud = true; }
 else if (gs.hasTripleCake) { if (Math.random() < 0.45) isDud = true; }
