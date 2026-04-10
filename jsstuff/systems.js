@@ -561,8 +561,7 @@ function sysBulletEnemyCollision() {
 
         if (ehp.hp<=0) {
           const type=ECS.get(id,'enemy').type;
-          if (type==='boss') handleBossDeath(id);
-
+if (type === 'boss' || type === 'cakeBoss') handleBossDeath(id);
           if (gs.ricochetActive) {
             let nearest=null,nearDist=999999;
             for (const oid of ECS.query('enemy','pos')) {
@@ -715,6 +714,20 @@ if (eb.isArcBall) {
         }
 
         // Arc enemy landing: release the enemy at the landing spot
+    // Frosting arc: spawn giftbox on impact if flagged
+if (eb.isFrosting && eb.spawnGiftBox) {
+  const gid = ECS.createEntity();
+  const def = ENEMY_DEFS['giftBox'];
+  const baseHp = 1 + Math.floor(gs.wave / 2);
+  ECS.add(gid, 'enemy', { type: 'giftBox' });
+  ECS.add(gid, 'pos', { x: eb.x, y: eb.y, angle: 0 });
+  ECS.add(gid, 'vel', { vx: 0, vy: 0 });
+  ECS.add(gid, 'hp', { hp: Math.ceil(baseHp * def.hpMult), maxHp: Math.ceil(baseHp * def.hpMult), hitFlash: 0 });
+  ECS.add(gid, 'physics', { speed: 0.8 });
+  ECS.add(gid, 'ai', { windupTimer: 0, exploded: false, heldByPlayer: false, thrown: false, dashHit: false });
+  spawnParticles(eb.x, eb.y, '#ffaa00', 14);
+  showMsg('A GIFT BOX FELL FROM THE FROSTING!');
+}
         if (eb.isArcEnemy && eb.carriedId && ECS.has(eb.carriedId, 'pos')) {
           const cpos = ECS.get(eb.carriedId, 'pos');
           cpos.x = eb.x; cpos.y = eb.y;
@@ -1048,15 +1061,26 @@ ECS.add(id,'ai',{shootCooldown:120,ambushTimer:0,diveTimer:0,dashHit:false,maskO
 }
 
 function spawnBoss() {
-  const ppos=ECS.get(gs.playerId,'pos');
-  const x=ppos.x>worldW/2?120:worldW-120,y=ppos.y>worldH/2?120:worldH-120;
-  const id=ECS.createEntity();
-  ECS.add(id,'enemy',{type:'boss'}); ECS.add(id,'pos',{x,y,angle:0}); ECS.add(id,'vel',{vx:0,vy:0});
-  ECS.add(id,'hp',{hp:CFG.BOSS_BASE_HP+gs.wave*12,maxHp:CFG.BOSS_BASE_HP+gs.wave*12,hitFlash:0});
-  ECS.add(id,'physics',{speed:CFG.BOSS_SPEED});
-  ECS.add(id,'ai',{shootCooldown:90,ambushTimer:0,diveTimer:0,dashHit:false,bossPhase:BOSS_PHASE.IDLE,phaseTimer:120,spiralAngle:0,volleyCount:0,volleyTimer:0,slamTarget:null,slamRadius:0,slamWarning:0});
-  spawnParticles(x, y, '#ff4400', 10);
-  gs.bossId=id;
+  const ppos = ECS.get(gs.playerId, 'pos');
+  const x = ppos.x > worldW / 2 ? 120 : worldW - 120;
+  const y = ppos.y > worldH / 2 ? 120 : worldH - 120;
+  const id = ECS.createEntity();
+  const bossHp = CFG.BOSS_BASE_HP + gs.wave * 12;
+  ECS.add(id, 'enemy', { type: 'cakeBoss' });
+  ECS.add(id, 'pos', { x, y, angle: 0 });
+  ECS.add(id, 'vel', { vx: 0, vy: 0 });
+  ECS.add(id, 'hp', { hp: bossHp, maxHp: bossHp, hitFlash: 0 });
+  ECS.add(id, 'physics', { speed: CFG.BOSS_SPEED });
+  ECS.add(id, 'ai', {
+    bossPhase: 'IDLE', phaseTimer: 140,
+    candlesLit: 5, candleTimer: 80,
+    idleSpin: 0, spiralAngle: 0,
+    bounceCount: 0, permanentSpiral: false,
+    shootCooldown: 0, ambushTimer: 0,
+    diveTimer: 0, dashHit: false,
+  });
+  spawnParticles(x, y, '#ff69b4', 20);
+  gs.bossId = id;
 }
 
 function shoot() {
