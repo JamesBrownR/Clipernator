@@ -126,36 +126,64 @@ let didReflect = false;
      const isArc = eb.isArcBall;
     
               // Inherit arc ball properties so it still explodes on impact
-       if (isArc) {
+    if (isArc) {
   const targetX = mouse.x, targetY = mouse.y;
   const GRAVITY = 0.15;
   const HANG_TIME = Math.max(55, Math.min(110, Math.hypot(targetX - eb.x, targetY - eb.y) / 5));
-  gs.bullets.push({
-    x: eb.x, y: eb.y,
-    vx: (targetX - eb.x) / HANG_TIME,
-    vy: -HANG_TIME * GRAVITY * 0.5,
-    vyHoriz: (targetY - eb.y) / HANG_TIME,
-    gravity: GRAVITY,
-    angle: Math.atan2(targetY - eb.y, targetX - eb.x),
-    life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
-    damageMult: baseBulletDamage() * 2,
-    isDud: false, isReflected: true, isExplosive: true,
-    isArcBall: true,
-    targetX, targetY,
-    startX: eb.x, startY: eb.y,
-    shadowX: eb.x, shadowY: targetY,
-    sizeScale: eb.sizeScale || 1.0,
-  });
-} else {
-  gs.bullets.push({
-        x: eb.x, y: eb.y,
-        vx: Math.cos(reflectAngle) * reflectSpeed,
-        vy: Math.sin(reflectAngle) * reflectSpeed,
-        life: 120, maxLife: 120, angle: reflectAngle,
-        damageMult: baseBulletDamage() * 2, isDud: false,
-        isReflected: true, isExplosive: true,
+  
+  // Check if any mirror shard is near the reflect point — if so, consume it and upgrade immediately
+  let shardHit = -1;
+  if (gs.hasMirrorMaze && gs.mirrorShards) {
+    for (let si = 0; si < gs.mirrorShards.length; si++) {
+      const s = gs.mirrorShards[si];
+      if (Math.hypot(eb.x - s.x, eb.y - s.y) < 80) { // generous radius since it's intentional
+        shardHit = si;
+        break;
+      }
+    }
+  }
 
-      });
+  if (shardHit >= 0) {
+    const s = gs.mirrorShards[shardHit];
+    gs.mirrorShards.splice(shardHit, 1);
+    if (s.orbiting) gs.mirrorPlayerShardTimer = 900;
+    spawnParticles(s.x, s.y, '#ff2244', 16);
+    spawnParticles(s.x, s.y, '#ccddff', 10);
+    const redHANG = Math.max(25, Math.min(55, Math.hypot(targetX - eb.x, targetY - eb.y) / 10));
+    gs.bullets.push({
+      x: eb.x, y: eb.y,
+      vx: (targetX - eb.x) / redHANG,
+      vy: -redHANG * GRAVITY * 0.5,
+      vyHoriz: (targetY - eb.y) / redHANG,
+      gravity: GRAVITY,
+      angle: Math.atan2(targetY - eb.y, targetX - eb.x),
+      life: redHANG + 30, maxLife: redHANG + 30,
+      damageMult: baseBulletDamage() * 5,
+      isDud: false, isExplosive: true,
+      isArcBall: true, isMirrorArc: true,
+      targetX, targetY,
+      startX: eb.x, startY: eb.y,
+      shadowX: eb.x, shadowY: targetY,
+      sizeScale: 1.2,
+    });
+  } else {
+    gs.bullets.push({
+      x: eb.x, y: eb.y,
+      vx: (targetX - eb.x) / HANG_TIME,
+      vy: -HANG_TIME * GRAVITY * 0.5,
+      vyHoriz: (targetY - eb.y) / HANG_TIME,
+      gravity: GRAVITY,
+      angle: Math.atan2(targetY - eb.y, targetX - eb.x),
+      life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
+      damageMult: baseBulletDamage() * 2,
+      isDud: false, isReflected: true, isExplosive: true,
+      isArcBall: true,
+      targetX, targetY,
+      startX: eb.x, startY: eb.y,
+      shadowX: eb.x, shadowY: targetY,
+      sizeScale: eb.sizeScale || 1.0,
+    });
+  }
 }
       
       
