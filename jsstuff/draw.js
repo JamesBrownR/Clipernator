@@ -921,7 +921,6 @@ for(const id of ECS.query('enemy','pos','hp')) {
   else if (type==='mask')        drawMask(epos, ehp, ai, frozen);
   else if (type==='giftBox')     drawGiftBox(epos, ehp, ai, frozen);
   else if (type==='partyHat')    drawPartyHat(epos, ehp, frozen);
-  else if (type==='boss')        drawBoss(epos, ehp, frozen);
   else if (type==='cannonball')  drawCannonball(epos, ehp, ai, frozen);
   else if (type==='ringmaster')  drawRingmaster(epos, ehp, ai, frozen);
   else if (type==='juggler')     drawJuggler(epos, ehp, ai, frozen);
