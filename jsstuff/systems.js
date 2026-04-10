@@ -346,6 +346,14 @@ function sysPlayerMovement() {
       if (spd>topSpd){vel.vx=vel.vx/spd*topSpd;vel.vy=vel.vy/spd*topSpd;}
     }
   }
+
+  // near the top of sysPlayerMovement, after dashing block:
+if (gs.knockingPinsActive) {
+  pos.x += vel.vx; pos.y += vel.vy;
+  // wall bounce/clamp still applies
+  return; // skip normal movement processing
+}
+  
   pos.x+=vel.vx; pos.y+=vel.vy;
   const bouncy=gs.bouncyHouse;
   if (pos.x<CFG.WALL_PAD){pos.x=CFG.WALL_PAD;vel.vx=bouncy?Math.abs(vel.vx):0;}
