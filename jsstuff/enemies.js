@@ -679,8 +679,7 @@ const BT_PARTYHAT = new BTSelector(
   })
 );
 
-// ── Boss (Floor 1) ──
-const BT_BOSS = new BTSelector(
+const BT_CAKEBOSS = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
     const pos = ECS.get(id, 'pos');
@@ -691,147 +690,258 @@ const BT_BOSS = new BTSelector(
     const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    const phase2 = hp.hp < hp.maxHp * 0.5;
+    // ── Idle spin always ticks ──
+    ai.idleSpin = (ai.idleSpin || 0) + 0.008;
 
-    const cx = worldW / 2, cy = worldH / 2;
-    const toCX = cx - pos.x, toCY = cy - pos.y;
-    const distCenter = Math.hypot(toCX, toCY);
-    if (distCenter > 180) {
-      vel.vx += (toCX / distCenter) * 0.08;
-      vel.vy += (toCY / distCenter) * 0.08;
-    } else {
-      vel.vx += (Math.random() - 0.5) * 0.12;
-      vel.vy += (Math.random() - 0.5) * 0.12;
+    // ── Candle count from HP thresholds ──
+    const hpRatio = hp.hp / hp.maxHp;
+    const newCandles = hpRatio > 0.8 ? 5 : hpRatio > 0.6 ? 4 : hpRatio > 0.4 ? 3 : hpRatio > 0.2 ? 2 : 1;
+    if (newCandles < (ai.candlesLit ?? 5)) {
+      // Candle blown out — flash and shake
+      ai.candlesLit = newCandles;
+      gs.shakeX = 18; gs.shakeY = 18;
+      hp.hitFlash = 30;
+      spawnPartyParticles(pos.x, pos.y);
+      showMsg(newCandles === 1 ? '⚠️ LAST CANDLE! THE CAKE RAGES!' : `CANDLE SNUFFED! ${newCandles} REMAINING!`);
+      // Last candle: enter permanent spiral layer
+      if (newCandles === 1) ai.permanentSpiral = true;
     }
-    const spd = Math.hypot(vel.vx, vel.vy);
-    const maxSpd = phase2 ? phy.speed * 1.5 : phy.speed;
-    if (spd > maxSpd) { vel.vx = vel.vx/spd*maxSpd; vel.vy = vel.vy/spd*maxSpd; }
+    if (ai.candlesLit === undefined) ai.candlesLit = 5;
 
-    if (pos.x < 80)          vel.vx += 0.3;
-    if (pos.x > worldW - 80) vel.vx -= 0.3;
-    if (pos.y < 80)          vel.vy += 0.3;
-    if (pos.y > worldH - 80) vel.vy -= 0.3;
-
-    ai.bossPhase    = ai.bossPhase    || BOSS_PHASE.IDLE;
-    ai.phaseTimer   = ai.phaseTimer   ?? 120;
+    // ── Init ──
+    ai.bossPhase    = ai.bossPhase    || 'IDLE';
+    ai.phaseTimer   = ai.phaseTimer   ?? 140;
+    ai.candleTimer  = ai.candleTimer  ?? 80;
     ai.spiralAngle  = ai.spiralAngle  || 0;
-    ai.volleyCount  = ai.volleyCount  || 0;
-    ai.volleyTimer  = ai.volleyTimer  || 0;
-    ai.slamTarget   = ai.slamTarget   || null;
-    ai.slamRadius   = ai.slamRadius   || 0;
-    ai.slamWarning  = ai.slamWarning  || 0;
+    ai.bounceCount  = ai.bounceCount  || 0;
 
     const dx = pp.x - pos.x, dy = pp.y - pos.y;
 
-    if (ai.bossPhase === BOSS_PHASE.IDLE) {
+    // ── Permanent spiral overlay at 1 candle ──
+    if (ai.permanentSpiral) {
+      ai.spiralAngle += 0.14;
+      if (ai.phaseTimer % 4 === 0) {
+        const a = ai.spiralAngle;
+        gs.enemyBullets.push({
+          x: pos.x, y: pos.y,
+          vx: Math.cos(a) * 1.8, vy: Math.sin(a) * 1.8,
+          life: 160, maxLife: 160, color: '#ff69b4'
+        });
+      }
+    }
+
+    // ── IDLE: drift toward center, tick down to next attack ──
+    if (ai.bossPhase === 'IDLE') {
+      const cx = worldW / 2, cy = worldH / 2;
+      const toCX = cx - pos.x, toCY = cy - pos.y;
+      const d = Math.hypot(toCX, toCY) || 1;
+      vel.vx = (vel.vx || 0) * 0.88 + (toCX / d) * phy.speed * 0.15;
+      vel.vy = (vel.vy || 0) * 0.88 + (toCY / d) * phy.speed * 0.15;
+
+      // Candle shots on their own timer
+      ai.candleTimer--;
+      if (ai.candleTimer <= 0) {
+        _cakeBossFireCandles(id, pos, pp, ai, gs);
+        // Faster between shots as candles are lost
+        ai.candleTimer = [80, 65, 50, 35, 20][5 - ai.candlesLit] || 20;
+      }
+
       ai.phaseTimer--;
       if (ai.phaseTimer <= 0) {
         const roll = Math.random();
-        if (roll < 0.33) {
-          ai.bossPhase  = BOSS_PHASE.SLAM_TELEGRAPH;
-          ai.slamTarget = { x: pp.x, y: pp.y };
-          ai.slamRadius = 0;
-          ai.slamWarning = 90;
-          showMsg('⚠️ INCOMING SLAM!');
-        } else if (roll < 0.66) {
-          ai.bossPhase = BOSS_PHASE.SPIRAL;
-          ai.phaseTimer = phase2 ? 220 : 160;
-          ai.spiralAngle = 0;
+        if (roll < 0.45) {
+          ai.bossPhase = 'SPIN_TELEGRAPH';
+          ai.phaseTimer = 45;
+          vel.vx *= 0.2; vel.vy *= 0.2;
+          showMsg('⚠️ THE CAKE SPINS UP!');
         } else {
-          ai.bossPhase  = BOSS_PHASE.VOLLEY;
-          ai.volleyCount = phase2 ? 5 : 3;
-          ai.volleyTimer = 0;
+          ai.bossPhase = 'FROSTING_CHARGE';
+          ai.phaseTimer = 60;
+          vel.vx *= 0.1; vel.vy *= 0.1;
         }
       }
     }
-    else if (ai.bossPhase === BOSS_PHASE.SLAM_TELEGRAPH) {
+
+    // ── SPIN TELEGRAPH ──
+    else if (ai.bossPhase === 'SPIN_TELEGRAPH') {
       vel.vx *= 0.85; vel.vy *= 0.85;
-      ai.slamWarning--;
-      ai.slamRadius = (1 - ai.slamWarning / 90) * 70;
-      if (ai.slamWarning <= 0) {
-        ai.bossPhase = BOSS_PHASE.SLAM_STRIKE;
-        ai.phaseTimer = 8;
+      ai.idleSpin += 0.06; // spin faster during telegraph
+      ai.phaseTimer--;
+      if (ai.phaseTimer % 8 === 0) spawnParticles(pos.x, pos.y, '#ff4400', 6);
+      if (ai.phaseTimer <= 0) {
+        // Launch toward player
+        const dist = Math.hypot(dx, dy) || 1;
+        vel.vx = (dx / dist) * 18;
+        vel.vy = (dy / dist) * 18;
+        ai.bossPhase = 'SPIN_BOUNCE';
+        ai.bounceCount = 0;
+        ai.phaseTimer = 200;
       }
     }
-    else if (ai.bossPhase === BOSS_PHASE.SLAM_STRIKE) {
-      vel.vx *= 0.7; vel.vy *= 0.7;
+
+    // ── SPIN BOUNCE ──
+    else if (ai.bossPhase === 'SPIN_BOUNCE') {
+      ai.idleSpin += 0.18; // fast spin visually
       ai.phaseTimer--;
-      const slamDist = Math.hypot(pp.x - ai.slamTarget.x, pp.y - ai.slamTarget.y);
-      if (slamDist < 70 && gs.invincible <= 0) {
-        gs.health -= 35;
+
+      // Wall bounces
+      let bounced = false;
+      if (pos.x < 40)          { pos.x = 40;          vel.vx =  Math.abs(vel.vx); bounced = true; }
+      if (pos.x > worldW - 40) { pos.x = worldW - 40; vel.vx = -Math.abs(vel.vx); bounced = true; }
+      if (pos.y < 40)          { pos.y = 40;           vel.vy =  Math.abs(vel.vy); bounced = true; }
+      if (pos.y > worldH - 40) { pos.y = worldH - 40;  vel.vy = -Math.abs(vel.vy); bounced = true; }
+
+      if (bounced) {
+        ai.bounceCount++;
+        // Burst of bullets on each bounce
+        spawnParticles(pos.x, pos.y, '#ff4400', 18);
+        gs.shakeX = 12; gs.shakeY = 12;
+        const bulletCount = 10;
+        for (let i = 0; i < bulletCount; i++) {
+          const a = (i / bulletCount) * Math.PI * 2;
+          gs.enemyBullets.push({
+            x: pos.x, y: pos.y,
+            vx: Math.cos(a) * 1.4, vy: Math.sin(a) * 1.4,
+            life: 140, maxLife: 140, color: '#ff6600'
+          });
+        }
+        if (ai.bounceCount >= 5) {
+          vel.vx *= 0.1; vel.vy *= 0.1;
+          ai.bossPhase = 'SPIN_RECOVER';
+          ai.phaseTimer = 70;
+          showMsg('CAKE STUNNED! HIT IT!');
+        }
+      }
+
+      // Player contact damage during spin
+      if (gs.invincible <= 0 && Math.hypot(pos.x - pp.x, pos.y - pp.y) < 44) {
+        gs.health -= 28;
         gs.invincible = CFG.INVINCIBLE_FRAMES;
-        gs.shakeX = 28; gs.shakeY = 28;
+        gs.shakeX = 20; gs.shakeY = 20;
         gs.flawlessThisWave = false;
-        triggerSFPHit();
-        spawnParticles(pp.x, pp.y, '#cc00ff', 20);
-        updateHUD();
+        triggerSFPHit(); updateHUD();
+        spawnParticles(pp.x, pp.y, '#ff4400', 16);
         if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
       }
-      spawnParticles(ai.slamTarget.x, ai.slamTarget.y, '#cc00ff', 30);
-      spawnParticles(ai.slamTarget.x, ai.slamTarget.y, '#ffffff', 15);
-      if (phase2) {
-        for (let i = 0; i < 12; i++) {
-          const a = (i / 12) * Math.PI * 2;
-          gs.enemyBullets.push({ x: ai.slamTarget.x, y: ai.slamTarget.y, vx: Math.cos(a)*1.0, vy: Math.sin(a)*1.0, life: 140, maxLife: 140, color: '#cc00ff' });
-        }
-      }
+
       if (ai.phaseTimer <= 0) {
-        ai.bossPhase = BOSS_PHASE.SLAM_RECOVER;
-        ai.phaseTimer = 60;
-        showMsg('BOSS STUNNED!');
+        // Safety fallback if somehow 5 bounces not hit
+        vel.vx *= 0.1; vel.vy *= 0.1;
+        ai.bossPhase = 'SPIN_RECOVER';
+        ai.phaseTimer = 70;
       }
     }
-    else if (ai.bossPhase === BOSS_PHASE.SLAM_RECOVER) {
-      vel.vx *= 0.8; vel.vy *= 0.8;
+
+    // ── SPIN RECOVER ──
+    else if (ai.bossPhase === 'SPIN_RECOVER') {
+      vel.vx *= 0.85; vel.vy *= 0.85;
       ai.phaseTimer--;
       if (ai.phaseTimer <= 0) {
-        ai.bossPhase = BOSS_PHASE.IDLE;
-        ai.phaseTimer = phase2 ? 60 : 90;
-        ai.slamTarget = null;
+        ai.bossPhase = 'IDLE';
+        ai.phaseTimer = 100 + Math.floor(Math.random() * 60);
       }
     }
-    else if (ai.bossPhase === BOSS_PHASE.SPIRAL) {
-      vel.vx *= 0.92; vel.vy *= 0.92;
-      ai.phaseTimer--;
-      const spiralRate = phase2 ? 7 : 10;
-      if (ai.phaseTimer % spiralRate === 0) {
-        const arms = phase2 ? 3 : 2;
-        for (let arm = 0; arm < arms; arm++) {
-          const a = ai.spiralAngle + (arm / arms) * Math.PI * 2;
-          const spd2 = phase2 ? 0.75 : 0.6;
-          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*spd2, vy: Math.sin(a)*spd2, life: 180, maxLife: 180, color: '#cc00ff' });
-        }
-        ai.spiralAngle += phase2 ? 0.14 : 0.11;
-      }
-      if (ai.phaseTimer <= 0) {
-        ai.bossPhase = BOSS_PHASE.IDLE;
-        ai.phaseTimer = phase2 ? 50 : 80;
-      }
-    }
-    else if (ai.bossPhase === BOSS_PHASE.VOLLEY) {
+
+    // ── FROSTING CHARGE (telegraph) ──
+    else if (ai.bossPhase === 'FROSTING_CHARGE') {
       vel.vx *= 0.88; vel.vy *= 0.88;
-      ai.volleyTimer--;
-      if (ai.volleyTimer <= 0 && ai.volleyCount > 0) {
-        const aim = Math.atan2(dy, dx);
-        const count = phase2 ? 5 : 4;
-        for (let i = 0; i < count; i++) {
-          const spread = phase2 ? 0.9 : 0.7;
-          const a = aim + (i / (count - 1) - 0.5) * spread * 2;
-          gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a)*0.85, vy: Math.sin(a)*0.85, life: 160, maxLife: 160, color: '#ff44ff' });
-        }
-        spawnParticles(pos.x, pos.y, '#ff00ff', 10);
-        ai.volleyCount--;
-        ai.volleyTimer = phase2 ? 40 : 55;
-        if (ai.volleyCount === 0) {
-          ai.bossPhase = BOSS_PHASE.IDLE;
-          ai.phaseTimer = phase2 ? 40 : 70;
-        }
+      ai.phaseTimer--;
+      if (ai.phaseTimer % 10 === 0) spawnParticles(pos.x, pos.y, '#ffffff', 5);
+      if (ai.phaseTimer <= 0) {
+        // Fire frosting arc balls at player's current position
+        _cakeBossFrostingLaunch(id, pos, pp, ai, gs);
+        ai.bossPhase = 'FROSTING_RECOVER';
+        ai.phaseTimer = 80;
       }
+    }
+
+    // ── FROSTING RECOVER ──
+    else if (ai.bossPhase === 'FROSTING_RECOVER') {
+      vel.vx *= 0.88; vel.vy *= 0.88;
+      ai.phaseTimer--;
+      if (ai.phaseTimer <= 0) {
+        ai.bossPhase = 'IDLE';
+        ai.phaseTimer = 90 + Math.floor(Math.random() * 50);
+      }
+    }
+
+    // Wall clamping during non-bounce phases
+    if (ai.bossPhase !== 'SPIN_BOUNCE') {
+      pos.x = Math.max(60, Math.min(worldW - 60, pos.x));
+      pos.y = Math.max(60, Math.min(worldH - 60, pos.y));
     }
 
     return BT.RUNNING;
   })
 );
+
+function _cakeBossFireCandles(id, pos, pp, ai, gs) {
+  const candlesLit = ai.candlesLit ?? 5;
+  const dx = pp.x - pos.x, dy = pp.y - pos.y;
+  const aim = Math.atan2(dy, dx);
+
+  if (candlesLit === 5) {
+    // Slow wide spread
+    for (const sa of [-0.5, -0.25, 0, 0.25, 0.5]) {
+      gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(aim + sa) * 0.8, vy: Math.sin(aim + sa) * 0.8, life: 160, maxLife: 160, color: '#ffdd00' });
+    }
+  } else if (candlesLit === 4) {
+    for (const sa of [-0.4, -0.13, 0.13, 0.4]) {
+      gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(aim + sa) * 1.1, vy: Math.sin(aim + sa) * 1.1, life: 150, maxLife: 150, color: '#ffaa00' });
+    }
+  } else if (candlesLit === 3) {
+    // Pairs with slight delay via two separate pushes at offset angles
+    for (const sa of [-0.3, 0, 0.3]) {
+      gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(aim + sa) * 1.4, vy: Math.sin(aim + sa) * 1.4, life: 145, maxLife: 145, color: '#ff8800' });
+      gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(aim + sa + 0.15) * 1.4, vy: Math.sin(aim + sa + 0.15) * 1.4, life: 145, maxLife: 145, color: '#ff6600' });
+    }
+  } else if (candlesLit === 2) {
+    // Rotating pattern — use spiralAngle offset
+    ai.spiralAngle = (ai.spiralAngle || 0) + 0.6;
+    for (let i = 0; i < 4; i++) {
+      const a = ai.spiralAngle + (i / 4) * Math.PI * 2;
+      gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(a) * 1.8, vy: Math.sin(a) * 1.8, life: 140, maxLife: 140, color: '#ff4400' });
+    }
+  } else {
+    // 1 candle: rapid tight spiral handled by permanentSpiral above
+    // Plus a direct aimed shot every fire
+    gs.enemyBullets.push({ x: pos.x, y: pos.y, vx: Math.cos(aim) * 2.4, vy: Math.sin(aim) * 2.4, life: 130, maxLife: 130, color: '#ff2200' });
+  }
+  spawnParticles(pos.x, pos.y, '#ffdd00', 4);
+}
+
+function _cakeBossFrostingLaunch(id, pos, pp, ai, gs) {
+  const count = 3;
+  for (let i = 0; i < count; i++) {
+    const offsetX = (i - 1) * 40;
+    const targetX = pp.x + offsetX;
+    const targetY = pp.y;
+    const horizDist = Math.hypot(targetX - pos.x, targetY - pos.y);
+    const GRAVITY = 0.12;
+    const HANG_TIME = Math.max(60, Math.min(120, horizDist / 4.5));
+    const vx = (targetX - pos.x) / HANG_TIME;
+    const vy_horiz = (targetY - pos.y) / HANG_TIME;
+    const vy_up = -HANG_TIME * GRAVITY * 0.5;
+
+    gs.enemyBullets.push({
+      x: pos.x, y: pos.y,
+      vx, vy: vy_up,
+      vyHoriz: vy_horiz,
+      gravity: GRAVITY,
+      life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
+      color: '#ffffff',
+      isArcBall: true,
+      isFrosting: true,
+      targetX, targetY,
+      hangTime: HANG_TIME,
+      startX: pos.x, startY: pos.y,
+      shadowX: pos.x, shadowY: targetY,
+      spawnGiftBox: i === 1 && Math.random() < 0.5, // center ball only, 50% chance
+    });
+    spawnParticles(pos.x, pos.y, '#ffffff', 8);
+  }
+  showMsg('⚠️ FROSTING INCOMING!');
+}
 
 // ── Floor 2: Birthday Bomber ──
 const BT_BIRTHDAY_BOMBER = new BTSelector(
@@ -1170,7 +1280,7 @@ const ENEMY_BTS = {
   mask:           BT_MASK,
   giftBox:        BT_GIFTBOX,
   partyHat:       BT_PARTYHAT,
-  boss:           BT_BOSS,
+  cakeBoss: BT_CAKEBOSS,
   birthdayBomber: BT_BIRTHDAY_BOMBER,
   pinata:         BT_PINATA,
   balloonWitch:   BT_BALLOON_WITCH,
@@ -1189,7 +1299,7 @@ const ENEMY_DEFS = {
   mask:           { hpMult: 1.1, speedMult: 1.05, size: 28, color: '#44aaff' },
   giftBox:        { hpMult: 2.2, speedMult: 0.5,  size: 34, color: '#ffaa00' },
   partyHat:       { hpMult: 0.8, speedMult: 1.4,  size: 26, color: '#ffdd00' },
-  boss:           { hpMult: 1,   speedMult: 0.4,  size: 55, color: '#9900cc' },
+  cakeBoss: { hpMult: 1, speedMult: 0.35, size: 44, color: '#ff69b4' },
   birthdayBomber: { hpMult: 1.4, speedMult: 0.85, size: 30, color: '#ff4400' },
   pinata:         { hpMult: 4.0, speedMult: 0.5,  size: 38, color: '#ff88ff' },
   balloonWitch:   { hpMult: 1.1, speedMult: 1.1,  size: 28, color: '#9944ff' },
