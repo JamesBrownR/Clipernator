@@ -114,7 +114,7 @@ function initGameState() {
     _kernelsCollected: 0,
     hasFunhouseDistortion: false,
     hasTightropeBoots: false,
-    knockingPinsActive: false, knockingPinsTimer: 0,
+    knockingPinsActive: true, knockingPinsTimer: 0,
     hasClownish: true,
     clownNoseSize: 0, clownNoseTimer: 0, clownNoseMax: 480,
     clownNoseHonkTimer: 0,
