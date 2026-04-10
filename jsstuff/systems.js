@@ -680,7 +680,33 @@ function sysEnemyBullets() {
 if (eb.isTear) {
   if (eb.gravX !== undefined) { eb.vx += eb.gravX; eb.vy += eb.gravY; }
   else if (eb.gravity) eb.vy += eb.gravity;
-}    
+}
+
+// ── Arc ball physics ──
+if (eb.isArcBall) {
+  eb.vy += eb.gravity;
+  eb.y  += eb.vyHoriz; // vertical world-movement toward target
+  // Check if ball has reached target Y or gone past it
+  const traveled = Math.hypot(eb.x - eb.startX, eb.y - eb.startY + eb.vyHoriz);
+  const totalDist = Math.hypot(eb.targetX - eb.startX, eb.targetY - eb.startY);
+  if (eb.life < eb.maxLife - eb.hangTime || Math.hypot(eb.x - eb.targetX, eb.y - eb.targetY) < 22) {
+    // Impact!
+    spawnParticles(eb.x, eb.y, '#ffdd00', 20);
+    spawnParticles(eb.x, eb.y, '#ff8800', 12);
+    gs.shakeX = 10; gs.shakeY = 10;
+    if (gs.invincible <= 0 && Math.hypot(eb.x - ppos.x, eb.y - ppos.y) < 55) {
+      gs.health -= 18; gs.invincible = CFG.INVINCIBLE_FRAMES;
+      gs.shakeX = 16; gs.shakeY = 16;
+      gs.flawlessThisWave = false;
+      triggerSFPHit(); updateHUD();
+      if (gs.health <= 0) { gameOver(); return false; }
+    }
+    return false;
+  }
+  // Update shadow position (tracks directly below ball's world XY)
+  eb.shadowX = eb.x;
+  eb.shadowY = eb.targetY; // shadow stays at ground level at target
+}
     if (eb.homing) {
       const dx=ppos.x-eb.x,dy=ppos.y-eb.y,dist=Math.hypot(dx,dy)||1;
       eb.vx+=(dx/dist)*(eb.homingStrength||0.04); eb.vy+=(dy/dist)*(eb.homingStrength||0.04);
