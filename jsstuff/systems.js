@@ -1169,11 +1169,11 @@ function checkWave() {
       const b2hp = CFG.BOSS_BASE_HP + gs.wave * 16;
       ECS.add(id, 'hp', { hp: b2hp, maxHp: b2hp, hitFlash: 0 });
       ECS.add(id, 'physics', { speed: CFG.BOSS_SPEED * 1.1 });
-      ECS.add(id, 'ai', { bossPhase: 'IDLE', phaseTimer: 100, spiralAngle: 0, volleyCount: 0, volleyTimer: 0 });
-
-      ECS.add(id, 'ai', {
+     ECS.add(id, 'ai', {
+  bossPhase: 'IDLE', phaseTimer: 100,
+  spiralAngle: 0, volleyCount: 0, volleyTimer: 0,
   shootCooldown: 120, ambushTimer: 0, diveTimer: 0, dashHit: false,
-  maskOrient: Math.floor(Math.random() * 4) // 0=normal, 1=right, 2=upside down, 3=left
+  maskOrient: Math.floor(Math.random() * 4)
 });
 
       
