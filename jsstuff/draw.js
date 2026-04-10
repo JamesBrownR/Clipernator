@@ -27,7 +27,8 @@ function _drawUtensilShape(ctx, type, color, scale = 1) {
     ctx.beginPath();
     ctx.ellipse(0, -8 * scale, 5 * scale, 7 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
-  }
+  } else if (type === 'cakeBoss') drawCakeBoss(epos, ehp, ai, frozen);
+  
 }
 
 function drawUtensil(epos, ehp, ai, frozen) {
@@ -316,24 +317,155 @@ function drawPartyHat(epos, ehp, frozen) {
   ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#cc0000'; ctx.fillRect(x-bw/2,y-38,bw*(ehp.hp/ehp.maxHp),5);
 }
 
-function drawBoss(epos, ehp, frozen) {
-  const {x,y,angle} = epos;
-  ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+function drawCakeBoss(epos, ehp, ai, frozen) {
+  const { x, y } = epos;
+  const t = Date.now() / 300;
+  const totalCandles = 5;
+  const candlesLit = ai.candlesLit ?? 5;
+  const spin = ai.idleSpin || 0;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(spin);
   if (frozen) ctx.globalAlpha = 0.7;
-  ctx.shadowColor = frozen ? '#aaccff' : '#cc00ff';
-  ctx.shadowBlur = 28;
-  ctx.fillStyle = frozen ? '#88aaff' : '#9900cc';
-  ctx.beginPath(); ctx.arc(0,0,32,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#330011';
-  ctx.fillRect(-18,-12,36,10);
-  ctx.fillStyle = '#ff0000';
-  ctx.beginPath(); ctx.arc(0,4,12,0.4,Math.PI-0.4); ctx.fill();
-  ctx.fillStyle = '#ffdd00';
-  ctx.beginPath(); ctx.moveTo(-22,-26); ctx.lineTo(-12,-38); ctx.lineTo(-4,-26); ctx.lineTo(4,-38); ctx.lineTo(12,-26); ctx.lineTo(22,-38); ctx.lineTo(-22,-26); ctx.fill();
+
+  // Bottom tier
+  ctx.shadowColor = frozen ? '#aaccff' : '#ff69b4';
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = frozen ? '#4488cc' : '#ff69b4';
+  ctx.fillRect(-36, 10, 72, 22);
+  ctx.fillStyle = frozen ? '#88aadd' : '#ff99cc';
+  ctx.fillRect(-36, 6, 72, 6);
+
+  // Middle tier
+  ctx.fillStyle = frozen ? '#5599dd' : '#ff4499';
+  ctx.fillRect(-26, -10, 52, 18);
+  ctx.fillStyle = frozen ? '#88aadd' : '#ff88bb';
+  ctx.fillRect(-26, -14, 52, 6);
+
+  // Top tier
+  ctx.fillStyle = frozen ? '#6699cc' : '#cc2277';
+  ctx.fillRect(-16, -26, 32, 14);
+  ctx.fillStyle = frozen ? '#88aadd' : '#ff66aa';
+  ctx.fillRect(-16, -30, 32, 6);
+
+  // Frosting drips
+  ctx.fillStyle = frozen ? '#aaccff' : '#ffffff';
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    ctx.arc(-28 + i * 14, 6, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.arc(-20 + i * 13, -14, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Candles
+  for (let i = 0; i < totalCandles; i++) {
+    const angle = (i / totalCandles) * Math.PI * 2;
+    const cr = 11;
+    const cx2 = Math.cos(angle) * cr;
+    const cy2 = Math.sin(angle) * cr - 30;
+    const isLit = i < candlesLit;
+
+    ctx.save();
+    ctx.translate(cx2, cy2);
+
+    // Candle body
+    ctx.fillStyle = isLit ? '#f5deb3' : '#666666';
+    ctx.shadowColor = isLit ? '#ff8800' : 'transparent';
+    ctx.shadowBlur = isLit ? 8 : 0;
+    ctx.fillRect(-3, -10, 6, 14);
+
+    // Wick
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -10);
+    ctx.lineTo(0, -13);
+    ctx.stroke();
+
+    // Flame
+    if (isLit && !frozen) {
+      const flicker = Math.sin(t * 8 + i * 1.3) * 1.5;
+      ctx.fillStyle = '#ffff88';
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur = 14 + flicker;
+      ctx.beginPath();
+      ctx.ellipse(0, -16 + flicker * 0.3, 3, 5 + flicker, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.ellipse(0, -16 + flicker * 0.3, 1.2, 2.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Snuffed smoke wisp
+    if (!isLit) {
+      ctx.globalAlpha = 0.4 + Math.sin(t * 2 + i) * 0.2;
+      ctx.strokeStyle = '#aaaaaa';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -12);
+      ctx.quadraticCurveTo(3, -18, 0, -24);
+      ctx.stroke();
+      ctx.globalAlpha = frozen ? 0.7 : 1;
+    }
+
+    ctx.restore();
+  }
+
   ctx.restore();
-  const bw = 72;
-  ctx.fillStyle = '#330000'; ctx.fillRect(x-bw/2, y-52, bw, 8);
-  ctx.fillStyle = '#cc00ff'; ctx.fillRect(x-bw/2, y-52, bw * (ehp.hp/ehp.maxHp), 8);
+
+  // Spin bounce glow
+  if (ai.bossPhase === 'SPIN_BOUNCE') {
+    ctx.save();
+    ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 40) * 0.3;
+    ctx.strokeStyle = '#ff2200';
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#ff4400';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(x, y, 44, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Telegraph glow for frosting
+  if (ai.bossPhase === 'FROSTING_CHARGE') {
+    const progress = 1 - (ai.phaseTimer / 60);
+    ctx.save();
+    ctx.globalAlpha = progress * 0.7;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 30;
+    ctx.beginPath();
+    ctx.arc(x, y, 20 + progress * 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // HP bar
+  const bw = 80;
+  ctx.fillStyle = '#330000';
+  ctx.fillRect(x - bw / 2, y - 62, bw, 8);
+  ctx.fillStyle = ehp.hp < ehp.maxHp * 0.3 ? '#ff2200' : '#ff69b4';
+  ctx.fillRect(x - bw / 2, y - 62, bw * (ehp.hp / ehp.maxHp), 8);
+
+  // Candle pip indicators under HP bar
+  for (let i = 0; i < totalCandles; i++) {
+    const isLit = i < candlesLit;
+    ctx.fillStyle = isLit ? '#ffdd00' : '#333333';
+    ctx.shadowColor = isLit ? '#ffaa00' : 'transparent';
+    ctx.shadowBlur = isLit ? 6 : 0;
+    ctx.beginPath();
+    ctx.arc(x - 16 + i * 8, y - 68, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
 }
 
 function drawCannonball(epos, ehp, ai, frozen) {
