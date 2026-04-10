@@ -123,12 +123,20 @@ let didReflect = false;
     if (Math.hypot(eb.x-ppos.x, eb.y-ppos.y) < CFG.MELEE_RANGE) {
       const reflectAngle = Math.atan2(-eb.vy, -eb.vx);
       const reflectSpeed = Math.max(8, Math.hypot(eb.vx,eb.vy)*2.0);
+     const isArc = eb.isArcBall;
       gs.bullets.push({
-        x:eb.x, y:eb.y,
-        vx:Math.cos(reflectAngle)*reflectSpeed, vy:Math.sin(reflectAngle)*reflectSpeed,
-        life:120, maxLife:120, angle:reflectAngle,
-        damageMult:baseBulletDamage()*2, isDud:false,
-        isReflected:true, isExplosive:true
+        x: eb.x, y: eb.y,
+        vx: Math.cos(reflectAngle) * reflectSpeed,
+        vy: Math.sin(reflectAngle) * reflectSpeed,
+        life: 120, maxLife: 120, angle: reflectAngle,
+        damageMult: baseBulletDamage() * 2, isDud: false,
+        isReflected: true, isExplosive: true,
+        // Inherit arc ball properties so it still explodes on impact
+        ...(isArc ? {
+          isArcBall: false, // fly straight now, but still explosive
+          sizeScale: eb.sizeScale || 1.0,
+          isCannonball: eb.isCannonball || false,
+        } : {}),
       });
       gs.enemyBullets.splice(i,1);
       spawnParticles(eb.x, eb.y, '#00ff88', 8);
@@ -692,14 +700,44 @@ if (eb.isArcBall) {
     spawnParticles(eb.x, eb.y, '#ffdd00', 20);
     spawnParticles(eb.x, eb.y, '#ff8800', 12);
     gs.shakeX = 10; gs.shakeY = 10;
-    if (gs.invincible <= 0 && Math.hypot(eb.x - ppos.x, eb.y - ppos.y) < 55) {
-      gs.health -= Math.round(18 * (eb.rmDmgMult || 1)); gs.invincible = CFG.INVINCIBLE_FRAMES;
-      gs.shakeX = 16; gs.shakeY = 16;
-      gs.flawlessThisWave = false;
-      triggerSFPHit(); updateHUD();
-      if (gs.health <= 0) { gameOver(); return false; }
-    }
-    return false;
+   const scale = eb.sizeScale || 1.0;
+        const impactR = Math.round(55 * scale);
+        const impactShake = Math.round(10 * scale);
+
+        // Cannonball arc: big explosion on landing
+        if (eb.isCannonball) {
+          detonateExplosiveBullet({ damageMult: (eb.rmDmgMult || 1) * 4, life: 1, isExplosive: true }, eb.x, eb.y);
+          spawnParticles(eb.x, eb.y, '#ff4400', Math.round(30 * scale));
+          gs.shakeX = Math.round(22 * scale); gs.shakeY = Math.round(22 * scale);
+          // Release the carried enemy entity at landing
+          if (eb.carriedId && ECS.has(eb.carriedId, 'pos')) ECS.destroyEntity(eb.carriedId);
+          return false;
+        }
+
+        // Arc enemy landing: release the enemy at the landing spot
+        if (eb.isArcEnemy && eb.carriedId && ECS.has(eb.carriedId, 'pos')) {
+          const cpos = ECS.get(eb.carriedId, 'pos');
+          cpos.x = eb.x; cpos.y = eb.y;
+          const cai = ECS.get(eb.carriedId, 'ai');
+          const cvel = ECS.get(eb.carriedId, 'vel');
+          if (cai) { cai.juggled = false; cai.juggledBy = null; }
+          if (cvel) { cvel.vx = (Math.random() - 0.5) * 3; cvel.vy = (Math.random() - 0.5) * 3; }
+          spawnParticles(eb.x, eb.y, '#ff8800', 14);
+          return false;
+        }
+
+        spawnParticles(eb.x, eb.y, '#ffdd00', Math.round(20 * scale));
+        spawnParticles(eb.x, eb.y, '#ff8800', Math.round(12 * scale));
+        gs.shakeX = impactShake; gs.shakeY = impactShake;
+        if (gs.invincible <= 0 && Math.hypot(eb.x - ppos.x, eb.y - ppos.y) < impactR) {
+          gs.health -= Math.round(18 * (eb.rmDmgMult || 1) * scale);
+          gs.invincible = CFG.INVINCIBLE_FRAMES;
+          gs.shakeX = Math.round(16 * scale); gs.shakeY = Math.round(16 * scale);
+          gs.flawlessThisWave = false;
+          triggerSFPHit(); updateHUD();
+          if (gs.health <= 0) { gameOver(); return false; }
+        }
+        return false;
   }
   // Update shadow position (tracks directly below ball's world XY)
   eb.shadowX = eb.x;
