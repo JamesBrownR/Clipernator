@@ -715,20 +715,25 @@ if (gs.hasMirrorMaze && gs.mirrorShards) {
       ctx.save();
       ctx.globalAlpha = 0.35;
       ctx.fillStyle = '#000000';
+     const shadowScale = eb.sizeScale || 1.0;
       ctx.beginPath();
-      ctx.ellipse(eb.shadowX, eb.shadowY, 18, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(eb.shadowX, eb.shadowY, 18 * shadowScale, 8 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       // Draw the ball itself
-      const spin = Date.now() / 80;
+     const spin = Date.now() / 80;
+      const bScale = eb.sizeScale || 1.0;
+      const bR = 9 * bScale;
+      const bColor = eb.isCannonball ? '#ff6600' : (eb.isArcEnemy ? '#ff8800' : '#ffdd00');
+      const bGlow = eb.isCannonball ? '#ff4400' : (eb.isArcEnemy ? '#ff6600' : '#ffaa00');
       ctx.save();
       ctx.translate(eb.x, eb.y);
       ctx.rotate(spin);
-      ctx.fillStyle = '#ffdd00'; ctx.shadowColor = '#ffaa00'; ctx.shadowBlur = 14;
-      ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, 9); ctx.stroke();
+      ctx.fillStyle = bColor; ctx.shadowColor = bGlow; ctx.shadowBlur = 14 * bScale;
+      ctx.beginPath(); ctx.arc(0, 0, bR, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = bGlow; ctx.lineWidth = 2 * bScale;
+      ctx.beginPath(); ctx.moveTo(-bR, 0); ctx.lineTo(bR, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -bR); ctx.lineTo(0, bR); ctx.stroke();
       ctx.restore();
       ctx.restore();
       continue; // skip default bullet drawing
