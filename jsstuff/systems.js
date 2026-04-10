@@ -288,8 +288,8 @@ function sysMirrorMaze() {
         const dist2 = Math.hypot(dx, dy) || 1;
      bulletsToAdd.push({
           x: s.x, y: s.y,
-          vx: (dx / dist2) * CFG.BULLET_SPEED * 10,
-          vy: (dy / dist2) * CFG.BULLET_SPEED * 10,
+          vx: (dx / dist2) * CFG.BULLET_SPEED * 2.5,
+          vy: (dy / dist2) * CFG.BULLET_SPEED * 2.5,
           angle: Math.atan2(dy, dx),
           life: CFG.BULLET_LIFE + 30,
           maxLife: CFG.BULLET_LIFE + 30,
