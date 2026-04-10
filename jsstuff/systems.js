@@ -193,7 +193,7 @@ function sysMirrorMaze() {
   const ORBIT_R = 130;
   const REDIRECT_RANGE = 350;
   const SHARD_HIT_R = 14;
-  const CHAIN_MAX = 10000;
+  const CHAIN_MAX = 10000; // Why does this exist lol
   const REGEN_FRAMES = 900;
 
   // ── Tick player shard regen ──
