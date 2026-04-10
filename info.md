@@ -21,7 +21,6 @@ Changes (I need to make a lot of changes, not sure where to start):
 Make enemies more interactive overall:
   * cannonball enemies should always be able to be reflected, even when thye arent charging
   * cannonball enemies charging speed should be lowered by 20%
-  * the wave 11 boss fight is boring, party because the bullet it shoots do not go far enough. it is currently possible to dodge now but the boss still shoots too few bullets too slowly (UPDATE: Honestly the boss fight should be completely redesigned lol, not even sure what the current boss visual is supposed to be)
 
   
  
