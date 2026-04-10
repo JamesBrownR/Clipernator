@@ -1299,7 +1299,7 @@ const ENEMY_DEFS = {
   mask:           { hpMult: 1.1, speedMult: 1.05, size: 28, color: '#44aaff' },
   giftBox:        { hpMult: 2.2, speedMult: 0.5,  size: 34, color: '#ffaa00' },
   partyHat:       { hpMult: 0.8, speedMult: 1.4,  size: 26, color: '#ffdd00' },
-  cakeBoss: { hpMult: 1, speedMult: 0.35, size: 44, color: '#ff69b4' },
+  cakeBoss: { hpMult: 3, speedMult: 0.35, size: 44, color: '#ff69b4' },
   birthdayBomber: { hpMult: 1.4, speedMult: 0.85, size: 30, color: '#ff4400' },
   pinata:         { hpMult: 4.0, speedMult: 0.5,  size: 38, color: '#ff88ff' },
   balloonWitch:   { hpMult: 1.1, speedMult: 1.1,  size: 28, color: '#9944ff' },
