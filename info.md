@@ -25,8 +25,9 @@ Make enemies more interactive overall:
 
   
  
-  * The juggler enemy is a bit mindless, always chases the player instead of trying to keep distance. it should try and stay a certain distance away from the player, however if there is a ringmaster nearby it should go to it and circle around it to gain buffs
-  * The way jugglers throw balls is not good. You can see the balls juggiling above their head but they never ge tthrown at the player, they just spawn a bunch of balls in a straight linear direction at you. It should be more unique and visually obvious, maybe where it winds up, throws a ball from the slot and it goes into the air before slamming down in the position the juggler aimed at (which is the same way throwing enemies should work), and the jugler slowly refills their balls after running out
+  * WHen the player reflects juggler thrown balls they become normal straight projectiles. make is so when a player reflected a projectiled it inherents the same projectile type
+
+
   * if possible, there should be a animation of the stage getting bigger after you kill boss one, rather than a instant transition (UPDATE: This works but the note has not been removed since the game still pauses bullets briefly before continuing; it should be instant and have no pause)
   *  the wave scaling in floor two in kind of weird (11 is very slow everyone after is very fast)
   
