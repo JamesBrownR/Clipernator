@@ -422,51 +422,89 @@ const BT_JUGGLER = new BTSelector(
           const vy_horiz = (targetY - pos.y) / HANG_TIME;
           const vy_up = -HANG_TIME * GRAVITY * 0.5; // initial upward velocity
 
+       const sizeScale = ai.rmSizeScale || 1.0;
           gs.enemyBullets.push({
             x: pos.x, y: pos.y - 38,
             vx, vy: vy_up,
-            vyHoriz: vy_horiz, // separate Y-axis movement toward target
+            vyHoriz: vy_horiz,
             gravity: GRAVITY,
             life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
             color: '#ffdd00',
             isArcBall: true,
-            rmDmgMult: ai.rmDmgMult || 1,
             targetX, targetY,
             hangTime: HANG_TIME,
             startX: pos.x, startY: pos.y - 38,
             shadowX: pos.x, shadowY: pos.y,
+            rmDmgMult: ai.rmDmgMult || 1,
+            sizeScale,
           });
           spawnParticles(pos.x, pos.y - 38, '#ffdd00', 10);
 
-        } else if (slot.type === 'enemy' && ECS.has(slot.id, 'pos')) {
+       } else if (slot.type === 'enemy' && ECS.has(slot.id, 'pos')) {
           const eai = ECS.get(slot.id, 'ai');
-          eai.juggled = false; eai.juggledBy = null;
           const etype = ECS.get(slot.id, 'enemy').type;
-          if (etype === 'cannonball') {
-            eai.chargeState = 'TELEGRAPH'; eai.chargeTimer = 20;
-            eai.chargeTarget = { x: pp.x, y: pp.y };
-          }
-          spawnParticles(pos.x, pos.y - 38, '#ff8800', 8);
-          showMsg('JUGGLER THROWS AN ENEMY!');
+          const isCannonball = etype === 'cannonball';
+          // Detach from juggler
+          eai.juggled = false; eai.juggledBy = null;
+          // Hide the carried enemy visually during flight
+          const carriedId = slot.id;
+          const targetX = pp.x, targetY = pp.y;
+          const horizDist = Math.hypot(targetX - pos.x, targetY - pos.y);
+          const GRAVITY = 0.10;
+          const HANG_TIME = Math.max(55, Math.min(110, horizDist / 5));
+          const vx = (targetX - pos.x) / HANG_TIME;
+          const vy_horiz = (targetY - pos.y) / HANG_TIME;
+          const vy_up = -HANG_TIME * GRAVITY * 0.5;
+          const sizeScale = ai.rmSizeScale || 1.0;
+          gs.enemyBullets.push({
+            x: pos.x, y: pos.y - 38,
+            vx, vy: vy_up,
+            vyHoriz: vy_horiz,
+            gravity: GRAVITY,
+            life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
+            color: isCannonball ? '#ff6600' : '#ff8800',
+            isArcBall: true,
+            isArcEnemy: true,
+            carriedEnemyType: etype,
+            carriedId,
+            isCannonball,
+            targetX, targetY,
+            hangTime: HANG_TIME,
+            startX: pos.x, startY: pos.y - 38,
+            shadowX: pos.x, shadowY: pos.y,
+            rmDmgMult: ai.rmDmgMult || 1,
+            sizeScale,
+          });
+          // Move the carried entity off-screen during flight so it isn't visible
+          const cpos = ECS.get(carriedId, 'pos');
+          if (cpos) { cpos.x = -200; cpos.y = -200; }
+          spawnParticles(pos.x, pos.y - 38, isCannonball ? '#ff4400' : '#ff8800', 10);
+          showMsg(isCannonball ? 'JUGGLER LAUNCHES A CANNONBALL!!!' : 'JUGGLER THROWS AN ENEMY!');
         }
 
         // Start regen for the thrown ball slot
         ai.regenTimer = 300; // 5 seconds
+        const ballsAfterThrow = ai.juggleSlots.filter(s => s.type === 'ball').length;
+        if (ballsAfterThrow === 0) ai.waitingForRegen = true;
       }
-    } else if (ai.throwCooldown <= 0 && dist < 320 && ai.juggleSlots.length > 0) {
+    } else if (ai.throwCooldown <= 0 && dist < 320 && ai.juggleSlots.length > 0 && !ai.waitingForRegen) {
       // Start windup
       ai.throwCooldown = 80;
       const ballIdx = ai.juggleSlots.findIndex(s => s.type === 'ball');
       const enemyIdx = ai.juggleSlots.findIndex(s => s.type === 'enemy');
-      ai.windupSlot = ballIdx >= 0 ? ballIdx : enemyIdx;
-      if (ai.windupSlot >= 0) {
+// Always prioritize throwing captured enemies first
+      if (enemyIdx >= 0) {
+        ai.windupSlot = enemyIdx;
+      } else {
+        ai.windupSlot = ballIdx;
+      }      if (ai.windupSlot >= 0) {
         ai.windupTimer = 30;
         spawnParticles(pos.x, pos.y - 38, '#ffcc00', 6);
         showMsg('JUGGLER WINDING UP!');
       }
     }
 
- // ── Ball regen: one ball every 5 seconds until back to max ──
+// ── Ball regen: one ball every 5 seconds until back to max, then resume throwing ──
     if (ai.regenTimer > 0) {
       ai.regenTimer--;
       if (ai.regenTimer === 0) {
@@ -474,8 +512,14 @@ const BT_JUGGLER = new BTSelector(
         if (ballsNow < ai.juggleBalls) {
           ai.juggleSlots.push({ type: 'ball', phase: Math.random() * Math.PI * 2 });
           spawnParticles(pos.x, pos.y - 38, '#ffcc44', 8);
-          // If still missing balls, keep regen going
-          if (ballsNow + 1 < ai.juggleBalls) ai.regenTimer = 300;
+          if (ballsNow + 1 < ai.juggleBalls) {
+            ai.regenTimer = 300; // keep regenerating
+          } else {
+            ai.waitingForRegen = false; // all balls back — resume throwing
+            showMsg('JUGGLER RELOADED!');
+          }
+        } else {
+          ai.waitingForRegen = false;
         }
       }
     }
