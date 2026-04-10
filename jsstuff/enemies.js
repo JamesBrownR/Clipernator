@@ -319,10 +319,13 @@ const BT_JUGGLER = new BTSelector(
     if (ai.windupTimer   === undefined) ai.windupTimer   = 0;
     if (ai.windupSlot    === undefined) ai.windupSlot    = -1;
 
-    // ── Fill ball slots up to juggleBalls count ──
+   // ── Count current balls (no auto-fill here — regen is timer-gated below) ──
     const currentBalls = ai.juggleSlots.filter(s => s.type === 'ball').length;
-    if (currentBalls < ai.juggleBalls && ai.juggleSlots.length < ai.juggleMax) {
-      ai.juggleSlots.push({ type: 'ball', phase: Math.random() * Math.PI * 2 });
+    // Initial fill only on first spawn (regenTimer === 0 and no slots yet)
+    if (ai.juggleSlots.length === 0 && ai.regenTimer === 0) {
+      for (let b = 0; b < ai.juggleBalls; b++) {
+        ai.juggleSlots.push({ type: 'ball', phase: (b / ai.juggleBalls) * Math.PI * 2 });
+      }
     }
 
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
@@ -413,8 +416,8 @@ const BT_JUGGLER = new BTSelector(
           // Arc projectile toward player's current position
           const targetX = pp.x, targetY = pp.y;
           const horizDist = Math.hypot(targetX - pos.x, targetY - pos.y);
-          const GRAVITY = 0.28;
-          const HANG_TIME = Math.max(28, Math.min(55, horizDist / 8));
+          const GRAVITY = 0.15;
+          const HANG_TIME = Math.max(55, Math.min(110, horizDist / 5));
           const vx = (targetX - pos.x) / HANG_TIME;
           const vy_horiz = (targetY - pos.y) / HANG_TIME;
           const vy_up = -HANG_TIME * GRAVITY * 0.5; // initial upward velocity
@@ -424,9 +427,10 @@ const BT_JUGGLER = new BTSelector(
             vx, vy: vy_up,
             vyHoriz: vy_horiz, // separate Y-axis movement toward target
             gravity: GRAVITY,
-            life: HANG_TIME + 20, maxLife: HANG_TIME + 20,
+            life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
             color: '#ffdd00',
             isArcBall: true,
+            rmDmgMult: ai.rmDmgMult || 1,
             targetX, targetY,
             hangTime: HANG_TIME,
             startX: pos.x, startY: pos.y - 38,
@@ -462,12 +466,17 @@ const BT_JUGGLER = new BTSelector(
       }
     }
 
-    // ── Ball regen ──
+ // ── Ball regen: one ball every 5 seconds until back to max ──
     if (ai.regenTimer > 0) {
       ai.regenTimer--;
-      if (ai.regenTimer === 0 && currentBalls < ai.juggleBalls) {
-        ai.juggleSlots.push({ type: 'ball', phase: Math.random() * Math.PI * 2 });
-        spawnParticles(pos.x, pos.y - 38, '#ffcc44', 8);
+      if (ai.regenTimer === 0) {
+        const ballsNow = ai.juggleSlots.filter(s => s.type === 'ball').length;
+        if (ballsNow < ai.juggleBalls) {
+          ai.juggleSlots.push({ type: 'ball', phase: Math.random() * Math.PI * 2 });
+          spawnParticles(pos.x, pos.y - 38, '#ffcc44', 8);
+          // If still missing balls, keep regen going
+          if (ballsNow + 1 < ai.juggleBalls) ai.regenTimer = 300;
+        }
       }
     }
 
@@ -1101,7 +1110,7 @@ if (targetMaxHp > ehp2.maxHp) {
       const aim = Math.atan2(dy,dx);
       for (const sa of [-0.35, -0.18, 0, 0.18, 0.35]) {
         const a = aim + sa;
-        gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*1.5, vy:Math.sin(a)*1.5, life:130, maxLife:130, color:'#cc0044' });
+gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*1.5, vy:Math.sin(a)*1.5, life:130, maxLife:130, color:'#cc0044', rmDmgMult: 1 });
       }
       spawnParticles(pos.x, pos.y, '#cc0044', 8);
     }
