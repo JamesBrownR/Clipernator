@@ -27,7 +27,7 @@ function _drawUtensilShape(ctx, type, color, scale = 1) {
     ctx.beginPath();
     ctx.ellipse(0, -8 * scale, 5 * scale, 7 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
-  } else if (type === 'cakeBoss') drawCakeBoss(epos, ehp, ai, frozen);
+  } 
   
 }
 
@@ -925,6 +925,7 @@ for(const id of ECS.query('enemy','pos','hp')) {
   else if (type==='cannonball')  drawCannonball(epos, ehp, ai, frozen);
   else if (type==='ringmaster')  drawRingmaster(epos, ehp, ai, frozen);
   else if (type==='juggler')     drawJuggler(epos, ehp, ai, frozen);
+  else if (type === 'cakeBoss') drawCakeBoss(epos, ehp, ai, frozen);
 
   // Red critical mass overlay
   // Critical mass: pulsing red OUTLINE only, not a filled overlay
