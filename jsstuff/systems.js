@@ -286,10 +286,10 @@ function sysMirrorMaze() {
       if (targetX !== null) {
         const dx = targetX - s.x, dy = targetY - s.y;
         const dist2 = Math.hypot(dx, dy) || 1;
-        bulletsToAdd.push({
+     bulletsToAdd.push({
           x: s.x, y: s.y,
-          vx: (dx / dist2) * CFG.BULLET_SPEED,
-          vy: (dy / dist2) * CFG.BULLET_SPEED,
+          vx: (dx / dist2) * CFG.BULLET_SPEED * 10,
+          vy: (dy / dist2) * CFG.BULLET_SPEED * 10,
           angle: Math.atan2(dy, dx),
           life: CFG.BULLET_LIFE + 30,
           maxLife: CFG.BULLET_LIFE + 30,
@@ -591,11 +591,8 @@ if (type === 'boss' || type === 'cakeBoss') handleBossDeath(id);
           ECS.destroyEntity(id);
           // Death shard from redirected bullet
 if (gs.hasMirrorMaze) {
-  const staticCount = gs.mirrorShards.filter(s => !s.orbiting).length;
-  if (staticCount < 10) {
-    gs.mirrorShards.push({ orbiting: false, x: epos.x, y: epos.y, angle: Math.random() * Math.PI * 2 });
-    spawnParticles(epos.x, epos.y, '#ccddff', 10);
-  }
+  gs.mirrorShards.push({ orbiting: false, x: epos.x, y: epos.y, angle: Math.random() * Math.PI * 2 });
+  spawnParticles(epos.x, epos.y, '#ccddff', 10);
 }
           gs.score+=Math.round(10*gs.wave*(dmg>1?1.6:1)); gs.waveKills++;
           tryDropTicket(); gs.health=Math.min(gs.maxHealth,gs.health+CFG.HEALTH_REGEN); updateHUD(); checkWave();
@@ -646,14 +643,20 @@ if (eaiCheck && eaiCheck.criticalMass && gs.invincible <= 0) {
       // Knocking Pins: reduced contact damage (8 instead of 20),
       // and the bowl itself damages the enemy it rams into
       if (gs.knockingPinsActive) {
-        gs.health-=4; gs.invincible=CFG.INVINCIBLE_FRAMES;
-        gs.shakeX=8;gs.shakeY=8; gs.flawlessThisWave=false;
+        gs.health-=2; gs.invincible=CFG.INVINCIBLE_FRAMES;
+        gs.shakeX=16;gs.shakeY=16; gs.flawlessThisWave=false;
         // Deal damage to the enemy being bowled into
         const ehp=ECS.get(id,'hp');
         if (ehp) {
-          ehp.hp-=baseBulletDamage()*30; ehp.hitFlash=14;
+          ehp.hp-=baseBulletDamage()*120; ehp.hitFlash=14;
           spawnParticles(epos.x,epos.y,'#3333cc',10);
-          if (ehp.hp<=0){
+// Knock nearby enemies away from impact
+              for (const oid of ECS.query('enemy','pos','vel')) {
+                if (oid === id) continue;
+                const op = ECS.get(oid,'pos'), ov = ECS.get(oid,'vel');
+                const od = Math.hypot(op.x-epos.x, op.y-epos.y);
+                if (od < 80) { ov.vx += (op.x-epos.x)/(od||1)*18; ov.vy += (op.y-epos.y)/(od||1)*18; }
+              }          if (ehp.hp<=0){
             spawnParticles(epos.x,epos.y,'#ff2222',18);
             ECS.destroyEntity(id);
             gs.score+=Math.round(12*gs.wave); gs.waveKills++;
@@ -955,8 +958,8 @@ function sysTimers() {
       }
 if (nearest) {
         const dx = nearest.x - ppos.x, dy = nearest.y - ppos.y, dist = Math.hypot(dx, dy) || 1;
-        pvel.vx = (dx / dist) * CFG.PLAYER_SPEED * 10;
-        pvel.vy = (dy / dist) * CFG.PLAYER_SPEED * 10;
+        pvel.vx = (dx / dist) * CFG.PLAYER_SPEED * 30;
+        pvel.vy = (dy / dist) * CFG.PLAYER_SPEED * 30;
       }    }
   }
 
@@ -976,15 +979,15 @@ if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
       return Math.hypot(ep.x - ppos3.x, ep.y - ppos3.y) < 100;
     });
 
-    if (nearbyEnemy) {
-      gs.clownNoseTimer = 0;
-      gs.clownNoseSize = 0;
+   if (nearbyEnemy) {
       gs.clownNoseHonkTimer = 14;
+      // Defer the reset so the honk squish animation has frames to play
+      setTimeout(() => { gs.clownNoseTimer = 0; gs.clownNoseSize = 0; }, 200);
 
       // Two waves with different speeds — NO stray bullets
-      gs.clownSoundWaves = [
-        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 220, life: 60, maxLife: 60, speed: 3.2, hitEnemies: new Set() },
-        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 220, life: 52, maxLife: 60, speed: 2.0, hitEnemies: new Set() },
+     gs.clownSoundWaves = [
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 240, life: 90, maxLife: 90, speed: 1.8, hitEnemies: new Set() },
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 240, life: 78, maxLife: 90, speed: 1.1, hitEnemies: new Set() },
       ];
       spawnPartyParticles(ppos3.x, ppos3.y);
       showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! WAVES CONFUSE ENEMIES!' : 'HONK! WAVES CONFUSE NEARBY ENEMIES!');
