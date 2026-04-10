@@ -300,6 +300,7 @@ for (const sa of [-0.28, 0, 0.28]) {
   })
 );
 
+
 // ── Floor 2: Juggler ──
 const BT_JUGGLER = new BTSelector(
   new BTAction((id, gs) => {
@@ -308,42 +309,67 @@ const BT_JUGGLER = new BTSelector(
     const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    if (ai.juggleBalls   === undefined) ai.juggleBalls    = 4;
-    if (ai.juggleMax     === undefined) ai.juggleMax      = 8;
-    if (!ai.juggleSlots)               ai.juggleSlots    = [];
-    if (!ai.regenTimer)                ai.regenTimer     = 0;
-    if (!ai.throwCooldown)             ai.throwCooldown  = 60;
-    if (!ai.sphereAngle)               ai.sphereAngle    = 0;
-    if (ai.enemyShootTimer === undefined) ai.enemyShootTimer = 25;
-    if (ai.ballShootTimer  === undefined) ai.ballShootTimer  = 55;
+    // ── Init ──
+    if (ai.juggleBalls   === undefined) ai.juggleBalls   = 4;
+    if (ai.juggleMax     === undefined) ai.juggleMax     = 8;
+    if (!ai.juggleSlots)               ai.juggleSlots   = [];
+    if (ai.regenTimer    === undefined) ai.regenTimer    = 0;
+    if (ai.throwCooldown === undefined) ai.throwCooldown = 90;
+    if (ai.sphereAngle   === undefined) ai.sphereAngle   = 0;
+    if (ai.windupTimer   === undefined) ai.windupTimer   = 0;
+    if (ai.windupSlot    === undefined) ai.windupSlot    = -1;
 
-    // Fill ball slots up to juggleBalls count (but never exceed juggleMax)
+    // ── Fill ball slots up to juggleBalls count ──
     const currentBalls = ai.juggleSlots.filter(s => s.type === 'ball').length;
-    const currentTotal = ai.juggleSlots.length;
-    if (currentBalls < ai.juggleBalls && currentTotal < ai.juggleMax) {
+    if (currentBalls < ai.juggleBalls && ai.juggleSlots.length < ai.juggleMax) {
       ai.juggleSlots.push({ type: 'ball', phase: Math.random() * Math.PI * 2 });
     }
 
-    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
+    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
 
-    vel.vx = (vel.vx||0)*0.9 + (dx/dist)*phy.speed*0.12;
-    vel.vy = (vel.vy||0)*0.9 + (dy/dist)*phy.speed*0.12;
-    const spd = Math.hypot(vel.vx,vel.vy);
-    if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
+    // ── Movement: orbit ringmaster if nearby, else keep distance from player ──
+    let nearestRM = null, nearestRMDist = 999999;
+    for (const eid of ECS.query('enemy', 'pos')) {
+      if (eid === id) continue;
+      const etype = ECS.get(eid, 'enemy').type;
+      if (etype !== 'ringmaster') continue;
+      const epos = ECS.get(eid, 'pos');
+      const d = Math.hypot(epos.x - pos.x, epos.y - pos.y);
+      if (d < 300 && d < nearestRMDist) { nearestRMDist = d; nearestRM = epos; }
+    }
+
+    if (nearestRM) {
+      // Orbit the ringmaster at ~80px
+      const ORBIT_R = 80;
+      const rmDx = nearestRM.x - pos.x, rmDy = nearestRM.y - pos.y;
+      const rmDist = Math.hypot(rmDx, rmDy) || 1;
+      const orbitAngle = Math.atan2(rmDy, rmDx) + 0.022;
+      const tx = nearestRM.x - Math.cos(orbitAngle) * ORBIT_R;
+      const ty = nearestRM.y - Math.sin(orbitAngle) * ORBIT_R;
+      vel.vx = (vel.vx || 0) * 0.88 + ((tx - pos.x) / 80) * phy.speed * 0.25;
+      vel.vy = (vel.vy || 0) * 0.88 + ((ty - pos.y) / 80) * phy.speed * 0.25;
+    } else {
+      // Keep ~200px from player — chase if too far, flee if too close
+      const PREFERRED_DIST = 200;
+      const distErr = dist - PREFERRED_DIST;
+      const dirX = dx / dist, dirY = dy / dist;
+      vel.vx = (vel.vx || 0) * 0.88 + dirX * phy.speed * (distErr > 0 ? 0.15 : -0.2);
+      vel.vy = (vel.vy || 0) * 0.88 + dirY * phy.speed * (distErr > 0 ? 0.15 : -0.2);
+    }
+    const spd = Math.hypot(vel.vx, vel.vy);
+    if (spd > phy.speed) { vel.vx = vel.vx/spd*phy.speed; vel.vy = vel.vy/spd*phy.speed; }
 
     ai.sphereAngle += vel.vx * 0.06;
 
-    // Capture nearby enemies into juggle slots (when there's room)
+    // ── Capture nearby enemies into juggle slots ──
     if (ai.juggleSlots.length < ai.juggleMax) {
       for (const eid of ECS.query('enemy','pos','ai')) {
-        if (eid === id) continue;
-        if (eid === gs.playerId) continue;
+        if (eid === id || eid === gs.playerId) continue;
         const eai = ECS.get(eid,'ai');
         if (eai.juggled) continue;
         const epos = ECS.get(eid,'pos');
-        if (Math.hypot(epos.x-pos.x, epos.y-pos.y) < 44) {
-          eai.juggled = true;
-          eai.juggledBy = id;
+        if (Math.hypot(epos.x - pos.x, epos.y - pos.y) < 44) {
+          eai.juggled = true; eai.juggledBy = id;
           ai.juggleSlots.push({ type:'enemy', id: eid, phase: Math.random()*Math.PI*2 });
           spawnParticles(epos.x, epos.y, '#ffdd00', 12);
           showMsg('JUGGLER CAPTURED AN ENEMY!');
@@ -352,108 +378,106 @@ const BT_JUGGLER = new BTSelector(
       }
     }
 
-    // Position juggled enemies above juggler
+    // ── Position juggled enemies above juggler ──
     const t = Date.now() / 400;
     for (let i = 0; i < ai.juggleSlots.length; i++) {
       const slot = ai.juggleSlots[i];
       const slotAngle = (i / Math.max(ai.juggleMax, 1)) * Math.PI * 2;
       const arcX = Math.cos(slotAngle + t) * 28;
       const arcY = -38 + Math.sin(slotAngle * 2 + t) * 18;
-    
-      // Add inside the slot positioning loop after epos assignment:
-if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
-  const epos = ECS.get(slot.id,'pos');
-  epos.x = pos.x + arcX;
-  epos.y = pos.y + arcY;
-  // Inherit juggler's ringmaster stacks if juggler has them
-  const slotAi = ECS.get(slot.id,'ai');
-  const myAi   = ECS.get(id,'ai');
-  if (slotAi && myAi && myAi.rmStacks) {
-    slotAi.rmStacks = Math.max(slotAi.rmStacks || 0, myAi.rmStacks);
-    slotAi.rmSizeScale = myAi.rmSizeScale;
-    slotAi.rmDmgMult   = myAi.rmDmgMult;
-    if (myAi.criticalMass) {
-      slotAi.criticalMass      = true;
-      slotAi.criticalMassImmune = true;
-    }
-  }
-}
-    }
-    // ── Prioritize juggled ENEMY shooting over ball shooting ──
-    const enemySlots = ai.juggleSlots.filter(s => s.type === 'enemy' && ECS.has(s.id, 'pos'));
-    if (enemySlots.length > 0) {
-      ai.enemyShootTimer--;
-      if (ai.enemyShootTimer <= 0) {
-        ai.enemyShootTimer = 25;
-        for (const slot of enemySlots) {
-          const epos = ECS.get(slot.id, 'pos');
-          const etype = ECS.get(slot.id, 'enemy').type;
-          const edx = pp.x - epos.x, edy = pp.y - epos.y;
-          const aim = Math.atan2(edy, edx);
-          gs.enemyBullets.push({
-            x: epos.x, y: epos.y,
-            vx: Math.cos(aim) * 1.2,
-            vy: Math.sin(aim) * 1.2,
-            life: 130, maxLife: 130,
-            color: etype === 'mask' ? '#44aaff' : '#ffdd44',
-          });
-          spawnParticles(epos.x, epos.y, '#ffdd00', 3);
+      if (slot.type === 'enemy' && ECS.has(slot.id, 'pos')) {
+        const epos = ECS.get(slot.id, 'pos');
+        epos.x = pos.x + arcX;
+        epos.y = pos.y + arcY;
+        const slotAi = ECS.get(slot.id,'ai'), myAi = ECS.get(id,'ai');
+        if (slotAi && myAi && myAi.rmStacks) {
+          slotAi.rmStacks = Math.max(slotAi.rmStacks || 0, myAi.rmStacks);
+          slotAi.rmSizeScale = myAi.rmSizeScale;
+          slotAi.rmDmgMult = myAi.rmDmgMult;
+          if (myAi.criticalMass) { slotAi.criticalMass = true; slotAi.criticalMassImmune = true; }
         }
-      }
-    } else {
-      ai.ballShootTimer--;
-      if (ai.ballShootTimer <= 0) {
-        ai.ballShootTimer = 55;
       }
     }
 
-    // Throw at player — PREFER enemy slots first
+    // ── Windup + Arc throw ──
     ai.throwCooldown--;
-    if (ai.throwCooldown <= 0 && dist < 220 && ai.juggleSlots.length > 0) {
-      ai.throwCooldown = 50;
 
-      const enemyIdx = ai.juggleSlots.findIndex(s => s.type === 'enemy');
-      const slotIdx  = enemyIdx >= 0 ? enemyIdx : 0;
-      const slot = ai.juggleSlots.splice(slotIdx, 1)[0];
+    if (ai.windupTimer > 0) {
+      // Currently winding up — count down, then throw
+      ai.windupTimer--;
+      if (ai.windupTimer === 0 && ai.windupSlot >= 0 && ai.windupSlot < ai.juggleSlots.length) {
+        const slot = ai.juggleSlots.splice(ai.windupSlot, 1)[0];
+        ai.windupSlot = -1;
 
-      if (slot.type === 'ball') {
-        const throwSpd = 2.2;
-        gs.enemyBullets.push({
-          x: pos.x, y: pos.y - 38,
-          vx: (dx/dist)*throwSpd, vy: (dy/dist)*throwSpd - 0.8,
-          life: 150, maxLife: 150,
-          color: '#ffdd00',
-          isJuggleBall: true
-        });
-      } else if (slot.type === 'enemy' && ECS.has(slot.id,'pos')) {
-        const eai = ECS.get(slot.id,'ai');
-        eai.juggled = false;
-        eai.juggledBy = null;
-        const etype = ECS.get(slot.id,'enemy').type;
-        if (etype === 'cannonball') {
-          eai.chargeState = 'TELEGRAPH';
-          eai.chargeTimer = 20;
-          eai.chargeTarget = { x: pp.x, y: pp.y };
+        if (slot.type === 'ball') {
+          // Arc projectile toward player's current position
+          const targetX = pp.x, targetY = pp.y;
+          const horizDist = Math.hypot(targetX - pos.x, targetY - pos.y);
+          const GRAVITY = 0.28;
+          const HANG_TIME = Math.max(28, Math.min(55, horizDist / 8));
+          const vx = (targetX - pos.x) / HANG_TIME;
+          const vy_horiz = (targetY - pos.y) / HANG_TIME;
+          const vy_up = -HANG_TIME * GRAVITY * 0.5; // initial upward velocity
+
+          gs.enemyBullets.push({
+            x: pos.x, y: pos.y - 38,
+            vx, vy: vy_up,
+            vyHoriz: vy_horiz, // separate Y-axis movement toward target
+            gravity: GRAVITY,
+            life: HANG_TIME + 20, maxLife: HANG_TIME + 20,
+            color: '#ffdd00',
+            isArcBall: true,
+            targetX, targetY,
+            hangTime: HANG_TIME,
+            startX: pos.x, startY: pos.y - 38,
+            shadowX: pos.x, shadowY: pos.y,
+          });
+          spawnParticles(pos.x, pos.y - 38, '#ffdd00', 10);
+
+        } else if (slot.type === 'enemy' && ECS.has(slot.id, 'pos')) {
+          const eai = ECS.get(slot.id, 'ai');
+          eai.juggled = false; eai.juggledBy = null;
+          const etype = ECS.get(slot.id, 'enemy').type;
+          if (etype === 'cannonball') {
+            eai.chargeState = 'TELEGRAPH'; eai.chargeTimer = 20;
+            eai.chargeTarget = { x: pp.x, y: pp.y };
+          }
+          spawnParticles(pos.x, pos.y - 38, '#ff8800', 8);
+          showMsg('JUGGLER THROWS AN ENEMY!');
         }
-        spawnParticles(pos.x, pos.y - 38, '#ff8800', 8);
-        showMsg('JUGGLER THROWS AN ENEMY!');
+
+        // Start regen for the thrown ball slot
+        ai.regenTimer = 300; // 5 seconds
+      }
+    } else if (ai.throwCooldown <= 0 && dist < 320 && ai.juggleSlots.length > 0) {
+      // Start windup
+      ai.throwCooldown = 80;
+      const ballIdx = ai.juggleSlots.findIndex(s => s.type === 'ball');
+      const enemyIdx = ai.juggleSlots.findIndex(s => s.type === 'enemy');
+      ai.windupSlot = ballIdx >= 0 ? ballIdx : enemyIdx;
+      if (ai.windupSlot >= 0) {
+        ai.windupTimer = 30;
+        spawnParticles(pos.x, pos.y - 38, '#ffcc00', 6);
+        showMsg('JUGGLER WINDING UP!');
       }
     }
 
-    // Regen balls
-    if (currentBalls < ai.juggleBalls) {
-      ai.regenTimer++;
-      if (ai.regenTimer >= 540) { ai.regenTimer = 0; }
+    // ── Ball regen ──
+    if (ai.regenTimer > 0) {
+      ai.regenTimer--;
+      if (ai.regenTimer === 0 && currentBalls < ai.juggleBalls) {
+        ai.juggleSlots.push({ type: 'ball', phase: Math.random() * Math.PI * 2 });
+        spawnParticles(pos.x, pos.y - 38, '#ffcc44', 8);
+      }
     }
 
-    // Clean up dead juggled enemies
+    // ── Clean up dead juggled enemies ──
     ai.juggleSlots = ai.juggleSlots.filter(s => {
       if (s.type !== 'enemy') return true;
       if (!ECS.has(s.id, 'pos')) return false;
       if (s.id === gs.playerId) return false;
       const sea = ECS.get(s.id, 'ai');
-      if (!sea || sea.juggledBy !== id) return false;
-      return true;
+      return sea && sea.juggledBy === id;
     });
 
     return BT.RUNNING;
