@@ -124,14 +124,8 @@ let didReflect = false;
       const reflectAngle = Math.atan2(-eb.vy, -eb.vx);
       const reflectSpeed = Math.max(8, Math.hypot(eb.vx,eb.vy)*2.0);
      const isArc = eb.isArcBall;
-      gs.bullets.push({
-        x: eb.x, y: eb.y,
-        vx: Math.cos(reflectAngle) * reflectSpeed,
-        vy: Math.sin(reflectAngle) * reflectSpeed,
-        life: 120, maxLife: 120, angle: reflectAngle,
-        damageMult: baseBulletDamage() * 2, isDud: false,
-        isReflected: true, isExplosive: true,
-        // Inherit arc ball properties so it still explodes on impact
+    
+              // Inherit arc ball properties so it still explodes on impact
        if (isArc) {
   const targetX = mouse.x, targetY = mouse.y;
   const GRAVITY = 0.15;
@@ -153,9 +147,18 @@ let didReflect = false;
     sizeScale: eb.sizeScale || 1.0,
   });
 } else {
-  gs.bullets.push({ normal reflected bullet... });
-}
+  gs.bullets.push({
+        x: eb.x, y: eb.y,
+        vx: Math.cos(reflectAngle) * reflectSpeed,
+        vy: Math.sin(reflectAngle) * reflectSpeed,
+        life: 120, maxLife: 120, angle: reflectAngle,
+        damageMult: baseBulletDamage() * 2, isDud: false,
+        isReflected: true, isExplosive: true,
+
       });
+}
+      
+      
       gs.enemyBullets.splice(i,1);
       spawnParticles(eb.x, eb.y, '#00ff88', 8);
       didReflect = true;
