@@ -312,19 +312,19 @@ const ITEM_DEFS = {
 
   extraClips: {
     id: 'extraClips', label: 'EXTRA\nCLIPS', icon: '📎',
-    desc: '+25% MAX HP\n+25% MAX AMMO',
+    desc: '+15% MAX HP\n+15% MAX AMMO\nSTACKS!',
     color: '#ffdd00', shadowColor: '#ffaa00', spawnCooldown: 999999999,
     effect(gs) {
   gs.hasExtraClips = true;
-  const hpBonus  = Math.ceil(gs.maxHealth * 0.10);
-  const ammoBonus = Math.ceil(gs.maxAmmo * 0.10);
+  const hpBonus  = Math.ceil(gs.maxHealth * 0.15);
+  const ammoBonus = Math.ceil(gs.maxAmmo * 0.15);
   gs.maxHealth += hpBonus;
   gs.maxAmmo   += ammoBonus;
   gs.health     = gs.maxHealth;
   gs.ammo       = gs.maxAmmo;
   gs.reloading  = false;
   updateHUD();
-  showMsg('EXTRA CLIPS! +25% HP & AMMO, FULL HEAL!');
+  showMsg('EXTRA CLIPS! +15% HP & AMMO, FULL HEAL!');
 },
     draw(fi) {
       const {x,y,phase}=fi, t=Date.now()/300, bob=Math.sin(t+phase)*5, spin=Math.sin(t*.6+phase)*.1;
