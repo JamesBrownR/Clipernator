@@ -307,19 +307,43 @@ function sysMirrorMaze() {
       if (targetX !== null) {
         const dx = targetX - s.x, dy = targetY - s.y;
         const dist2 = Math.hypot(dx, dy) || 1;
-     bulletsToAdd.push({
-          x: s.x, y: s.y,
-          vx: (dx / dist2) * CFG.BULLET_SPEED * 2.5,
-          vy: (dy / dist2) * CFG.BULLET_SPEED * 2.5,
-          angle: Math.atan2(dy, dx),
-          life: CFG.BULLET_LIFE + 30,
-          maxLife: CFG.BULLET_LIFE + 30,
-          damageMult: (b.damageMult || 1) * 5.0,
-          isDud: false,
-          isRedirected: true,
-          chainDepth: (b.chainDepth || 0) + 1,
-          isMirrorRicochet: true,
-        });
+     if (b.isArcBall && targetX !== null) {
+  const GRAVITY = 0.15;
+  const horizDist = Math.hypot(targetX - s.x, targetY - s.y);
+  const HANG_TIME = Math.max(25, Math.min(55, horizDist / 10)); // 2.5x speed = half hang time
+  bulletsToAdd.push({
+    x: s.x, y: s.y,
+    vx: (targetX - s.x) / HANG_TIME,
+    vy: -HANG_TIME * GRAVITY * 0.5,
+    vyHoriz: (targetY - s.y) / HANG_TIME,
+    gravity: GRAVITY,
+    angle: Math.atan2(targetY - s.y, targetX - s.x),
+    life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
+    damageMult: (b.damageMult || 1) * 5.0,
+    isDud: false, isExplosive: true,
+    isArcBall: true, isMirrorRicochet: true,
+    isMirrorArc: true, // flag for red color
+    targetX, targetY,
+    startX: s.x, startY: s.y,
+    shadowX: s.x, shadowY: targetY,
+    sizeScale: 1.2,
+    chainDepth: (b.chainDepth || 0) + 1,
+  });
+} else {
+  bulletsToAdd.push({
+    x: s.x, y: s.y,
+    vx: (dx / dist2) * CFG.BULLET_SPEED * 2.5,
+    vy: (dy / dist2) * CFG.BULLET_SPEED * 2.5,
+    angle: Math.atan2(dy, dx),
+    life: CFG.BULLET_LIFE + 30,
+    maxLife: CFG.BULLET_LIFE + 30,
+    damageMult: (b.damageMult || 1) * 5.0,
+    isDud: false,
+    isRedirected: true,
+    chainDepth: (b.chainDepth || 0) + 1,
+    isMirrorRicochet: true,
+  });
+}
       }
     }
     spawnParticles(s.x, s.y, '#8899ff', 8);
