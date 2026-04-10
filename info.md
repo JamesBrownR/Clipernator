@@ -35,4 +35,5 @@ Item stuff
   * there needs be a pool of general items that can be offered on any floor, related to office/technology/retro stuff. Two ideas so far: Paper Cuts (any enemy that has been damaged takes 1 damage per second) and Extra Clips (you gain 25% max health and 25% ammo). To ensure this doesnt compete with the floor items too much there should only be 20% chance of one of these items showing up vs a 80% for floor-specific items (or upgrades to items you already have) (UPDATE: This works, but the note has not been removed because there should be at least 7 items from this pool)
   
   * clownish and popcorn bucket will have upgrades when they are working correctly, the current upgrades are placeholders
+  * why does clownish spawn a bunch of confetti around the playerw
   * what the hell is inferno rounds?
