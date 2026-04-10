@@ -964,7 +964,7 @@ if (isCritMass) {
       ctx.save();
       ctx.globalAlpha = (1 - progress) * 0.7;
       ctx.strokeStyle = '#4488ff';
-      ctx.lineWidth = 24 - progress * 15;
+      ctx.lineWidth = 18 - progress * 10;
       ctx.shadowColor = '#4488ff';
       ctx.shadowBlur = 12;
       ctx.beginPath();
