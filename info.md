@@ -31,7 +31,7 @@ Make enemies more interactive overall:
   *  the wave scaling in floor two in kind of weird (11 is very slow everyone after is very fast)
   
 Item stuff
-  * Seemingly none of the floor 2 items currently work as expected. clownish works but the waves it shoots goes too far. Knocking Pins works but is too slow, even when i increase "CFG.PLAYER_SPEED * #" it doesnt go any faster. knocking pins should smoothly bounce from player to player.Popcorn bucket does not feel very good, feels kinda useless to use. Funhouse distortion makes the bullets go toward the nearest enemy is a really janky way. it should extend the bullet lifetime, slow bullets down and make it smoother.
+* clownish works but the waves it shoots goes too far. Knocking Pins works but is too slow, even when i increase "CFG.PLAYER_SPEED * #" it doesnt go any faster. Popcorn bucket does not feel very good, feels kinda useless to use. Funhouse distortion makes the bullets go toward the nearest enemy is a really janky way. it should extend the bullet lifetime, slow bullets down and make it smoother.
   * there needs be a pool of general items that can be offered on any floor, related to office/technology/retro stuff. Two ideas so far: Paper Cuts (any enemy that has been damaged takes 1 damage per second) and Extra Clips (you gain 25% max health and 25% ammo). To ensure this doesnt compete with the floor items too much there should only be 20% chance of one of these items showing up vs a 80% for floor-specific items (or upgrades to items you already have) (UPDATE: This works, but the note has not been removed because there should be at least 7 items from this pool)
   
   * clownish and popcorn bucket will have upgrades when they are working correctly, the current upgrades are placeholders
