@@ -551,8 +551,22 @@ function sysBullets() {
     if (spd > cap) { b.vx = b.vx / spd * cap; b.vy = b.vy / spd * cap; }
   }
 }
-    b.x+=b.vx; b.y+=b.vy; b.life--;
-    if (gs.bouncyHouse) {
+b.x += b.vx; b.y += b.vy; b.life--;
+if (b.isArcBall) {
+  b.vy += b.gravity;
+  b.y  += b.vyHoriz;
+  b.shadowX = b.x;
+  // Impact: when remaining life drops below the buffer or close to target
+  if (b.life < 30 || Math.hypot(b.x - b.targetX, b.y - b.targetY) < 28) {
+    if (b.isExplosive) {
+      detonateExplosiveBullet(b, b.x, b.y);
+    }
+    b.life = 0;
+    spawnParticles(b.x, b.y, '#00ff88', 20);
+    gs.shakeX = 14; gs.shakeY = 14;
+    return false; // filtered out below
+  }
+}    if (gs.bouncyHouse) {
       let bounced=false;
       if (b.x<=4){b.x=4;b.vx=Math.abs(b.vx);b.angle=Math.atan2(b.vy,b.vx);bounced=true;}
       if (b.x>=worldW-4){b.x=worldW-4;b.vx=-Math.abs(b.vx);b.angle=Math.atan2(b.vy,b.vx);bounced=true;}
