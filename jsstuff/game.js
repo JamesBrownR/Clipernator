@@ -112,7 +112,7 @@ function initGameState() {
     mirrorPlayerShardTimer: 1,
     hasPopcornBucket: false, popcornKernels: [], popcornFrenzyTimer: 0,
     _kernelsCollected: 0,
-    hasFunhouseDistortion: true,
+    hasFunhouseDistortion: false,
     hasTightropeBoots: false,
     knockingPinsActive: true, knockingPinsTimer: 10,
     hasClownish: false,
