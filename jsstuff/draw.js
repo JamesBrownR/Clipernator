@@ -710,6 +710,29 @@ if (gs.hasMirrorMaze && gs.mirrorShards) {
   // Enemy bullets
   for(const eb of gs.enemyBullets) {
     ctx.save(); ctx.globalAlpha=eb.life/eb.maxLife;
+    // ── Arc ball: draw ground shadow first, then ball ──
+    if (eb.isArcBall) {
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.ellipse(eb.shadowX, eb.shadowY, 18, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      // Draw the ball itself
+      const spin = Date.now() / 80;
+      ctx.save();
+      ctx.translate(eb.x, eb.y);
+      ctx.rotate(spin);
+      ctx.fillStyle = '#ffdd00'; ctx.shadowColor = '#ffaa00'; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, 9); ctx.stroke();
+      ctx.restore();
+      ctx.restore();
+      continue; // skip default bullet drawing
+    }
     if (eb.isTear) {
       const tearAngle = Math.atan2(eb.vy, eb.vx);
       ctx.translate(eb.x, eb.y); ctx.rotate(tearAngle + Math.PI/2);
