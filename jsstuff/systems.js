@@ -590,10 +590,9 @@ if (type === 'boss' || type === 'cakeBoss') handleBossDeath(id);
             gs.popcornKernels.push({x:epos.x+(Math.random()-.5)*20,y:epos.y+(Math.random()-.5)*20});
           ECS.destroyEntity(id);
           // Death shard from redirected bullet
-if ((b.isRedirected || b.isMirrorRicochet) && gs.hasMirrorMaze) {
-  const hasOrbitShard = gs.mirrorShards.some(s => s.orbiting);
+if (gs.hasMirrorMaze) {
   const staticCount = gs.mirrorShards.filter(s => !s.orbiting).length;
-  if (staticCount < 7) {
+  if (staticCount < 10) {
     gs.mirrorShards.push({ orbiting: false, x: epos.x, y: epos.y, angle: Math.random() * Math.PI * 2 });
     spawnParticles(epos.x, epos.y, '#ccddff', 10);
   }
