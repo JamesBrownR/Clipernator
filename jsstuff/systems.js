@@ -133,7 +133,7 @@ let didReflect = false;
         isReflected: true, isExplosive: true,
         // Inherit arc ball properties so it still explodes on impact
         ...(isArc ? {
-          isArcBall: false, // fly straight now, but still explosive
+          isArcBall: true, // fly straight now, but still explosive
           sizeScale: eb.sizeScale || 1.0,
           isCannonball: eb.isCannonball || false,
         } : {}),
