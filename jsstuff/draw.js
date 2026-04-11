@@ -1086,19 +1086,37 @@ if (isCritMass) {
     ctx.beginPath(); ctx.arc(ppos.x, ppos.y, 42, 0, Math.PI*2); ctx.stroke();
     ctx.restore();
   }
-  if (meleeSwingTimer > 0) {
-    const progress = meleeSwingTimer / CFG.MELEE_SWING_FRAMES;
-    ctx.save();
-    ctx.translate(ppos.x, ppos.y);
-    ctx.rotate(gunAngle + (progress * 2.8 - 1.4));
-    ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 30;
-    ctx.fillStyle = '#00ff88';
-    ctx.fillRect(32, -9, 38, 18);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(32, -4, 38, 8);
-    ctx.restore();
-    meleeSwingTimer--;
+if (meleeSwingTimer > 0) {
+  const progress = meleeSwingTimer / CFG.MELEE_SWING_FRAMES;
+  const active = gs.meleeActiveTimer > 0;
+  ctx.save();
+  ctx.translate(ppos.x, ppos.y);
+  ctx.rotate(gunAngle);
+  // Slash 1: upper
+  ctx.globalAlpha = active ? 0.95 : progress * 0.6;
+  ctx.shadowColor = '#00ff88'; ctx.shadowBlur = active ? 28 : 14;
+  ctx.strokeStyle = active ? '#ffffff' : '#00ff88';
+  ctx.lineWidth = active ? 5 : 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(28, -18 + (1 - progress) * 8);
+  ctx.lineTo(CFG.MELEE_RANGE - 10, -10 + (1 - progress) * 6);
+  ctx.stroke();
+  // Slash 2: lower
+  ctx.beginPath();
+  ctx.moveTo(28, 18 - (1 - progress) * 8);
+  ctx.lineTo(CFG.MELEE_RANGE - 10, 10 - (1 - progress) * 6);
+  ctx.stroke();
+  // Active window: bright front box outline
+  if (active) {
+    ctx.globalAlpha = 0.3 + (gs.meleeActiveTimer / CFG.MELEE_ACTIVE_FRAMES) * 0.4;
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(22, -CFG.MELEE_RANGE * 0.5, CFG.MELEE_RANGE - 24, CFG.MELEE_RANGE);
   }
+  ctx.restore();
+  meleeSwingTimer--;
+}
 
   ctx.restore();
 
