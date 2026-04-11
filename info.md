@@ -1,40 +1,93 @@
+# CLIPBLAST: PARTY HUNTER — Design Reference
 
-- "Entities" usually refers to both the player and enemies, but can also refer to bosses or projectiles.
-- Goal is to make floor 1&2 as good as possible before adding more
-- When suggesting changes, tell me what part of the code to add or change, do not remake entire files unless neccessary
+## General Notes
+- "Entities" usually refers to both the player and enemies, but can also refer to bosses or projectiles
+- Goal is to make floor 1 & 2 as good as possible before adding more floors
+- When suggesting changes, tell me what part of the code to add or change, do not remake entire files unless necessary
 
-Item Rules: 
+---
 
-1) items can be permanent or temporary
-2) items can affect the player, enemies, environment, or a combination really
-3) items can have only positive, or both negative and positive effects, but not only negative effects (negative effects on enemies are considered positive effects)
-4) items can affect each other, in fact that is kind of the point 
-5) the name of an item should be related to its effect, even if loosely
+## Item Rules
+1. Items can be permanent or temporary
+2. Items can affect the player, enemies, environment, or a combination
+3. Items can have only positive effects, or both positive and negative effects — never only negative
+4. Items can and should interact with each other
+5. Item names should be loosely related to their effect
 
-Changes (I need to make a lot of changes, not sure where to start):
+---
 
- 
+## Known Issues / TODO
+- Floor 2 wave scaling is off: wave 11 feels slow, then enemies spike suddenly after
+- Clownish sound waves travel too far
+- Knocking Pins feels too slow regardless of speed multiplier
+- Popcorn Bucket feels weak / low impact
+- General item pool needs at least 5 more items
+- Clownish and Popcorn Bucket upgrades are placeholders until base items feel good
+- what the hell is Inferno Rounds?
+- Stage expansion after boss 1 death causes a brief bullet pause that should be seamless
 
-  * Glowstick functionality should be reworked. Rightnow it seems the hitbox is a line that slowly moves from one side to the other. I would like it to function more like a box in front of the player, and when you use glowsicks it activates the box in front of the play, when it is on cooldown it is inactive. This should mean that the delay between the player pressing the glowsticks button and a projectile in front of them getting reflected is zero. aside from the functionality I would also like to change the animation from being a swing to one side from the other to being a sort of double slash animation that happens in front of the player. Beyond that,I would like he glowsticks to pause the game for a few frames when you reflect something (not when a reflected object hits something), make all reflected projectiles go to the players cursor, and set the glowstick cooldown to zero if a player successfully reflects something (make there be a cooldown only if the player misses). (UPDATE: this works and note will be removed soon)
- 
+## Item Pools
 
-  
-Make enemies more interactive overall:
-  * cannonball enemies should always be able to be reflected, even when thye arent charging. If you reflect a cannon ball enemy while it is not charging, it should charge in the direction you reflect it, moving somewhere until it explodes
-  * cannonball enemies charging speed should be lowered by 20%
+### Floor 1 Items (ALL_ITEM_IDS)
+- **Birthday Party** 🎂 — all enemies lose movement for 3 seconds. Temporary, field pickup, 
+- **Golden Cookie** 🍪 — 7x speed + 7x reload speed for 7 seconds. Temporary, field pickup
+- **Double Layered Cake** 🍰🍰 — every bullet: 40% dud, 60% 2x damage. Permanent
+- **Triple Layered Cake** 🍰🍰🍰 — every bullet: 45% dud, 55% 3x damage. Replaces Double. Permanent
+- **Quadruple Layered Cake** 🍰🍰🍰🍰 — every bullet: 50% dud, 50% 4x damage. Replaces Triple. Permanent
+- **Bouncy House** 🏠 — bullets, enemies, and player all bounce off walls. Permanent
+- **Party Popper** 🎉 (Dash) — SHIFT to dash, damages enemies on contact, 3 charges. Permanent
+- **Shake Fizzle Pop** 🥤 — meter fills over time; while full: +speed +damage; on hit: shockwave burst and meter resets. Permanent
+- **Flawless Baking** 🧁 — complete a wave without taking damage: +2 max ammo. Permanent
+- **Cursed Candles** 🕯️ — 5 candles orbit player, drain 5 HP/sec, each lit candle adds +2 bullets/shot. Candles relight over time. Permanent
 
-  
- 
+### Floor 2 Items (FLOOR2_ITEM_IDS)
+- **Mirror Maze** 🪞 — one shard orbits player; shoot the shard to redirect bullets toward nearest enemy or shard; kills spawn new shards. Permanent
+- **Popcorn Bucket** 🍿 — enemies drop kernels on death; collect 5 for a 4-second bullet explosion frenzy. Permanent
+- **Raging Rings** 💫 — player bullets that touch the player begin orbiting at 3x damage, max 8 rings; glowstick can fling them toward cursor as explosive shots. Permanent
+- **Knocking Pins** 🎳 — temporarily auto-charges player toward nearest enemy; player becomes the bowling ball. Temporary, field pickup
+- **Tightrope Boots** 👢 — +100% move speed, dashing makes player intangible. Permanent
+- **Clownish** 🔵 — a nose grows over time; when fully grown and near an enemy it honks, emitting two expanding sound waves that confuse all enemies they pass through. Permanent
+
+### General Items (any floor, ~20% chance, GENERAL_ITEM_IDS)
+- **Paper Cuts** 📄 — any enemy that has taken damage loses 1 HP per second until dead. Permanent
+- **Extra Clips** 📎 — +15% max HP and +15% max ammo, full heal on pickup. Stacks. Permanent
+- *(needs at least 5 more items in this pool — office/technology/retro theme)*
 
 
 
-  * if possible, there should be a animation of the stage getting bigger after you kill boss one, rather than a instant transition (UPDATE: This works but the note has not been removed since the game still pauses bullets briefly before continuing; it should be instant and have no pause)
-  *  the wave scaling in floor two in kind of weird (11 is very slow everyone after is very fast)
-  
-Item stuff
-* clownish works but the waves it shoots goes too far. Knocking Pins works but is too slow, even when i increase "CFG.PLAYER_SPEED * #" it doesnt go any faster. Popcorn bucket does not feel very good, feels kinda useless to use. 
-  * there needs be a pool of general items that can be offered on any floor, related to office/technology/retro stuff. Two ideas so far: Paper Cuts (any enemy that has been damaged takes 1 damage per second) and Extra Clips (you gain 25% max health and 25% ammo). To ensure this doesnt compete with the floor items too much there should only be 20% chance of one of these items showing up vs a 80% for floor-specific items (or upgrades to items you already have) (UPDATE: This works, but the note has not been removed because there should be at least 7 items from this pool)
-  
-  * clownish and popcorn bucket will have upgrades when they are working correctly, the current upgrades are placeholders
-  * why does clownish spawn a bunch of confetti around the playerw
-  * what the hell is inferno rounds?
+---
+
+## Glowsticks / Melee
+- Right-click or F to activate
+- everything reflected is explosive
+- Activates an instant hitbox box in front of the player for `MELEE_ACTIVE_FRAMES` frames
+- Zero delay between button press and hitbox being live
+- Reflects enemy bullets and raging ring bullets toward the player's cursor as explosive shots
+- Cannonball enemies can be redirected by glowstick at any time (not just while charging)
+- **No cooldown on successful reflect** — cooldown only applies on miss
+- Brief game freeze (explosionFreezeTimer) on successful reflect
+- Melee also damages enemies in front for baseDamage * 3
+
+---
+
+## Enemy Behaviors
+
+### Floor 1
+- **Utensil** (fork/knife/spoon) — body drifts toward player; orbiting utensil launches at player on a timer; knife bleeds, spoon knocks back, fork grabs and slows
+- **Mask** — alternates between SMILE (chases) and CRY (stops, fires spread of gravity-affected tear bullets)
+- **Gift Box** — slow wind-up explosion on proximity; player can grab and throw it
+- **Party Hat** — fast, periodically speed-dives at player
+- **Cake Boss** (wave 11) — multi-phase: candle shots, spin bounce, frosting arc balls; loses a candle per HP threshold; at 1 candle enters permanent spiral
+
+### Floor 2
+- **Birthday Bomber** — charges at player when close
+- **Piñata** — tanky, leaks particles at low HP
+- **Balloon Witch** — orbits player at distance, fires homing bullets
+- **Streamer Ghost** — phases out every few seconds, teleports near player
+- **Cannonball** — telegraphs then charges across arena; can be reflected by glowstick at any time into an explosion
+- **Ringmaster** — flees player, buffs nearby enemies (speed, size, damage, HP); enemies in aura long enough reach Critical Mass (immune to explosives, 3x damage, explode on contact)
+- **Juggler** — captures nearby enemies and juggles them; throws arc balls and captured enemies at player; orbits ringmaster if one is nearby
+- **Boss 2** (wave 26) — spiral, summon, and volley phases; phase 2 at 50% HP
+
+---
+
