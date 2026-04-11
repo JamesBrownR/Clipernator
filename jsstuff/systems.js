@@ -1151,7 +1151,6 @@ if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
         { x: ppos3.x, y: ppos3.y, r: 8, maxR: 240, life: 90, maxLife: 90, speed: 1.8, hitEnemies: new Set() },
         { x: ppos3.x, y: ppos3.y, r: 8, maxR: 240, life: 78, maxLife: 90, speed: 1.1, hitEnemies: new Set() },
       ];
-      spawnPartyParticles(ppos3.x, ppos3.y);
       showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! WAVES CONFUSE ENEMIES!' : 'HONK! WAVES CONFUSE NEARBY ENEMIES!');
     } else {
       // No enemy nearby — hold at full, don't reset, keep honk timer ticking
