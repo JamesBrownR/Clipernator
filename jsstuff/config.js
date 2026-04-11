@@ -35,6 +35,7 @@ const CFG = {
   MELEE_CONE_ANGLE: 1.1,
   MELEE_DAMAGE: 4,
   GLOW_COOLDOWN: 45,
+  MELEE_ACTIVE_FRAMES: 8,  // how many frames the hitbox is live
 };
 
 let worldW = CFG.W;
