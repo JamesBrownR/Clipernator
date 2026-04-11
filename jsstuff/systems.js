@@ -257,7 +257,7 @@ function sysRagingRings() {
   const ppos = ECS.get(gs.playerId, 'pos');
   const ORBIT_RADIUS = 52;
   const ORBIT_SPEED = 0.055;
-  const MAX_RINGS = 8;
+  const MAX_RINGS = 16;
 
   // Check if any active player bullets are touching the player — convert to orbit
   if (gs.ragingRingBullets.length < MAX_RINGS) {
