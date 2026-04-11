@@ -653,6 +653,28 @@ function drawPlayer() {
 
   if (gunRecoil > 0) gunRecoil = Math.max(0, gunRecoil - 0.08);
 
+  // ── Bowling ball preview ──
+  if (gs.bowlingBallReady) {
+    const previewDist = 60;
+    const px = ppos.x + Math.cos(gunAngle) * previewDist;
+    const py = ppos.y + Math.sin(gunAngle) * previewDist;
+    ctx.save();
+    ctx.globalAlpha = 0.4 + Math.sin(Date.now()/120)*0.15;
+    ctx.strokeStyle = '#aaaaaa';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#888888';
+    ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI*2); ctx.stroke();
+    // Finger holes preview
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#aaaaaa';
+    for(let i=0;i<3;i++){
+      const a = (Date.now()/600) + i*2.09;
+      ctx.beginPath(); ctx.arc(px+Math.cos(a)*7, py+Math.sin(a)*7, 3, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  
  // ── Clownish nose — grows as timer fills, honks (squishes) on blast ──
   if (gs.hasClownish) {
     const honking = gs.clownNoseHonkTimer > 0;
@@ -713,6 +735,26 @@ function drawPlayer() {
 
 function drawBullet(b) {
   ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.angle);
+
+
+  if (b.isBowlingBall) {
+    const spin = Date.now() / 200;
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(spin);
+    ctx.fillStyle = '#333344';
+    ctx.shadowColor = '#666677';
+    ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#222233';
+    ctx.beginPath(); ctx.arc(-5, -5, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#111122';
+    for(let i=0;i<3;i++){
+      const a = spin*0.5 + i*2.09;
+      ctx.beginPath(); ctx.arc(Math.cos(a)*7, Math.sin(a)*7, 3, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    return;
+  }
+    
   if (b.isDud) {
     ctx.fillStyle='#777'; ctx.shadowColor='#555'; ctx.shadowBlur=4; ctx.fillRect(-7,-1.5,14,3);
   } else {
@@ -1012,20 +1054,7 @@ if (isCritMass) {
     }
   }
 
-  // Knocking Pins overlay
-  if (gs.knockingPinsActive) {
-    const ppos2 = ECS.get(gs.playerId,'pos');
-    const t2 = Date.now()/200;
-    ctx.save(); ctx.globalAlpha=0.55;
-    ctx.fillStyle='#3333cc'; ctx.shadowColor='#6666ff'; ctx.shadowBlur=20;
-    ctx.beginPath(); ctx.arc(ppos2.x, ppos2.y, 22, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle='#1111aa';
-    for(let i=0;i<3;i++){const a=t2+i*2.09; ctx.beginPath(); ctx.arc(ppos2.x+Math.cos(a)*9, ppos2.y+Math.sin(a)*9, 4, 0, Math.PI*2); ctx.fill();}
-    ctx.restore();
-    const ratio2 = gs.knockingPinsTimer/300;
-    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(ppos2.x-26, ppos2.y+30, 52, 5);
-    ctx.fillStyle='#6666ff'; ctx.fillRect(ppos2.x-26, ppos2.y+30, 52*ratio2, 5);
-  }
+
 
   // Particles
   for(const p of gs.particles) {
