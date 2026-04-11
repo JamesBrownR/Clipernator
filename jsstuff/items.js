@@ -567,6 +567,6 @@ const ALL_ITEM_IDS = [
 ];
 
 const FLOOR2_ITEM_IDS = [
-  'popcornBucket', 'ragingrings', 'knockingPins',
+  'popcornBucket', 'ragingRings', 'knockingPins',
   'tightropeBoots', 'mirrorMaze', 'clownish'
 ];
