@@ -469,7 +469,7 @@ function sysPlayerMovement() {
   let speedMult=1;
   if (gs.speedBoostTimer>0) speedMult=gs.speedBoostMult||CFG.SPEED_BOOST_MULT;
   if (gs.sfpFull) speedMult=Math.max(speedMult,1.3);
-  if (gs.hasTightropeBoots) speedMult=Math.max(speedMult,1.25);
+  if (gs.hasTightropeBoots) speedMult=Math.max(speedMult,2.00);
   const topSpd=slowed?CFG.PLAYER_SPEED*0.45:(gs.speedBoostTimer>0?CFG.PLAYER_SPEED*speedMult:CFG.PLAYER_SPEED);
   if (dashing) {
     gs.dashTimer--; gs.dashTrail.push({x:pos.x,y:pos.y,life:12,angle:playerMoveAngle});
