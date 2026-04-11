@@ -23,7 +23,6 @@
 - It seems like when you kill a boss with explosives or melee it doesn't move to the next floor;  killing the boss should move to the next floor regardless of casue of death
 - General item pool needs at least 5 more items
 - Clownish upgrade is placeholder
-- Stage expansion after boss 1 death causes a brief bullet pause that should be seamless
 
 ## Item Pools
 
