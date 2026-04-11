@@ -345,23 +345,7 @@ const ITEM_DEFS = {
 
   // ── Floor 2 items ──
 
-  infernoRounds: {
-    id: 'infernoRounds', label: 'INFERNO\nROUNDS', icon: '🔥',
-    desc: 'BULLETS LEAVE\nFIRE TRAILS\n+1 BURN DAMAGE\nON HIT',
-    color: '#ff4400', shadowColor: '#ff6600', spawnCooldown: 999999999,
-    effect(gs) { gs.hasInfernoRounds = true; showMsg('INFERNO ROUNDS! BULLETS BURN!'); },
-    draw(fi) {
-      const {x,y,phase}=fi, t=Date.now()/220, bob=Math.sin(t+phase)*6;
-      ctx.save(); ctx.translate(x,y+bob);
-      ctx.shadowColor='#ff4400'; ctx.shadowBlur=26+Math.sin(t*3)*10;
-      ctx.fillStyle='#cc2200'; ctx.beginPath(); ctx.roundRect(-8,-22,16,36,4); ctx.fill();
-      ctx.fillStyle='#ffaa00'; ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(-8,-22); ctx.lineTo(0,-34); ctx.lineTo(8,-22); ctx.closePath(); ctx.fill();
-      const fc=['#ff2200','#ff6600','#ffcc00'];
-      for(let i=0;i<5;i++){const fx=-6+i*3, fy=14+Math.sin(t*5+i)*4; ctx.fillStyle=fc[i%fc.length]; ctx.shadowColor=fc[i%fc.length]; ctx.shadowBlur=8; ctx.beginPath(); ctx.ellipse(fx,fy,3,6,0,0,Math.PI*2); ctx.fill();}
-      ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
-      ctx.fillText('INFERNO',0,30); ctx.fillText('ROUNDS',0,40); ctx.restore();
-    }
-  },
+  
 
  mirrorMaze: {
   id: 'mirrorMaze', label: 'MIRROR\nMAZE', icon: '🪞',
@@ -528,7 +512,7 @@ const ITEM_DEFS = {
 
   tightropeBoots: {
     id: 'tightropeBoots', label: 'TIGHTROPE\nBOOTS', icon: '👢',
-    desc: '+25% MOVE SPEED\nDASH = INTANGIBLE',
+    desc: '+100% MOVE SPEED\nDASH = INTANGIBLE',
     color: '#00ccff', shadowColor: '#0088aa', spawnCooldown: 999999999,
     effect(gs) { gs.hasTightropeBoots = true; showMsg('TIGHTROPE BOOTS! +SPEED, DASH = INTANGIBLE!'); },
     draw(fi) {
