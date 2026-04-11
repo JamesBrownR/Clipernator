@@ -439,7 +439,33 @@ function sysMirrorMaze() {
     sizeScale: 1.2,
     chainDepth: (b.chainDepth || 0) + 1,
   });
-} else {
+} // ── Bowling ball hits shard: redirect + spawn second ball toward nearest enemy ──
+if (b.isBowlingBall) {
+  // Find nearest enemy for the bonus ball
+  let nearestEnemyX = null, nearestEnemyY = null, nearestDist = 999999;
+  for (const eid of ECS.query('enemy', 'pos')) {
+    const epos = ECS.get(eid, 'pos');
+    const ed = Math.hypot(epos.x - s.x, epos.y - s.y);
+    if (ed < nearestDist) { nearestDist = ed; nearestEnemyX = epos.x; nearestEnemyY = epos.y; }
+  }
+  if (nearestEnemyX !== null) {
+    const bdx = nearestEnemyX - s.x, bdy = nearestEnemyY - s.y, bd = Math.hypot(bdx,bdy)||1;
+    bulletsToAdd.push({
+      x: s.x, y: s.y,
+      vx: (bdx/bd)*4.5, vy: (bdy/bd)*4.5,
+      angle: Math.atan2(bdy,bdx),
+      life: 180, maxLife: 180,
+      damageMult: (b.damageMult||1) * 1.5,
+      isDud: false,
+      isBowlingBall: true,
+      bounces: 0,
+      hitEnemies: new Set(),
+      chainDepth: (b.chainDepth||0)+1,
+    });
+    spawnParticles(s.x, s.y, '#aaaaaa', 12);
+    showMsg('SPARE!!!');
+  }
+}  else {
   bulletsToAdd.push({
     x: s.x, y: s.y,
     vx: (dx / dist2) * CFG.BULLET_SPEED * 2.5,
@@ -691,7 +717,28 @@ if (b.isArcBall) {
     gs.shakeX = 14; gs.shakeY = 14;
     return false; // filtered out below
   }
-}    if (gs.bouncyHouse) {
+}    // ── Bowling ball: always bounces, pierces, explodes on expiry ──
+if (b.isBowlingBall) {
+  let bounced = false;
+  if (b.x <= 18)         { b.x = 18;          b.vx =  Math.abs(b.vx); bounced = true; }
+  if (b.x >= worldW - 18){ b.x = worldW - 18; b.vx = -Math.abs(b.vx); bounced = true; }
+  if (b.y <= 18)         { b.y = 18;           b.vy =  Math.abs(b.vy); bounced = true; }
+  if (b.y >= worldH - 18){ b.y = worldH - 18;  b.vy = -Math.abs(b.vy); bounced = true; }
+  if (bounced) {
+    b.bounces = (b.bounces || 0) + 1;
+    spawnParticles(b.x, b.y, '#aaaaaa', 6);
+    if (b.bounces >= 6) {
+      detonateExplosiveBullet(b, b.x, b.y);
+      return false;
+    }
+  }
+  if (b.life <= 0) {
+    detonateExplosiveBullet(b, b.x, b.y);
+    return false;
+  }
+  return true;
+}
+    if (gs.bouncyHouse) {
       let bounced=false;
       if (b.x<=4){b.x=4;b.vx=Math.abs(b.vx);b.angle=Math.atan2(b.vy,b.vx);bounced=true;}
       if (b.x>=worldW-4){b.x=worldW-4;b.vx=-Math.abs(b.vx);b.angle=Math.atan2(b.vy,b.vx);bounced=true;}
@@ -723,6 +770,32 @@ function sysBulletEnemyCollision() {
       if (Math.hypot(b.x-epos.x,b.y-epos.y)<30) {
         if (b.isExplosive){detonateExplosiveBullet(b,b.x,b.y);break;}
         if (b.isDud){b.life=0;spawnParticles(b.x,b.y,'#666666',3);break;}
+
+        // ── Bowling ball: pierce, don't kill bullet ──
+        if (b.isBowlingBall) {
+          if (!b.hitEnemies.has(id)) {
+            b.hitEnemies.add(id);
+            const dmg = b.damageMult || 1;
+            ehp.hp -= dmg; ehp.hitFlash = 14;
+            spawnParticles(epos.x, epos.y, '#aaaaaa', 8);
+            spawnParticles(epos.x, epos.y, '#333344', 5);
+            if (ehp.hp <= 0) {
+              spawnParticles(epos.x, epos.y, '#ff2222', 18);
+              if (gs.hasPopcornBucket && Math.random() < 0.22)
+                gs.popcornKernels.push({x:epos.x+(Math.random()-.5)*20,y:epos.y+(Math.random()-.5)*20});
+              if (gs.hasMirrorMaze) {
+                gs.mirrorShards.push({ orbiting: false, x: epos.x, y: epos.y, angle: Math.random()*Math.PI*2 });
+                spawnParticles(epos.x, epos.y, '#ccddff', 10);
+              }
+              ECS.destroyEntity(id);
+              gs.score += Math.round(10*gs.wave*(dmg>1?1.6:1)); gs.waveKills++;
+              tryDropTicket(); gs.health=Math.min(gs.maxHealth,gs.health+CFG.HEALTH_REGEN);
+              updateHUD(); checkWave();
+            }
+          }
+          continue; // don't break — keep checking other enemies
+        }
+
         const dmg=b.damageMult||1;
         ehp.hp-=dmg; ehp.hitFlash=12; b.life=0;
         spawnParticles(b.x,b.y,dmg>1?'#ff44ff':'#ff6644',6);
@@ -1287,25 +1360,46 @@ function shoot() {
   gs.ammo--; muzzleFlash=10; updateHUD(); gunRecoil=1.0;
   gs.shakeX=(Math.random()-.5)*13; gs.shakeY=(Math.random()-.5)*13;
   const muzzle=gunMuzzlePos();
+
+  // ── Bowling Ball shot ──
+  if (gs.bowlingBallReady) {
+    gs.bowlingBallReady = false;
+    const dmg = baseBulletDamage() * 8; // always full multiplier, never dud
+    gs.bullets.push({
+      x: muzzle.x, y: muzzle.y,
+      vx: Math.cos(gunAngle) * 4.5,
+      vy: Math.sin(gunAngle) * 4.5,
+      angle: gunAngle,
+      life: 220, maxLife: 220,
+      damageMult: dmg,
+      isDud: false,
+      isBowlingBall: true,
+      bounces: 0,
+      hitEnemies: new Set(), // pierce tracking
+    });
+    gs.shakeX = (Math.random()-.5)*8; gs.shakeY = (Math.random()-.5)*8;
+    spawnParticles(muzzle.x, muzzle.y, '#aaaaaa', 10);
+    showMsg('STRIKE!!!');
+    return;
+  }
+
   let doubleCount=0;
   const totalBullets=CFG.BULLET_COUNT+(gs.hasCursedCandles?gs.candlesLit*2:0);
   for (let i=0;i<totalBullets;i++) {
     const a=gunAngle+(Math.random()-.5)*.32;
     let damageMult = baseBulletDamage();
-
-   
-let isDud = false;
-if (gs.hasQuadCake)        { if (Math.random() < 0.50) isDud = true; }
-else if (gs.hasTripleCake) { if (Math.random() < 0.45) isDud = true; }
-else if (gs.hasDoubleCake) { if (Math.random() < 0.40) isDud = true; }
-const finalMult = isDud ? 1 : damageMult * (gs.sfpFull ? 1.5 : 1);
-gs.bullets.push({
-  x: muzzle.x, y: muzzle.y,
-  vx: Math.cos(a) * CFG.BULLET_SPEED,
-  vy: Math.sin(a) * CFG.BULLET_SPEED,
-  angle: a, life: CFG.BULLET_LIFE,
-  damageMult: finalMult, isDud
-});
+    let isDud = false;
+    if (gs.hasQuadCake)        { if (Math.random() < 0.50) isDud = true; }
+    else if (gs.hasTripleCake) { if (Math.random() < 0.45) isDud = true; }
+    else if (gs.hasDoubleCake) { if (Math.random() < 0.40) isDud = true; }
+    const finalMult = isDud ? 1 : damageMult * (gs.sfpFull ? 1.5 : 1);
+    gs.bullets.push({
+      x: muzzle.x, y: muzzle.y,
+      vx: Math.cos(a) * CFG.BULLET_SPEED,
+      vy: Math.sin(a) * CFG.BULLET_SPEED,
+      angle: a, life: CFG.BULLET_LIFE,
+      damageMult: finalMult, isDud
+    });
   }
   spawnParticles(muzzle.x,muzzle.y,doubleCount>0?'#ff44ff':'#ff8800',doubleCount>0?8:6);
 }
