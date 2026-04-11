@@ -106,7 +106,6 @@ function initGameState() {
     flawlessThisWave: false,
     hasCursedCandles: false,
     candlesLit: 0, candleHpTimer: 0, candleRelightDelay: 0,
-    hasInfernoRounds: false,
     hasRagingRings: true,
     ragingRingBullets: [],
     hasMirrorMaze: true,
