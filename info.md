@@ -42,7 +42,13 @@
 - **Mirror Maze** 🪞 — one shard orbits player; shoot the shard to redirect bullets toward nearest enemy or shard; kills spawn new shards. Permanent
 - **Popcorn Bucket** 🍿 — enemies drop kernels on death; collect 5 for a 4-second bullet explosion frenzy. Permanent
 - **Raging Rings** 💫 — player bullets that touch the player begin orbiting at 3x damage, max 16 rings; Permanent
-- **Knocking Pins** 🎳 — temporarily auto-charges player toward nearest enemy; player becomes the bowling ball. Temporary, field pickup
+- **Knocking Pins** 🎳 — Pierces enemies, damages each one it passes through (no b.life = 0 on hit)
+   - Explodes on expiry/too many bounces
+   - Reflectable by glowstick (already handled since tickMeleeWindow iterates gs.bullets — just needs to not skip isBowlingBall)
+   - Mirror shard hit → redirected ball + spawn second ball toward nearest enemy
+   - Grey preview circle at gun tip while queued
+   - Always uses full cake multiplier, never dud
+   
 - **Tightrope Boots** 👢 — +100% move speed, dashing makes player intangible. Permanent
 - **Clownish** 🔵 — a nose grows over time; when fully grown and near an enemy it honks, emitting two expanding sound waves that confuse all enemies they pass through. Permanent
 
