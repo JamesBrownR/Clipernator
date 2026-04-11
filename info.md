@@ -18,12 +18,12 @@
 
 ## Known Issues / TODO
 - Floor 2 wave scaling is off: wave 11 feels slow, then enemies spike suddenly after
-- Clownish sound waves travel too far
+- Clownish sound waves travel too far, cooldown should be increased
 - Knocking Pins feels too slow regardless of speed multiplier
+- It seems like when you kill a boss with explosives or melee it doesn't move to the next floor;  killing the boss should move to the next floor regardless of casue of death
 - Popcorn Bucket feels weak / low impact
 - General item pool needs at least 5 more items
 - Clownish and Popcorn Bucket upgrades are placeholders until base items feel good
-- what the hell is Inferno Rounds?
 - Stage expansion after boss 1 death causes a brief bullet pause that should be seamless
 
 ## Item Pools
