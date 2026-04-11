@@ -477,27 +477,32 @@ const ITEM_DEFS = {
     }
   },
 
-  funhouseDistortion: {
-    id: 'funhouseDistortion', label: 'FUNHOUSE\nDISTORTION', icon: '🎪',
-    desc: 'BULLETS BEND\nTOWARD NEAREST\nENEMY EACH FRAME',
-    color: '#ff44ff', shadowColor: '#aa00cc', spawnCooldown: 999999999,
-    effect(gs) { gs.hasFunhouseDistortion = true; showMsg('FUNHOUSE DISTORTION! HOMING BULLETS!'); },
-    draw(fi) {
-      const {x,y,phase}=fi, t=Date.now()/240, bob=Math.sin(t+phase)*6;
-      ctx.save(); ctx.translate(x,y+bob);
-      ctx.shadowColor='#ff44ff'; ctx.shadowBlur=22+Math.sin(t*2)*8;
-      ctx.strokeStyle='#ff44ff'; ctx.lineWidth=3; ctx.fillStyle='#1a0022';
-      ctx.beginPath(); ctx.ellipse(0,-4,14,20,Math.sin(t*.5)*.15,0,Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle='#cc44ff'; ctx.lineWidth=1.5; ctx.globalAlpha=0.7;
-      for(let i=0;i<4;i++){
-        ctx.beginPath(); ctx.moveTo(-10,-16+i*8);
-        ctx.quadraticCurveTo(Math.sin(t*2+i)*8,(-16+i*8)+4,10,-16+i*8); ctx.stroke();
-      }
-      ctx.globalAlpha=1;
-      ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
-      ctx.fillText('FUNHOUSE',0,28); ctx.fillText('DISTORT',0,38); ctx.restore();
-    }
+ ragingRings: {
+  id: 'ragingRings', label: 'RAGING\nRINGS', icon: '💫',
+  desc: 'BULLETS THAT TOUCH YOU\nORBIT FOREVER\n3X DAMAGE WHILE ORBITING\nMAX 8 RINGS',
+  color: '#ffffff', shadowColor: '#aaaaff', spawnCooldown: 999999999,
+  effect(gs) {
+    gs.hasRagingRings = true;
+    gs.ragingRingBullets = [];
+    showMsg('RAGING RINGS! BULLETS ORBIT YOU!');
   },
+  draw(fi) {
+    const {x,y,phase}=fi, t=Date.now()/260, bob=Math.sin(t+phase)*5;
+    ctx.save(); ctx.translate(x,y+bob);
+    ctx.shadowColor='#aaaaff'; ctx.shadowBlur=20+Math.sin(t*2)*8;
+    const ringColors=['#ffffff','#aaaaff','#88bbff'];
+    for(let r=0;r<3;r++){
+      const rr=8+r*7, speed=t*(1.2-r*0.3);
+      ctx.strokeStyle=ringColors[r]; ctx.lineWidth=1.5; ctx.globalAlpha=0.4;
+      ctx.beginPath(); ctx.arc(0,-4,rr,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
+      ctx.fillStyle=ringColors[r]; ctx.shadowColor=ringColors[r]; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(Math.cos(speed)*rr, Math.sin(speed)*rr-4, 3, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillText('RAGING',0,22); ctx.fillText('RINGS',0,32); ctx.restore();
+  }
+},
 
   knockingPins: {
     id: 'knockingPins', label: 'KNOCKING\nPINS', icon: '🎳',
@@ -562,6 +567,6 @@ const ALL_ITEM_IDS = [
 ];
 
 const FLOOR2_ITEM_IDS = [
-  'popcornBucket', 'funhouseDistortion', 'knockingPins',
+  'popcornBucket', 'ragingrings', 'knockingPins',
   'tightropeBoots', 'mirrorMaze', 'clownish'
 ];
