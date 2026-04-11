@@ -727,8 +727,8 @@ function sysBulletEnemyCollision() {
         if (gs.popcornFrenzyTimer > 0) {
   spawnParticles(b.x, b.y, '#ffdd00', 16);
   spawnParticles(b.x, b.y, '#ff8800', 8);
-  const frenzyRadius = gs.hasPopcornUpgrade ? 220 : 110;
-  const frenzyDmg    = gs.hasPopcornUpgrade ? dmg * 1.5 : dmg;
+  const frenzyRadius = gs.hasPopcornUpgrade ? 330 : 165;
+  const frenzyDmg    = gs.hasPopcornUpgrade ? dmg * 2.0 : dmg;
   for (const aoeId of ECS.query('enemy', 'pos', 'hp')) {
     if (aoeId === id) continue;
     const ap = ECS.get(aoeId, 'pos');
