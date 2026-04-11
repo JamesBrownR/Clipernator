@@ -69,6 +69,8 @@ function detonateExplosiveBullet(b, hitX, hitY) {
     ECS.destroyEntity(eid);
     gs.score += Math.round(15*gs.wave); gs.waveKills++;
     tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health+CFG.HEALTH_REGEN); updateHUD();
+    const killedType = ECS.get(eid, 'enemy')?.type;
+if (killedType === 'cakeBoss' || killedType === 'boss2') handleBossDeath(eid);
   }
   if (toKill.length > 0) checkWave();
   b.life = 0;
