@@ -126,24 +126,22 @@ let didReflect = false;
      const isArc = eb.isArcBall;
     
               // Inherit arc ball properties so it still explodes on impact
-    if (isArc) {
-  const targetX = mouse.x, targetY = mouse.y;
-  const GRAVITY = 0.15;
-  const HANG_TIME = Math.max(55, Math.min(110, Math.hypot(targetX - eb.x, targetY - eb.y) / 5));
-  
-  // Check if any mirror shard is near the reflect point — only for arc balls
-let shardHit = -1;
-if (isArc && gs.hasMirrorMaze && gs.mirrorShards) {
-  const ppos2 = ECS.get(gs.playerId, 'pos');
-  for (let si = 0; si < gs.mirrorShards.length; si++) {
-    const s = gs.mirrorShards[si];
-    // Check if shard is near the player (within melee range), not near the arc ball
-    if (Math.hypot(ppos2.x - s.x, ppos2.y - s.y) < CFG.MELEE_RANGE + 20) {
-      shardHit = si;
-      break;
+   // ── Arc ball: check for nearby shard first, then normal reflect ──
+if (isArc) {
+  let shardHit = -1;
+  if (gs.hasMirrorMaze && gs.mirrorShards) {
+    const ppos2 = ECS.get(gs.playerId, 'pos');
+    for (let si = 0; si < gs.mirrorShards.length; si++) {
+      const s = gs.mirrorShards[si];
+      if (Math.hypot(ppos2.x - s.x, ppos2.y - s.y) < CFG.MELEE_RANGE + 20) {
+        shardHit = si;
+        break;
+      }
     }
   }
-}
+
+  const targetX = mouse.x, targetY = mouse.y;
+  const GRAVITY = 0.15;
 
   if (shardHit >= 0) {
     const s = gs.mirrorShards[shardHit];
@@ -169,6 +167,8 @@ if (isArc && gs.hasMirrorMaze && gs.mirrorShards) {
       sizeScale: 1.2,
     });
   } else {
+    // Normal arc reflect — no shard needed
+    const HANG_TIME = Math.max(55, Math.min(110, Math.hypot(targetX - eb.x, targetY - eb.y) / 5));
     gs.bullets.push({
       x: eb.x, y: eb.y,
       vx: (targetX - eb.x) / HANG_TIME,
@@ -186,13 +186,28 @@ if (isArc && gs.hasMirrorMaze && gs.mirrorShards) {
       sizeScale: eb.sizeScale || 1.0,
     });
   }
+
+  gs.enemyBullets.splice(i, 1);
+  spawnParticles(eb.x, eb.y, '#00ff88', 8);
+  didReflect = true;
+
+} else {
+  // Normal (non-arc) bullet reflect
+  const reflectSpeed = Math.max(8, Math.hypot(eb.vx, eb.vy) * 2.0);
+  const reflectAngle = Math.atan2(mouse.y - eb.y, mouse.x - eb.x);
+  gs.bullets.push({
+    x: eb.x, y: eb.y,
+    vx: Math.cos(reflectAngle) * reflectSpeed,
+    vy: Math.sin(reflectAngle) * reflectSpeed,
+    angle: reflectAngle,
+    life: CFG.BULLET_LIFE + 20, maxLife: CFG.BULLET_LIFE + 20,
+    damageMult: baseBulletDamage() * 2,
+    isDud: false, isReflected: true, isExplosive: true,
+  });
+  gs.enemyBullets.splice(i, 1);
+  spawnParticles(eb.x, eb.y, '#00ff88', 8);
+  didReflect = true;
 }
-      
-      
-      gs.enemyBullets.splice(i,1);
-      spawnParticles(eb.x, eb.y, '#00ff88', 8);
-      didReflect = true;
-    }
   }
   if (didReflect) {
     gs.glowCooldown = 0;                 // instant cooldown reset on reflect
@@ -235,6 +250,7 @@ if (isArc && gs.hasMirrorMaze && gs.mirrorShards) {
     }
   }
   const muzzle=gunMuzzlePos(); spawnParticles(muzzle.x,muzzle.y,'#00ff88',14);
+}
 }
 
 // ── Helper: try to fire a Mirror Maze ricochet from a kill position ──
