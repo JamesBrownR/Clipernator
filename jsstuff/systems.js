@@ -176,6 +176,27 @@ function tickMeleeWindow() {
     gs.enemyBullets.splice(i, 1);
     spawnParticles(eb.x, eb.y, '#00ff88', 8);
     didReflect = true;
+    // Reflect orbiting raging ring bullets
+if (gs.hasRagingRings && gs.ragingRingBullets) {
+  for (let ri = gs.ragingRingBullets.length - 1; ri >= 0; ri--) {
+    const rb = gs.ragingRingBullets[ri];
+    if (Math.hypot(rb.x - ppos.x, rb.y - ppos.y) > CFG.MELEE_RANGE) continue;
+    const reflectAngle = Math.atan2(mouse.y - rb.y, mouse.x - rb.x);
+    const reflectSpeed = CFG.BULLET_SPEED * 1.4;
+    gs.bullets.push({
+      x: rb.x, y: rb.y,
+      vx: Math.cos(reflectAngle) * reflectSpeed,
+      vy: Math.sin(reflectAngle) * reflectSpeed,
+      angle: reflectAngle,
+      life: CFG.BULLET_LIFE + 20, maxLife: CFG.BULLET_LIFE + 20,
+      damageMult: rb.damageMult,
+      isDud: false, isReflected: true, isExplosive: true,
+    });
+    gs.ragingRingBullets.splice(ri, 1);
+    spawnParticles(rb.x, rb.y, '#aaaaff', 8);
+    didReflect = true;
+  }
+}
   }
 
   // Cannonball redirect (any state, not just CHARGING)
@@ -229,6 +250,68 @@ function tickMeleeWindow() {
   if (gs.meleeActiveTimer === 0 && !gs.meleeDidReflect) {
     gs.glowCooldown = CFG.GLOW_COOLDOWN;
   }
+}
+
+function sysRagingRings() {
+  if (!gs.hasRagingRings) return;
+  const ppos = ECS.get(gs.playerId, 'pos');
+  const ORBIT_RADIUS = 52;
+  const ORBIT_SPEED = 0.055;
+  const MAX_RINGS = 8;
+
+  // Check if any active player bullets are touching the player — convert to orbit
+  if (gs.ragingRingBullets.length < MAX_RINGS) {
+    for (let i = gs.bullets.length - 1; i >= 0; i--) {
+      if (gs.ragingRingBullets.length >= MAX_RINGS) break;
+      const b = gs.bullets[i];
+      if (b.life <= 0) continue;
+      if (b.isOrbiting) continue;
+      if (Math.hypot(b.x - ppos.x, b.y - ppos.y) < 28) {
+        // Convert to orbiting bullet
+        const angle = Math.atan2(b.y - ppos.y, b.x - ppos.x);
+        gs.ragingRingBullets.push({
+          angle,
+          damageMult: (b.damageMult || 1) * 3,
+          isDud: false,
+        });
+        gs.bullets.splice(i, 1);
+        spawnParticles(ppos.x, ppos.y, '#aaaaff', 6);
+      }
+    }
+  }
+
+  // Tick orbiting bullets
+  for (const rb of gs.ragingRingBullets) {
+    rb.angle += ORBIT_SPEED;
+    rb.x = ppos.x + Math.cos(rb.angle) * ORBIT_RADIUS;
+    rb.y = ppos.y + Math.sin(rb.angle) * ORBIT_RADIUS;
+  }
+
+  // Check orbiting bullet collisions with enemies
+  const toRemove = new Set();
+  for (let ri = 0; ri < gs.ragingRingBullets.length; ri++) {
+    const rb = gs.ragingRingBullets[ri];
+    for (const eid of ECS.query('enemy', 'pos', 'hp')) {
+      const eai = ECS.get(eid, 'ai');
+      if (eai && eai.phased) continue;
+      const epos = ECS.get(eid, 'pos'), ehp = ECS.get(eid, 'hp');
+      if (Math.hypot(rb.x - epos.x, rb.y - epos.y) < 30) {
+        if (rb.isDud) { toRemove.add(ri); break; }
+        ehp.hp -= rb.damageMult; ehp.hitFlash = 12;
+        spawnParticles(epos.x, epos.y, '#aaaaff', 6);
+        toRemove.add(ri);
+        if (ehp.hp <= 0) {
+          spawnParticles(epos.x, epos.y, '#ff2222', 18);
+          ECS.destroyEntity(eid);
+          gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+          tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+          updateHUD(); checkWave();
+        }
+        break;
+      }
+    }
+  }
+  gs.ragingRingBullets = gs.ragingRingBullets.filter((_, i) => !toRemove.has(i));
 }
 
 // ── Helper: try to fire a Mirror Maze ricochet from a kill position ──
@@ -584,22 +667,7 @@ if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type
 
 function sysBullets() {
   gs.bullets=gs.bullets.filter(b=>{
-    // Funhouse Distortion: meaningful homing force
-   if (gs.hasFunhouseDistortion) {
-  let nearest = null, nearDist = 999999;
-  for (const eid of ECS.query('enemy', 'pos')) {
-    const ep = ECS.get(eid, 'pos'), d = Math.hypot(ep.x - b.x, ep.y - b.y);
-    if (d < nearDist) { nearDist = d; nearest = ep; }
-  }
-  if (nearest && nearDist < 400) {
-    const dx = nearest.x - b.x, dy = nearest.y - b.y, dist = Math.hypot(dx, dy) || 1;
-    b.vx += (dx / dist) * 0.18;
-    b.vy += (dy / dist) * 0.18;
-    const spd = Math.hypot(b.vx, b.vy);
-    const cap = CFG.BULLET_SPEED * 0.75; // slower = more floaty/readable
-    if (spd > cap) { b.vx = b.vx / spd * cap; b.vy = b.vy / spd * cap; }
-  }
-}
+  
 b.x += b.vx; b.y += b.vy; b.life--;
 if (b.isArcBall) {
   b.vy += b.gravity;
@@ -1129,7 +1197,7 @@ function sysSpawner() {
 function update() {
   sysPlayerMovement(); sysAI(); sysBullets(); sysBulletEnemyCollision();
   sysDashCollision(); sysEnemyPlayerCollision(); sysEnemyBullets();
-  sysFieldItemPickup(); sysPopcorn(); sysMirrorMaze(); sysTimers(); sysSpawner(); 
+  sysFieldItemPickup(); sysPopcorn();  sysRagingRings(); sysMirrorMaze(); sysTimers(); sysSpawner(); 
   tickMeleeWindow(); 
 }
 
@@ -1199,7 +1267,7 @@ function shoot() {
     const a=gunAngle+(Math.random()-.5)*.32;
     let damageMult = baseBulletDamage();
 
-    if (gs.hasFunhouseDistortion) {life: CFG.BULLET_LIFE * 2}
+   
 let isDud = false;
 if (gs.hasQuadCake)        { if (Math.random() < 0.50) isDud = true; }
 else if (gs.hasTripleCake) { if (Math.random() < 0.45) isDud = true; }
