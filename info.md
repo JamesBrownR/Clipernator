@@ -25,6 +25,7 @@
 - General item pool needs at least 5 more items
 - Clownish and Popcorn Bucket upgrades are placeholders until base items feel good
 - Stage expansion after boss 1 death causes a brief bullet pause that should be seamless
+- glowsticks cant reflect raging ring bullets toward cursor as explosive shots. 
 
 ## Item Pools
 
@@ -43,7 +44,7 @@
 ### Floor 2 Items (FLOOR2_ITEM_IDS)
 - **Mirror Maze** 🪞 — one shard orbits player; shoot the shard to redirect bullets toward nearest enemy or shard; kills spawn new shards. Permanent
 - **Popcorn Bucket** 🍿 — enemies drop kernels on death; collect 5 for a 4-second bullet explosion frenzy. Permanent
-- **Raging Rings** 💫 — player bullets that touch the player begin orbiting at 3x damage, max 8 rings; glowstick can fling them toward cursor as explosive shots. Permanent
+- **Raging Rings** 💫 — player bullets that touch the player begin orbiting at 3x damage, max 16 rings; Permanent
 - **Knocking Pins** 🎳 — temporarily auto-charges player toward nearest enemy; player becomes the bowling ball. Temporary, field pickup
 - **Tightrope Boots** 👢 — +100% move speed, dashing makes player intangible. Permanent
 - **Clownish** 🔵 — a nose grows over time; when fully grown and near an enemy it honks, emitting two expanding sound waves that confuse all enemies they pass through. Permanent
