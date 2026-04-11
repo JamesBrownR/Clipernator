@@ -488,15 +488,35 @@ const ITEM_DEFS = {
   }
 },
 
-  knockingPins: {
-    id: 'knockingPins', label: 'KNOCKING\nPINS', icon: '🎳',
-    desc: 'CLIPPY BOWLS FROM\nENEMY TO ENEMY',
-    color: '#ffffff', shadowColor: '#aaaaaa', spawnCooldown: 14000,
+ bowlingBall: {
+    id: 'bowlingBall', label: 'BOWLING\nBALL', icon: '🎳',
+    desc: 'NEXT SHOT:\nA GIANT BOWLING BALL\nPIERCES + BOUNCES\nEXPLODES ON EXPIRY\nHITS MIRROR SHARDS',
+    color: '#aaaaaa', shadowColor: '#888888', spawnCooldown: 14000,
     effect(gs) {
-      gs.knockingPinsActive = true;
-      gs.knockingPinsTimer = 300;
-      showMsg('KNOCKING PINS! YOU ARE THE BALL!');
+      gs.bowlingBallReady = true;
+      showMsg('BOWLING BALL READY! NEXT SHOT IS A STRIKE!');
     },
+    draw(fi) {
+      const {x,y,phase}=fi, t=Date.now()/300, bob=Math.sin(t+phase)*5, spin=t*1.2;
+      ctx.save(); ctx.translate(x,y+bob);
+      ctx.shadowColor='#aaaaaa'; ctx.shadowBlur=18;
+      ctx.fillStyle='#333344';
+      ctx.beginPath(); ctx.arc(0,-6,18,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#222233';
+      ctx.beginPath(); ctx.arc(0,-6,18,0,Math.PI*2); ctx.fill();
+      // Shine
+      ctx.fillStyle='#666677';
+      ctx.beginPath(); ctx.arc(-6,-12,5,0,Math.PI*2); ctx.fill();
+      // Finger holes
+      ctx.fillStyle='#111122';
+      for(let i=0;i<3;i++){
+        const a=spin+i*2.09;
+        ctx.beginPath(); ctx.arc(Math.cos(a)*7,Math.sin(a)*7-6,3,0,Math.PI*2); ctx.fill();
+      }
+      ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+      ctx.fillText('BOWLING',0,20); ctx.fillText('BALL',0,30); ctx.restore();
+    }
+  },
     draw(fi) {
       const {x,y,phase}=fi, t=Date.now()/300, bob=Math.sin(t+phase)*5, spin=t*1.2;
       ctx.save(); ctx.translate(x,y+bob);
