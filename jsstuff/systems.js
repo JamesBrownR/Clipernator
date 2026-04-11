@@ -112,145 +112,123 @@ function unlockGlowsticks() {
 
 function swingGlowsticks() {
   if (!gs.hasGlowsticks || gs.glowCooldown > 0) return;
-  gs.glowCooldown = CFG.GLOW_COOLDOWN;
+
+  // Activate the melee window — cooldown only applied on miss
   meleeSwingTimer = CFG.MELEE_SWING_FRAMES;
-  const ppos = ECS.get(gs.playerId,'pos');
-  const meleeDmg = baseBulletDamage()*3;
+  gs.meleeActiveTimer = CFG.MELEE_ACTIVE_FRAMES;
+  gs.meleeDidReflect = false;
+}
 
-let didReflect = false;
-  for (let i = gs.enemyBullets.length-1; i >= 0; i--) {
+function tickMeleeWindow() {
+  if (!gs.meleeActiveTimer || gs.meleeActiveTimer <= 0) return;
+  gs.meleeActiveTimer--;
+
+  const ppos = ECS.get(gs.playerId, 'pos');
+  const meleeDmg = baseBulletDamage() * 3;
+
+  // Box check: bullet must be within MELEE_RANGE AND in front of player (dot > 0.3)
+  let didReflect = false;
+  for (let i = gs.enemyBullets.length - 1; i >= 0; i--) {
     const eb = gs.enemyBullets[i];
-    if (Math.hypot(eb.x-ppos.x, eb.y-ppos.y) < CFG.MELEE_RANGE) {
-      const reflectAngle = Math.atan2(-eb.vy, -eb.vx);
-      const reflectSpeed = Math.max(8, Math.hypot(eb.vx,eb.vy)*2.0);
-     const isArc = eb.isArcBall;
-    
-              // Inherit arc ball properties so it still explodes on impact
-   // ── Arc ball: check for nearby shard first, then normal reflect ──
-if (isArc) {
-  let shardHit = -1;
-  if (gs.hasMirrorMaze && gs.mirrorShards) {
-    const ppos2 = ECS.get(gs.playerId, 'pos');
-    for (let si = 0; si < gs.mirrorShards.length; si++) {
-      const s = gs.mirrorShards[si];
-      if (Math.hypot(ppos2.x - s.x, ppos2.y - s.y) < CFG.MELEE_RANGE + 20) {
-        shardHit = si;
-        break;
-      }
+    const dx = eb.x - ppos.x, dy = eb.y - ppos.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > CFG.MELEE_RANGE) continue;
+    // Must be in front half (dot product with gun facing)
+    const dot = (dx / dist) * Math.cos(gunAngle) + (dy / dist) * Math.sin(gunAngle);
+    if (dot < 0.1) continue;
+
+    // Reflect it
+    const isArc = eb.isArcBall;
+    if (isArc) {
+      const targetX = mouse.x, targetY = mouse.y;
+      const GRAVITY = 0.15;
+      const horizDist = Math.hypot(targetX - eb.x, targetY - eb.y);
+      const HANG_TIME = Math.max(25, Math.min(55, horizDist / 10));
+      gs.bullets.push({
+        x: eb.x, y: eb.y,
+        vx: (targetX - eb.x) / HANG_TIME,
+        vy: -HANG_TIME * GRAVITY * 0.5,
+        vyHoriz: (targetY - eb.y) / HANG_TIME,
+        gravity: GRAVITY,
+        angle: Math.atan2(targetY - eb.y, targetX - eb.x),
+        life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
+        damageMult: baseBulletDamage() * 2,
+        isDud: false, isReflected: true, isExplosive: true,
+        isArcBall: true, isMirrorArc: true,
+        targetX, targetY,
+        startX: eb.x, startY: eb.y,
+        shadowX: eb.x, shadowY: targetY,
+        sizeScale: eb.sizeScale || 1.0,
+      });
+    } else {
+      const reflectAngle = Math.atan2(mouse.y - eb.y, mouse.x - eb.x);
+      const reflectSpeed = Math.max(8, Math.hypot(eb.vx, eb.vy) * 2.0);
+      gs.bullets.push({
+        x: eb.x, y: eb.y,
+        vx: Math.cos(reflectAngle) * reflectSpeed,
+        vy: Math.sin(reflectAngle) * reflectSpeed,
+        angle: reflectAngle,
+        life: CFG.BULLET_LIFE + 20, maxLife: CFG.BULLET_LIFE + 20,
+        damageMult: baseBulletDamage() * 2,
+        isDud: false, isReflected: true, isExplosive: true,
+      });
     }
+    gs.enemyBullets.splice(i, 1);
+    spawnParticles(eb.x, eb.y, '#00ff88', 8);
+    didReflect = true;
   }
 
-  const targetX = mouse.x, targetY = mouse.y;
-  const GRAVITY = 0.15;
-
-  if (shardHit >= 0) {
-    const s = gs.mirrorShards[shardHit];
-    gs.mirrorShards.splice(shardHit, 1);
-    if (s.orbiting) gs.mirrorPlayerShardTimer = 900;
-    spawnParticles(s.x, s.y, '#ff2244', 16);
-    spawnParticles(s.x, s.y, '#ccddff', 10);
-    const redHANG = Math.max(25, Math.min(55, Math.hypot(targetX - eb.x, targetY - eb.y) / 10));
-    gs.bullets.push({
-      x: eb.x, y: eb.y,
-      vx: (targetX - eb.x) / redHANG,
-      vy: -redHANG * GRAVITY * 0.5,
-      vyHoriz: (targetY - eb.y) / redHANG,
-      gravity: GRAVITY,
-      angle: Math.atan2(targetY - eb.y, targetX - eb.x),
-      life: redHANG + 30, maxLife: redHANG + 30,
-      damageMult: baseBulletDamage() * 5,
-      isDud: false, isExplosive: true,
-      isArcBall: true, isMirrorArc: true,
-      targetX, targetY,
-      startX: eb.x, startY: eb.y,
-      shadowX: eb.x, shadowY: targetY,
-      sizeScale: 1.2,
-    });
-  } else {
-    // Normal arc reflect — no shard needed
-    const HANG_TIME = Math.max(55, Math.min(110, Math.hypot(targetX - eb.x, targetY - eb.y) / 5));
-    gs.bullets.push({
-      x: eb.x, y: eb.y,
-      vx: (targetX - eb.x) / HANG_TIME,
-      vy: -HANG_TIME * GRAVITY * 0.5,
-      vyHoriz: (targetY - eb.y) / HANG_TIME,
-      gravity: GRAVITY,
-      angle: Math.atan2(targetY - eb.y, targetX - eb.x),
-      life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
-      damageMult: baseBulletDamage() * 2,
-      isDud: false, isReflected: true, isExplosive: true,
-      isArcBall: true,
-      targetX, targetY,
-      startX: eb.x, startY: eb.y,
-      shadowX: eb.x, shadowY: targetY,
-      sizeScale: eb.sizeScale || 1.0,
-    });
-  }
-
-  gs.enemyBullets.splice(i, 1);
-  spawnParticles(eb.x, eb.y, '#00ff88', 8);
-  didReflect = true;
-
-} else {
-  // Normal (non-arc) bullet reflect
-  const reflectSpeed = Math.max(8, Math.hypot(eb.vx, eb.vy) * 2.0);
-  const reflectAngle = Math.atan2(mouse.y - eb.y, mouse.x - eb.x);
-  gs.bullets.push({
-    x: eb.x, y: eb.y,
-    vx: Math.cos(reflectAngle) * reflectSpeed,
-    vy: Math.sin(reflectAngle) * reflectSpeed,
-    angle: reflectAngle,
-    life: CFG.BULLET_LIFE + 20, maxLife: CFG.BULLET_LIFE + 20,
-    damageMult: baseBulletDamage() * 2,
-    isDud: false, isReflected: true, isExplosive: true,
-  });
-  gs.enemyBullets.splice(i, 1);
-  spawnParticles(eb.x, eb.y, '#00ff88', 8);
-  didReflect = true;
-}
-  }
-  if (didReflect) {
-    gs.glowCooldown = 0;                 // instant cooldown reset on reflect
-    gs.explosionFreezeTimer = (gs.explosionFreezeTimer || 0) + 3; // brief freeze like hitflash
-    gs.shakeX = 6; gs.shakeY = 6;
-  }
-
-  for (const id of ECS.query('enemy','pos','hp','ai')) {
-    const type = ECS.get(id,'enemy').type;
+  // Cannonball redirect (any state, not just CHARGING)
+  for (const id of ECS.query('enemy', 'pos', 'hp', 'ai')) {
+    const type = ECS.get(id, 'enemy').type;
     if (type !== 'cannonball') continue;
-    const epos=ECS.get(id,'pos'), eai=ECS.get(id,'ai'), evel=ECS.get(id,'vel');
-    if (eai.chargeState !== 'CHARGING') continue;
-    if (Math.hypot(epos.x-ppos.x, epos.y-ppos.y) < CFG.MELEE_RANGE+10) {
-      const chargeSpd = Math.hypot(evel.vx,evel.vy);
-      evel.vx = Math.cos(gunAngle)*Math.max(chargeSpd,14);
-      evel.vy = Math.sin(gunAngle)*Math.max(chargeSpd,14);
-      eai.chargeTarget = { x:epos.x+Math.cos(gunAngle)*400, y:epos.y+Math.sin(gunAngle)*400 };
-      eai.reflectedByGlowstick = true;
-      spawnParticles(epos.x,epos.y,'#00ff88',18); spawnParticles(epos.x,epos.y,'#ffffff',8);
-      gs.shakeX=14; gs.shakeY=14;
-      showMsg('CANNONBALL REDIRECTED! IT\'LL EXPLODE ON IMPACT!');
+    const epos = ECS.get(id, 'pos'), eai = ECS.get(id, 'ai'), evel = ECS.get(id, 'vel');
+    if (Math.hypot(epos.x - ppos.x, epos.y - ppos.y) > CFG.MELEE_RANGE + 10) continue;
+    const chargeSpd = Math.max(14, Math.hypot(evel.vx, evel.vy));
+    evel.vx = Math.cos(gunAngle) * chargeSpd;
+    evel.vy = Math.sin(gunAngle) * chargeSpd;
+    eai.chargeTarget = { x: epos.x + Math.cos(gunAngle) * 400, y: epos.y + Math.sin(gunAngle) * 400 };
+    eai.chargeState = 'CHARGING';
+    eai.reflectedByGlowstick = true;
+    spawnParticles(epos.x, epos.y, '#00ff88', 18);
+    gs.shakeX = 14; gs.shakeY = 14;
+    showMsg('CANNONBALL REDIRECTED!');
+    didReflect = true;
+  }
+
+  // Melee damage to enemies in front
+  for (const id of ECS.query('enemy', 'pos', 'hp')) {
+    const eai2 = ECS.get(id, 'ai'), type2 = ECS.get(id, 'enemy').type;
+    if (type2 === 'cannonball' && eai2 && eai2.chargeState === 'CHARGING') continue;
+    const epos = ECS.get(id, 'pos'), ehp = ECS.get(id, 'hp'), evel = ECS.get(id, 'vel');
+    const dx = epos.x - ppos.x, dy = epos.y - ppos.y, dist = Math.hypot(dx, dy);
+    if (dist >= CFG.MELEE_RANGE || dist < 5) continue;
+    const dot = (dx/dist)*Math.cos(gunAngle) + (dy/dist)*Math.sin(gunAngle);
+    if (dot < 0.1) continue;
+    ehp.hp -= meleeDmg; ehp.hitFlash = 12;
+    if (evel) { evel.vx += (dx / dist) * 7; evel.vy += (dy / dist) * 7; }
+    spawnParticles(epos.x, epos.y, '#00ff88', 9);
+    if (ehp.hp <= 0) {
+      spawnParticles(epos.x, epos.y, '#ff2222', 18);
+      ECS.destroyEntity(id);
+      gs.score += Math.round(15 * gs.wave); gs.waveKills++;
+      tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+      updateHUD(); checkWave();
     }
   }
 
-  for (const id of ECS.query('enemy','pos','hp')) {
-    const eai2=ECS.get(id,'ai'), type2=ECS.get(id,'enemy').type;
-    if (type2==='cannonball' && eai2 && eai2.chargeState==='CHARGING') continue;
-    const epos=ECS.get(id,'pos'), ehp=ECS.get(id,'hp'), evel=ECS.get(id,'vel');
-    const dx=epos.x-ppos.x, dy=epos.y-ppos.y, dist=Math.hypot(dx,dy);
-    if (dist < CFG.MELEE_RANGE && dist > 5 && angleDiff(Math.atan2(dy,dx),gunAngle) < CFG.MELEE_CONE_ANGLE) {
-      ehp.hp -= meleeDmg; ehp.hitFlash=12;
-      if (evel) { evel.vx+=(dx/dist)*7; evel.vy+=(dy/dist)*7; }
-      spawnParticles(epos.x,epos.y,'#00ff88',9);
-      if (ehp.hp <= 0) {
-        spawnParticles(epos.x,epos.y,'#ff2222',18);
-        ECS.destroyEntity(id);
-        gs.score+=Math.round(15*gs.wave); gs.waveKills++;
-        tryDropTicket(); gs.health=Math.min(gs.maxHealth,gs.health+CFG.HEALTH_REGEN); updateHUD(); checkWave();
-      }
-    }
+  if (didReflect) {
+    gs.meleeActiveTimer = 0; // end window immediately on reflect
+    gs.glowCooldown = 0;     // no cooldown on success
+    gs.explosionFreezeTimer = (gs.explosionFreezeTimer || 0) + 5;
+    gs.shakeX = 6; gs.shakeY = 6;
+    gs.meleeDidReflect = true;
   }
-  const muzzle=gunMuzzlePos(); spawnParticles(muzzle.x,muzzle.y,'#00ff88',14);
-}
+
+  // On window expiry with no reflect — apply cooldown
+  if (gs.meleeActiveTimer === 0 && !gs.meleeDidReflect) {
+    gs.glowCooldown = CFG.GLOW_COOLDOWN;
+  }
 }
 
 // ── Helper: try to fire a Mirror Maze ricochet from a kill position ──
@@ -1151,7 +1129,8 @@ function sysSpawner() {
 function update() {
   sysPlayerMovement(); sysAI(); sysBullets(); sysBulletEnemyCollision();
   sysDashCollision(); sysEnemyPlayerCollision(); sysEnemyBullets();
-  sysFieldItemPickup(); sysPopcorn(); sysMirrorMaze(); sysTimers(); sysSpawner();
+  sysFieldItemPickup(); sysPopcorn(); sysMirrorMaze(); sysTimers(); sysSpawner(); 
+  tickMeleeWindow(); 
 }
 
 function spawnEnemy() {
