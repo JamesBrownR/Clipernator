@@ -178,6 +178,8 @@ function tickMeleeWindow() {
     gs.enemyBullets.splice(i, 1);
     spawnParticles(eb.x, eb.y, '#00ff88', 8);
     didReflect = true;
+
+  }
     // Reflect orbiting raging ring bullets
 if (gs.hasRagingRings && gs.ragingRingBullets) {
   for (let ri = gs.ragingRingBullets.length - 1; ri >= 0; ri--) {
@@ -199,8 +201,6 @@ if (gs.hasRagingRings && gs.ragingRingBullets) {
     didReflect = true;
   }
 }
-  }
-
   // Cannonball redirect (any state, not just CHARGING)
   for (const id of ECS.query('enemy', 'pos', 'hp', 'ai')) {
     const type = ECS.get(id, 'enemy').type;
@@ -505,10 +505,13 @@ function sysPlayerMovement() {
   // near the top of sysPlayerMovement, after dashing block:
 if (gs.knockingPinsActive) {
   pos.x += vel.vx; pos.y += vel.vy;
-  // wall bounce/clamp still applies
-  return; // skip normal movement processing
+  const bouncy = gs.bouncyHouse;
+  if (pos.x < CFG.WALL_PAD) { pos.x = CFG.WALL_PAD; vel.vx = bouncy ? Math.abs(vel.vx) : 0; }
+  if (pos.x > worldW - CFG.WALL_PAD) { pos.x = worldW - CFG.WALL_PAD; vel.vx = bouncy ? -Math.abs(vel.vx) : 0; }
+  if (pos.y < CFG.WALL_PAD) { pos.y = CFG.WALL_PAD; vel.vy = bouncy ? Math.abs(vel.vy) : 0; }
+  if (pos.y > worldH - CFG.WALL_PAD) { pos.y = worldH - CFG.WALL_PAD; vel.vy = bouncy ? -Math.abs(vel.vy) : 0; }
+  return;
 }
-  
   pos.x+=vel.vx; pos.y+=vel.vy;
   const bouncy=gs.bouncyHouse;
   if (pos.x<CFG.WALL_PAD){pos.x=CFG.WALL_PAD;vel.vx=bouncy?Math.abs(vel.vx):0;}
@@ -721,14 +724,22 @@ function sysBulletEnemyCollision() {
         ehp.hp-=dmg; ehp.hitFlash=12; b.life=0;
         spawnParticles(b.x,b.y,dmg>1?'#ff44ff':'#ff6644',6);
 
-        if (gs.popcornFrenzyTimer>0) {
-          spawnParticles(b.x,b.y,'#ffdd00',12);
-          for (const aoeId of ECS.query('enemy','pos','hp')) {
-            if (aoeId===id) continue;
-            const ap=ECS.get(aoeId,'pos');
-            if (Math.hypot(ap.x-b.x,ap.y-b.y)<55){const ah=ECS.get(aoeId,'hp');ah.hp-=dmg*0.6;ah.hitFlash=8;}
-          }
-        }
+        if (gs.popcornFrenzyTimer > 0) {
+  spawnParticles(b.x, b.y, '#ffdd00', 16);
+  spawnParticles(b.x, b.y, '#ff8800', 8);
+  const frenzyRadius = gs.hasPopcornUpgrade ? 220 : 110;
+  const frenzyDmg    = gs.hasPopcornUpgrade ? dmg * 1.5 : dmg;
+  for (const aoeId of ECS.query('enemy', 'pos', 'hp')) {
+    if (aoeId === id) continue;
+    const ap = ECS.get(aoeId, 'pos');
+    if (Math.hypot(ap.x - b.x, ap.y - b.y) < frenzyRadius) {
+      const ah = ECS.get(aoeId, 'hp');
+      ah.hp -= frenzyDmg;
+      ah.hitFlash = 10;
+      spawnParticles(ap.x, ap.y, '#ffcc00', 5);
+    }
+  }
+}
 
       
 
