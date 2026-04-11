@@ -504,12 +504,15 @@ function sysPlayerMovement() {
 
   // near the top of sysPlayerMovement, after dashing block:
 if (gs.knockingPinsActive) {
+  // Skip all friction/cap logic — velocity is set directly by sysTimers each frame
   pos.x += vel.vx; pos.y += vel.vy;
   const bouncy = gs.bouncyHouse;
   if (pos.x < CFG.WALL_PAD) { pos.x = CFG.WALL_PAD; vel.vx = bouncy ? Math.abs(vel.vx) : 0; }
   if (pos.x > worldW - CFG.WALL_PAD) { pos.x = worldW - CFG.WALL_PAD; vel.vx = bouncy ? -Math.abs(vel.vx) : 0; }
   if (pos.y < CFG.WALL_PAD) { pos.y = CFG.WALL_PAD; vel.vy = bouncy ? Math.abs(vel.vy) : 0; }
   if (pos.y > worldH - CFG.WALL_PAD) { pos.y = worldH - CFG.WALL_PAD; vel.vy = bouncy ? -Math.abs(vel.vy) : 0; }
+  gunX = pos.x; gunY = pos.y; // keep gun synced during pin charge
+  gunAngle = Math.atan2(vel.vy, vel.vx);
   return;
 }
   pos.x+=vel.vx; pos.y+=vel.vy;
@@ -1140,8 +1143,9 @@ function sysTimers() {
       }
 if (nearest) {
         const dx = nearest.x - ppos.x, dy = nearest.y - ppos.y, dist = Math.hypot(dx, dy) || 1;
-        pvel.vx = (dx / dist) * CFG.PLAYER_SPEED * 30;
-        pvel.vy = (dy / dist) * CFG.PLAYER_SPEED * 30;
+        const pinSpeed = 18; // raw pixels/frame — bypasses speed cap in movement system
+        pvel.vx = (dx / dist) * pinSpeed;
+        pvel.vy = (dy / dist) * pinSpeed;
       }    }
   }
 
@@ -1149,10 +1153,11 @@ if (nearest) {
 if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
 
  if (gs.hasClownish) {
-  if (gs.clownNoseHonkTimer > 0) gs.clownNoseHonkTimer--;
-  gs.clownNoseTimer++;
-  gs.clownNoseSize = gs.clownNoseTimer / gs.clownNoseMax;
-
+    if (gs.clownNoseHonkTimer > 0) gs.clownNoseHonkTimer--;
+    if (gs.clownNoseCooldown > 0) { gs.clownNoseCooldown--; }
+    else {
+    gs.clownNoseTimer++;
+    gs.clownNoseSize = gs.clownNoseTimer / gs.clownNoseMax;
   if (gs.clownNoseTimer >= gs.clownNoseMax) {
     // Only blast if there's an enemy within 100px
     const ppos3 = ECS.get(gs.playerId, 'pos');
@@ -1167,10 +1172,12 @@ if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
       setTimeout(() => { gs.clownNoseTimer = 0; gs.clownNoseSize = 0; }, 200);
 
       // Two waves with different speeds — NO stray bullets
-     gs.clownSoundWaves = [
-        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 240, life: 90, maxLife: 90, speed: 1.8, hitEnemies: new Set() },
-        { x: ppos3.x, y: ppos3.y, r: 8, maxR: 240, life: 78, maxLife: 90, speed: 1.1, hitEnemies: new Set() },
+  const waveMaxR = gs.hasClownishUpgrade ? 160 : 110;
+      gs.clownSoundWaves = [
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: waveMaxR, life: 55, maxLife: 55, speed: 2.4, hitEnemies: new Set() },
+        { x: ppos3.x, y: ppos3.y, r: 8, maxR: waveMaxR, life: 44, maxLife: 55, speed: 1.5, hitEnemies: new Set() },
       ];
+      gs.clownNoseCooldown = gs.hasClownishUpgrade ? 180 : 300;
       showMsg(gs.hasClownishUpgrade ? 'MEGA CLOWN BLAST! WAVES CONFUSE ENEMIES!' : 'HONK! WAVES CONFUSE NEARBY ENEMIES!');
     } else {
       // No enemy nearby — hold at full, don't reset, keep honk timer ticking
@@ -1178,7 +1185,7 @@ if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
     }
   }
 }
-
+ }
   // Tick sound wave rings — enemies the wave front passes through get confused
   if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
     const confuseDur = gs.hasClownishUpgrade ? 480 : 300;
