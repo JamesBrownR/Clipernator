@@ -1030,10 +1030,17 @@ function sysPopcorn() {
 }
 
 function sysTimers() {
+  // ── Always run these regardless of transition state ──
+  for (const p of gs.particles){p.x+=p.vx;p.y+=p.vy;p.vx*=0.91;p.vy*=0.91;p.life--;}
+  gs.particles=gs.particles.filter(p=>p.life>0);
+  gs.shakeX*=0.72; gs.shakeY*=0.72;
+  if (muzzleFlash>0) muzzleFlash--;
+  if (gs.glowExplosionTimer>0) gs.glowExplosionTimer--;
+
   // Stage growth — auto-descend when done, no panel
-  if (gs.transitioning&&!gs.transitionDone) {
-    gs.transitionT=Math.min(1,gs.transitionT+1/90);
-    const t=gs.transitionT,ease=t<0.5?2*t*t:-1+(4-2*t)*t;
+  if (gs.transitioning && !gs.transitionDone) {
+    gs.transitionT = Math.min(1, gs.transitionT + 1/90);
+    const t=gs.transitionT, ease=t<0.5?2*t*t:-1+(4-2*t)*t;
     worldW=gs.transitionStartW+(gs.transitionEndW-gs.transitionStartW)*ease;
     worldH=gs.transitionStartH+(gs.transitionEndH-gs.transitionStartH)*ease;
     renderScale=CFG.W/worldW;
@@ -1049,7 +1056,7 @@ function sysTimers() {
       if (hint) hint.textContent=`WASD:MOVE | MOUSE:AIM | CLICK:SHOOT | ${formatKey(KEYBINDS.reload)}:RELOAD | SHIFT:DASH | ${formatKey(KEYBINDS.prizeWheel)}:PRIZE WHEEL (3 TICKETS)`;
       updateHUD();
     }
-    return;
+    return;  // skip spawner/timers during transition — but particles already updated above
   }
 
   if (gs.partyFreezeTimer>0) gs.partyFreezeTimer--;
