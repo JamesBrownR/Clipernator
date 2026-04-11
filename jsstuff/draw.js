@@ -755,6 +755,20 @@ function draw() {
   // Field items
   for(const fi of gs.fieldItems) ITEM_DEFS[fi.id].draw(fi);
 
+  // Raging ring bullets
+if (gs.hasRagingRings && gs.ragingRingBullets) {
+  for (const rb of gs.ragingRingBullets) {
+    ctx.save();
+    ctx.translate(rb.x, rb.y);
+    ctx.rotate(rb.angle + Math.PI / 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#aaaaff';
+    ctx.shadowBlur = 14;
+    ctx.fillRect(-8, -2.5, 16, 5);
+    ctx.restore();
+  }
+}
+  
   // Mirror shards
 if (gs.hasMirrorMaze && gs.mirrorShards) {
   const t = Date.now() / 400;
