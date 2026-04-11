@@ -134,14 +134,16 @@ let didReflect = false;
   // Check if any mirror shard is near the reflect point — only for arc balls
 let shardHit = -1;
 if (isArc && gs.hasMirrorMaze && gs.mirrorShards) {
+  const ppos2 = ECS.get(gs.playerId, 'pos');
   for (let si = 0; si < gs.mirrorShards.length; si++) {
-      const s = gs.mirrorShards[si];
-      if (Math.hypot(eb.x - s.x, eb.y - s.y) < 80) { // generous radius since it's intentional
-        shardHit = si;
-        break;
-      }
+    const s = gs.mirrorShards[si];
+    // Check if shard is near the player (within melee range), not near the arc ball
+    if (Math.hypot(ppos2.x - s.x, ppos2.y - s.y) < CFG.MELEE_RANGE + 20) {
+      shardHit = si;
+      break;
     }
   }
+}
 
   if (shardHit >= 0) {
     const s = gs.mirrorShards[shardHit];
@@ -322,7 +324,8 @@ function sysMirrorMaze() {
       }
     }
 
-    // Consume the shard
+// Only consume shard if we have somewhere to redirect
+    if (targetX === null) continue;
     shardsToRemove.add(si);
     if (s.orbiting) gs.mirrorPlayerShardTimer = REGEN_FRAMES;
     spawnParticles(s.x, s.y, '#ccddff', 12);
