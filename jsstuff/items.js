@@ -517,18 +517,7 @@ const ITEM_DEFS = {
       ctx.fillText('BOWLING',0,20); ctx.fillText('BALL',0,30); ctx.restore();
     }
   },
-    draw(fi) {
-      const {x,y,phase}=fi, t=Date.now()/300, bob=Math.sin(t+phase)*5, spin=t*1.2;
-      ctx.save(); ctx.translate(x,y+bob);
-      ctx.shadowColor='#aaaaff'; ctx.shadowBlur=18;
-      ctx.fillStyle='#ddddff';
-      ctx.beginPath(); ctx.arc(0,-6,16,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#3333aa';
-      for(let i=0;i<3;i++){const a=spin+i*2.09; ctx.beginPath(); ctx.arc(Math.cos(a)*7,Math.sin(a)*7-6,3,0,Math.PI*2); ctx.fill();}
-      ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
-      ctx.fillText('KNOCKING',0,18); ctx.fillText('PINS',0,28); ctx.restore();
-    }
-  },
+   
 
   tightropeBoots: {
     id: 'tightropeBoots', label: 'TIGHTROPE\nBOOTS', icon: '👢',
