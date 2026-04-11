@@ -91,7 +91,7 @@ function initGameState() {
    
 
     // Item flags
-    bouncyHouse: false,
+    bouncyHouse: true,
     hasDoubleCake: false, hasTripleCake: false, hasQuadCake: false,
     hasDash: false,
     dashCharges: 0, dashMaxCharges: CFG.DASH_MAX_CHARGES,
