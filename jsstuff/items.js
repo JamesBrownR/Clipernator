@@ -400,7 +400,7 @@ const ITEM_DEFS = {
 
   // ── Upgrade items ──
   popcornUpgrade: {
-    id: 'popcornUpgrade', label: 'MEGA\nPOPCORN\nBUCKET', icon: '🍿⭐',
+    id: 'popcornUpgrade', label: 'POPCORN\nBOWL', icon: '🍿⭐',
     desc: 'COLLECT 3 KERNELS\n(NOT 5) FOR FRENZY\nFRENZY LASTS 6 SECS\nHUGE EXPLOSION RADIUS',
     color: '#ffaa00', shadowColor: '#ff8800', spawnCooldown: 999999999,
     effect(gs) {
@@ -490,7 +490,7 @@ const ITEM_DEFS = {
 
   knockingPins: {
     id: 'knockingPins', label: 'KNOCKING\nPINS', icon: '🎳',
-    desc: 'AUTO-CHARGE\nTO NEAREST ENEMY',
+    desc: 'CLIPPY BOWLS FROM\nENEMY TO ENEMY',
     color: '#ffffff', shadowColor: '#aaaaaa', spawnCooldown: 14000,
     effect(gs) {
       gs.knockingPinsActive = true;
