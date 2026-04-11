@@ -98,7 +98,7 @@ function initGameState() {
     dashCooldownTimer: 0, dashCooldownMax: CFG.DASH_COOLDOWN_FRAMES,
     dashTimer: 0, dashVx: 0, dashVy: 0,
     frozen: false,
-    hasGlowsticks: false,
+    hasGlowsticks: true,
     glowCooldown: 0,
     hasShakeFizzlePop: false,
     sfpMeter: 0, sfpMax: 600, sfpFull: false,
@@ -543,6 +543,8 @@ document.addEventListener('keydown', e => {
   if (e.key === KEYBINDS.reload)     { startReload(); }
   if (e.key === KEYBINDS.prizeWheel) { spinPrizeWheel(); e.preventDefault(); }
   if (e.key === KEYBINDS.dash)       { tryDash(); e.preventDefault(); }
+ // In the keydown handler, after the dash line:
+if (e.key === KEYBINDS.glowstick) { swingGlowsticks(); e.preventDefault(); }
 });
 
 document.addEventListener('keyup', e => { keys[e.key] = false; });
