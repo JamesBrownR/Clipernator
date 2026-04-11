@@ -21,11 +21,9 @@
 - Clownish sound waves travel too far, cooldown should be increased
 - Knocking Pins feels too slow regardless of speed multiplier
 - It seems like when you kill a boss with explosives or melee it doesn't move to the next floor;  killing the boss should move to the next floor regardless of casue of death
-- Popcorn Bucket feels weak / low impact
 - General item pool needs at least 5 more items
-- Clownish and Popcorn Bucket upgrades are placeholders until base items feel good
+- Clownish upgrade is placeholder
 - Stage expansion after boss 1 death causes a brief bullet pause that should be seamless
-- glowsticks cant reflect raging ring bullets toward cursor as explosive shots. 
 
 ## Item Pools
 
