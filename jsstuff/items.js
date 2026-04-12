@@ -493,7 +493,9 @@ const ITEM_DEFS = {
     desc: 'NEXT SHOT:\nA GIANT BOWLING BALL\nPIERCES + BOUNCES\nEXPLODES ON EXPIRY\nHITS MIRROR SHARDS',
     color: '#aaaaaa', shadowColor: '#888888', spawnCooldown: 14000,
     effect(gs) {
+      gs.hasBowlingBall = true;
       gs.bowlingBallReady = true;
+      gs.bowlingBallRegenTimer = 0;
       showMsg('BOWLING BALL READY! NEXT SHOT IS A STRIKE!');
     },
     draw(fi) {
