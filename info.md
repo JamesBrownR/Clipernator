@@ -21,6 +21,7 @@
 
 
 - General item pool needs at least 5 more items
+- Clownish is still a bit iffy, when you confuse enemies they still chase you if there aren't any other enemies, they should do nothing. When you confuse enemies that shoot bullets their bullets are still enemy owned bullets, not player-owned (all confused enemies seem to shoot a few generic blue bullets, but this is nigh uselsss and should be removed). Also, it seems like only masks turn blue when confused.
 - Clownish upgrade is placeholder
 
 
