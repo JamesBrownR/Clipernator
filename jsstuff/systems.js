@@ -461,31 +461,49 @@ function sysMirrorMaze() {
   });
 } // ── Bowling ball hits shard: redirect + spawn second ball toward nearest enemy ──
 if (b.isBowlingBall) {
-  // Find nearest enemy for the bonus ball
+  // Redirect the ball itself toward the target at 2x speed (decays back to base naturally via friction)
+  const BOOSTED_SPEED = 14;
+  bulletsToAdd.push({
+    x: s.x, y: s.y,
+    vx: (dx / dist2) * BOOSTED_SPEED,
+    vy: (dy / dist2) * BOOSTED_SPEED,
+    angle: Math.atan2(dy, dx),
+    life: 220, maxLife: 220,
+    damageMult: (b.damageMult || 1) * 2,
+    isDud: false,
+    isBowlingBall: true,
+    bounces: 0,
+    hitEnemies: new Set(),
+    chainDepth: (b.chainDepth || 0) + 1,
+    _mirrorBoosted: true,
+  });
+  // Also spawn a bonus ball toward nearest enemy
   let nearestEnemyX = null, nearestEnemyY = null, nearestDist = 999999;
   for (const eid of ECS.query('enemy', 'pos')) {
     const epos = ECS.get(eid, 'pos');
     const ed = Math.hypot(epos.x - s.x, epos.y - s.y);
     if (ed < nearestDist) { nearestDist = ed; nearestEnemyX = epos.x; nearestEnemyY = epos.y; }
   }
-  if (nearestEnemyX !== null) {
-    const bdx = nearestEnemyX - s.x, bdy = nearestEnemyY - s.y, bd = Math.hypot(bdx,bdy)||1;
+  if (nearestEnemyX !== null && Math.hypot(nearestEnemyX - targetX, nearestEnemyY - targetY) > 40) {
+    const bdx = nearestEnemyX - s.x, bdy = nearestEnemyY - s.y, bd = Math.hypot(bdx, bdy) || 1;
     bulletsToAdd.push({
       x: s.x, y: s.y,
-      vx: (bdx/bd)*4.5, vy: (bdy/bd)*4.5,
-      angle: Math.atan2(bdy,bdx),
+      vx: (bdx / bd) * 7, vy: (bdy / bd) * 7,
+      angle: Math.atan2(bdy, bdx),
       life: 180, maxLife: 180,
-      damageMult: (b.damageMult||1) * 1.5,
+      damageMult: (b.damageMult || 1) * 1.5,
       isDud: false,
       isBowlingBall: true,
       bounces: 0,
       hitEnemies: new Set(),
-      chainDepth: (b.chainDepth||0)+1,
+      chainDepth: (b.chainDepth || 0) + 1,
     });
-    spawnParticles(s.x, s.y, '#aaaaaa', 12);
     showMsg('SPARE!!!');
+  } else {
+    showMsg('MIRROR STRIKE!!!');
   }
-}  else {
+  spawnParticles(s.x, s.y, '#aaaaaa', 12);
+} else {
   bulletsToAdd.push({
     x: s.x, y: s.y,
     vx: (dx / dist2) * CFG.BULLET_SPEED * 2.5,
@@ -1398,8 +1416,8 @@ function shoot() {
     const dmg = baseBulletDamage() * 8; // always full multiplier, never dud
     gs.bullets.push({
       x: muzzle.x, y: muzzle.y,
-      vx: Math.cos(gunAngle) * 4.5,
-      vy: Math.sin(gunAngle) * 4.5,
+      vx: Math.cos(gunAngle) * 10.0,
+      vy: Math.sin(gunAngle) * 10.0,
       angle: gunAngle,
       life: 220, maxLife: 220,
       damageMult: dmg,
