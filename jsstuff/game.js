@@ -114,6 +114,7 @@ function initGameState() {
     hasPopcornBucket: true, popcornKernels: [], popcornFrenzyTimer: 0,
     _kernelsCollected: 0,
     hasTightropeBoots: false,
+    hasBowlingBall: true,
     bowlingBallReady: true,
     bowlingBallRegenTimer: 0,
     hasClownish: false,
