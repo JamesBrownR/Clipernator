@@ -1713,32 +1713,37 @@ function checkWave() {
   if (gs.waveKills>=gs.waveEnemiesLeft&&ECS.query('enemy').length===0) {
     const completed=gs.wave;
     if (gs.hasFlawlessBaking && gs.flawlessThisWave) {
-  gs.maxAmmo += 2;
-  if (gs.hasExtraClips) gs.maxAmmo = Math.ceil(gs.maxAmmo * 1.25);
-  gs.ammo = Math.min(gs.ammo + 2, gs.maxAmmo);
-  updateHUD();
-  showMsg('FLAWLESS BAKING! +2 MAX AMMO!');
-  spawnPartyParticles(CFG.W/2, CFG.H/2);
-}
-    gs.wave++; gs.spawnInterval=Math.max(55,CFG.SPAWN_INTERVAL_BASE-gs.wave*CFG.WAVE_SPAWN_SPEEDUP);
-    
-if (gs.floor === 2) {
-  const f2wave = gs.wave - 11; // wave 12 = f2wave 1, wave 13 = f2wave 2, etc.
-  gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + f2wave * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
-} else {
-  gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
-}  gs.waveKills=0; gs.flawlessThisWave=true;
+      gs.maxAmmo += 2;
+      if (gs.hasExtraClips) gs.maxAmmo = Math.ceil(gs.maxAmmo * 1.25);
+      gs.ammo = Math.min(gs.ammo + 2, gs.maxAmmo);
+      updateHUD();
+      showMsg('FLAWLESS BAKING! +2 MAX AMMO!');
+      spawnPartyParticles(CFG.W/2, CFG.H/2);
+    }
+    gs.wave++;
+
+    if (gs.floor === 2) {
+      const f2wave = gs.wave - 11;
+      gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + Math.max(1, f2wave) * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
+      gs.spawnInterval = Math.max(75, CFG.SPAWN_INTERVAL_BASE - Math.max(1, f2wave) * CFG.WAVE_SPAWN_SPEEDUP);
+    } else {
+      gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
+      gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
+    }
+
+    gs.waveKills=0; gs.flawlessThisWave=true;
     if (gs.hasCursedCandles&&gs.candlesLit>0) {
       gs.maxAmmo=Math.max(CFG.MAX_AMMO,gs.maxAmmo-gs.candlesLit*2);
       gs.ammo=Math.min(gs.ammo,gs.maxAmmo); gs.candlesLit=0; gs.candleHpTimer=0;
       gs.candleRelightDelay=180; showMsg('CANDLES SNUFFED! THEY WILL RELIGHT...');
     }
     updateHUD();
-    if (gs.wave===CFG.BOSS_WAVE) {
+    if (completed===CFG.BOSS_WAVE) {
       gs.bossActive=true; spawnBoss();
       gs.spawnInterval=Math.max(120,CFG.SPAWN_INTERVAL_BASE*2);
-      showMsg('BOSS INCOMING — WAVE '+gs.wave+'!');
+      showMsg('BOSS INCOMING — WAVE '+completed+'!');
     } else if (gs.wave === CFG.BOSS2_WAVE && gs.floor === 2) {
+      // ... boss2 spawn 
       gs.bossActive = true;
       // spawn boss2
       const ppos = ECS.get(gs.playerId, 'pos');
