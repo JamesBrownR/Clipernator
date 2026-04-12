@@ -1121,14 +1121,25 @@ for(const id of ECS.query('enemy','pos','hp')) {
     else if (type === 'clownCar')  drawClownCar(epos, ehp, ai, frozen);
 else if (type === 'miniClown') drawMiniClown(epos, ehp, ai, frozen);
 
-  // Confused tint for all enemy types (masks handle their own internally)
+ // Confused tint — hue-shift + light cyan wash on the enemy sprite area
   if (ai && ai.confused) {
+    const confuseR = (ENEMY_DEFS[type]?.size || 28) + 2;
+    // Hue shift to cyan
     ctx.save();
-    ctx.globalAlpha = 0.35;
+    ctx.globalCompositeOperation = 'hue';
+    ctx.globalAlpha = 0.9;
     ctx.fillStyle = '#00ffff';
     ctx.beginPath();
-    const confuseR = (ENEMY_DEFS[type]?.size || 28) + 4;
-    ctx.ellipse(epos.x, epos.y, confuseR, confuseR, 0, 0, Math.PI * 2);
+    ctx.ellipse(epos.x, epos.y, confuseR, confuseR * 1.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // Light cyan wash on top for visibility
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle = '#00ffff';
+    ctx.beginPath();
+    ctx.ellipse(epos.x, epos.y, confuseR, confuseR * 1.1, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
