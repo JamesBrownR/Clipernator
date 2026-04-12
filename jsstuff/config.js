@@ -31,7 +31,7 @@ const CFG = {
   WAVE_ENEMIES_FLOOR2_GROWTH: 2, // and scales more gently
 
   
-  BOSS_WAVE: 11,
+  BOSS_WAVE: 10,
   BOSS2_WAVE: 26,
   BOSS_BASE_HP: 240,
   BOSS_SPEED: 1.8,
