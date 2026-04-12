@@ -812,6 +812,10 @@ if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type
       }
       ai2.clownCooldownMult = 1.0;
     }
+    // Reset rider count each tick — BT_MINI_CLOWN re-increments it each frame for attached clowns.
+    // Only reset if this entity is not a miniClown itself (clowns don't have riders).
+    if (ECS.get(id, 'enemy').type !== 'miniClown') ai2.clownRiders = 0;
+    }
     // Reset rider count each tick — BT_MINI_CLOWN re-increments it each frame for attached clowns
     ai2.clownRiders = 0;
       if (ai2.ringmasterBuffed) {
