@@ -198,16 +198,7 @@ function drawMask(epos, ehp, ai, frozen) {
     ctx.restore();
   }
 
-  // Confused tint
-  if (ai.confused) {
-    ctx.save();
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = '#00ffff';
-    ctx.beginPath();
-    ctx.ellipse(x, y, 24, 24, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
+  
 
   // Health bar
   const bw = 50;
@@ -1129,7 +1120,18 @@ for(const id of ECS.query('enemy','pos','hp')) {
   else if (type==='juggler')     drawJuggler(epos, ehp, ai, frozen);
     else if (type === 'clownCar')  drawClownCar(epos, ehp, ai, frozen);
 else if (type === 'miniClown') drawMiniClown(epos, ehp, ai, frozen);
- 
+
+  // Confused tint for all enemy types (masks handle their own internally)
+  if (ai && ai.confused) {
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#00ffff';
+    ctx.beginPath();
+    const confuseR = (ENEMY_DEFS[type]?.size || 28) + 4;
+    ctx.ellipse(epos.x, epos.y, confuseR, confuseR, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   // Red critical mass overlay
   // Critical mass: pulsing red OUTLINE only, not a filled overlay
