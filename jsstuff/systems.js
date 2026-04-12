@@ -748,8 +748,13 @@ function sysAI() {
     const bt=ENEMY_BTS[type]; if (bt) bt.tick(id,gs);
     // Skip position update for player-driven car (sysTimers handles it)
 if (type === 'clownCar' && gs.drivingCar === id) continue;
-    if (!ECS.has(id,'pos')||!ECS.has(id,'vel')) continue;
+   if (!ECS.has(id,'pos')||!ECS.has(id,'vel')) continue;
     const pos=ECS.get(id,'pos'),vel=ECS.get(id,'vel');
+    // Attached clowns update their own position inside BT_MINI_CLOWN — skip the sysAI position update
+    if (type === 'miniClown' && ai2 && ai2.clownState === 'ATTACHED') {
+      const hp2 = ECS.get(id,'hp'); if (hp2 && hp2.hitFlash > 0) hp2.hitFlash--;
+      continue;
+    }
 
 if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type==='cannonball') {
       const hitWall=pos.x<30||pos.x>worldW-30||pos.y<30||pos.y>worldH-30;
