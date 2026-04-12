@@ -680,6 +680,42 @@ if (gs.knockingPinsActive) {
   }
 }
 
+function sysConfusedEnemyCollision() {
+  const confusedIds = ECS.query('enemy', 'pos', 'hp', 'ai').filter(id => {
+    const ai = ECS.get(id, 'ai');
+    return ai && ai.confused;
+  });
+  if (confusedIds.length < 2) return;
+
+  const toKill = [];
+  for (let i = 0; i < confusedIds.length; i++) {
+    for (let j = i + 1; j < confusedIds.length; j++) {
+      const idA = confusedIds[i], idB = confusedIds[j];
+      if (!ECS.has(idA, 'pos') || !ECS.has(idB, 'pos')) continue;
+      const posA = ECS.get(idA, 'pos'), posB = ECS.get(idB, 'pos');
+      if (Math.hypot(posA.x - posB.x, posA.y - posB.y) < 28) {
+        const hpA = ECS.get(idA, 'hp'), hpB = ECS.get(idB, 'hp');
+        hpA.hp -= 8; hpA.hitFlash = 10;
+        hpB.hp -= 8; hpB.hitFlash = 10;
+        spawnParticles((posA.x+posB.x)/2, (posA.y+posB.y)/2, '#4488ff', 8);
+        if (hpA.hp <= 0) toKill.push({ id: idA, x: posA.x, y: posA.y });
+        if (hpB.hp <= 0) toKill.push({ id: idB, x: posB.x, y: posB.y });
+      }
+    }
+  }
+  for (const { id, x, y } of toKill) {
+    if (!ECS.has(id, 'pos')) continue;
+    spawnParticles(x, y, '#ff2222', 14);
+    ECS.destroyEntity(id);
+    gs.score += Math.round(10 * gs.wave);
+    gs.waveKills++;
+    tryDropTicket();
+    gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+    updateHUD();
+  }
+  if (toKill.length > 0) setTimeout(() => checkWave(), 0);
+}
+     
 function sysAI() {
   gs.frozen=gs.partyFreezeTimer>0;
 
@@ -727,9 +763,16 @@ function sysAI() {
    const type=ECS.get(id,'enemy').type;
 const bt=ENEMY_BTS[type];
 if (bt) {
-  if (ai2 && ai2.confused) {
-    const prevCount = gs.enemyBullets.length;
-    bt.tick(id, gs);
+if (ai2 && ai2.confused) {
+        const prevCount = gs.enemyBullets.length;
+        // Only tick BT to capture any bullets it would fire (we'll redirect them)
+        // but first zero velocity so BT movement doesn't override confused movement
+        const velRef = ECS.get(id, 'vel');
+        const savedVx = velRef ? velRef.vx : 0;
+        const savedVy = velRef ? velRef.vy : 0;
+        bt.tick(id, gs);
+        // Restore vel — confused movement block below will set it properly
+        if (velRef) { velRef.vx = savedVx; velRef.vy = savedVy; }
     if (gs.enemyBullets.length > prevCount) {
       const cpos = ECS.get(id, 'pos');
       let nearestPos = null, nearestDist = 999999;
@@ -1518,7 +1561,7 @@ function sysSpawner() {
 
 function update() {
   sysPlayerMovement(); sysAI(); sysBullets(); sysBulletEnemyCollision();
-  sysDashCollision(); sysEnemyPlayerCollision(); sysEnemyBullets();
+  sysDashCollision(); sysEnemyPlayerCollision(); sysConfusedEnemyCollision();  sysEnemyBullets();
   sysFieldItemPickup(); sysPopcorn();  sysRagingRings(); sysMirrorMaze(); 
   sysOobCleanup(); sysTimers(); sysSpawner(); 
   tickMeleeWindow(); 
