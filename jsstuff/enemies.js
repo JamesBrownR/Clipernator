@@ -1373,11 +1373,7 @@ const BT_MINI_CLOWN = new BTSelector(
     const spd = Math.hypot(vel.vx, vel.vy);
     if (spd > phy.speed) { vel.vx = vel.vx / spd * phy.speed; vel.vy = vel.vy / spd * phy.speed; }
 
-    // Position update (only when not attached — attached clowns update pos themselves above)
-    pos.x += vel.vx;
-    pos.y += vel.vy;
-    pos.x = Math.max(CFG.WALL_PAD, Math.min(worldW - CFG.WALL_PAD, pos.x));
-    pos.y = Math.max(CFG.WALL_PAD, Math.min(worldH - CFG.WALL_PAD, pos.y));
+
 
     return BT.RUNNING;
   })
