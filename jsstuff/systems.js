@@ -825,7 +825,7 @@ if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type
         if (ai2.ringmasterBuffTimer<=0){ai2.ringmasterBuffed=false;phy2.speed=phy2._baseSpeed;}
       } else if (phy2._baseSpeed) { phy2.speed=phy2._baseSpeed; }
     }
-  }
+  
 
   // Paper Cuts
   if (gs.hasPaperCuts) {
