@@ -26,6 +26,11 @@ const CFG = {
   WAVE_ENEMIES_BASE: 6,
   WAVE_ENEMIES_GROWTH: 3,
   WAVE_SPAWN_SPEEDUP: 13,
+
+   WAVE_ENEMIES_FLOOR2_BASE: 5,   // floor 2 starts lighter
+  WAVE_ENEMIES_FLOOR2_GROWTH: 2, // and scales more gently
+
+  
   BOSS_WAVE: 11,
   BOSS2_WAVE: 26,
   BOSS_BASE_HP: 240,
