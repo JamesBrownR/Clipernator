@@ -22,8 +22,7 @@
 - the boss floor one spawns on wave 11 instead of at the end of wave ten like its supposed too. this makes wave 11 considerend a floor one level, and it takes a whole bunch on enemies to move on from it. you are suppsoed to go to wave 11 after you kill the boss. also floor 2 waves seem to carry the same spawn cooldown from wave 11, the enemies spawn really fast on wave 12 and more. it also takes too many enemy deaths to move on to the next wave in early floor two waves.
 - floor 2 boss doesnt work at all
 - General item pool needs at least 5 more items
-- Clownish is still a bit iffy, when you confuse enemies they still chase you if there aren't any other enemies, they should do nothing. When you confuse enemies that shoot bullets their bullets are still enemy owned bullets, not player-owned (all confused enemies seem to shoot a few generic blue bullets, but this is nigh uselsss and should be removed). Also, it seems like only masks turn blue when confused.
-- game constantly says "CAR EXPLODING SOON" on bottom.
+- Clownish is still a bit iffy, when you confuse enemies they still chase you if there aren't any other enemies, they should do nothing. When you confuse enemies that shoot bullets their bullets are still enemy owned bullets, not player-owned. Confused enemies dont do contact damage to other confused enemies, they should
 - Clownish upgrade is placeholder
 
 
