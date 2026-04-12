@@ -523,9 +523,9 @@ const ITEM_DEFS = {
 
   tightropeBoots: {
     id: 'tightropeBoots', label: 'TIGHTROPE\nBOOTS', icon: '👢',
-    desc: '+100% MOVE SPEED\nDASH = INTANGIBLE',
+    desc: '+200% MOVE SPEED\nDASH = INTANGIBLE',
     color: '#00ccff', shadowColor: '#0088aa', spawnCooldown: 999999999,
-    effect(gs) { gs.hasTightropeBoots = true; showMsg('TIGHTROPE BOOTS! +SPEED, DASH = INTANGIBLE!'); },
+    effect(gs) { gs.hasTightropeBoots = true; showMsg('TIGHTROPE BOOTS! +SPEED'); },
     draw(fi) {
       const {x,y,phase}=fi, t=Date.now()/280, bob=Math.sin(t+phase)*5;
       ctx.save(); ctx.translate(x,y+bob);
