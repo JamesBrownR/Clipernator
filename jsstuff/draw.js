@@ -695,7 +695,14 @@ function drawMiniClown(epos, ehp, ai, frozen) {
   ctx.fillRect(-8, 10, 6, 4);
   ctx.fillRect( 2, 10, 6, 4);
 
+  // HP bar (always show — clown can be shot off host)
+  ctx.fillStyle = '#330000';
+  ctx.fillRect(x - 10, y - 20, 20, 3);
+  ctx.fillStyle = '#ff4400';
+  ctx.fillRect(x - 10, y - 20, 20 * (ehp.hp / ehp.maxHp), 3);
+
   ctx.restore();
+}
 }
 
 // ============================================================
