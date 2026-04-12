@@ -178,8 +178,8 @@ function drawMask(epos, ehp, ai, frozen) {
  
 
  const baseAlpha = frozen ? 0.7 : 1;
-  const orient = ai.maskOrient || 0;
-  const orientAngle = orient * (Math.PI / 2);
+  const orientAngle = (typeof ai.maskOrient === 'number') ? ai.maskOrient : 0;
+
 
   ctx.save();
   ctx.translate(x, y);
