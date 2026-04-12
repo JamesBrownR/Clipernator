@@ -265,12 +265,19 @@ ai.orientAngle += angleDelta * 0.02;
         ai.cryBurstTimer = 0;
         vel.vx *= 0.3; vel.vy *= 0.3;
       }
-    } else {
-      // flee from player while crying
-      vel.vx = (vel.vx||0)*0.88 - (dx/dist)*phy.speed*0.18;
-      vel.vy = (vel.vy||0)*0.88 - (dy/dist)*phy.speed*0.18;
+   } else {
+      // flee from player while crying — cap flee speed same as chase
+      const fleeDx = -(dx / dist), fleeDy = -(dy / dist);
+      vel.vx = (vel.vx || 0) * 0.88 + fleeDx * phy.speed * 0.18;
+      vel.vy = (vel.vy || 0) * 0.88 + fleeDy * phy.speed * 0.18;
       const fspd = Math.hypot(vel.vx, vel.vy);
-      if (fspd > phy.speed) { vel.vx = vel.vx/fspd*phy.speed; vel.vy = vel.vy/fspd*phy.speed; }
+      if (fspd > phy.speed) { vel.vx = vel.vx / fspd * phy.speed; vel.vy = vel.vy / fspd * phy.speed; }
+      // Soft wall repulsion — push back toward arena center before clamping
+      const margin = 40;
+      if (pos.x < margin)          vel.vx += (margin - pos.x)        * 0.15;
+      if (pos.x > worldW - margin) vel.vx -= (pos.x - (worldW - margin)) * 0.15;
+      if (pos.y < margin)          vel.vy += (margin - pos.y)        * 0.15;
+      if (pos.y > worldH - margin) vel.vy -= (pos.y - (worldH - margin)) * 0.15;
       ai.cryBurstTimer = (ai.cryBurstTimer||0) - 1;
       if (ai.cryBurstTimer <= 0 && ai.cryBurst > 0) {
         ai.cryBurst--;
