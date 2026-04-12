@@ -252,12 +252,14 @@ if (gs.hasRagingRings && gs.ragingRingBullets) {
     if (evel) { evel.vx += (dx / dist) * 7; evel.vy += (dy / dist) * 7; }
     spawnParticles(epos.x, epos.y, '#00ff88', 9);
     if (ehp.hp <= 0) {
-      spawnParticles(epos.x, epos.y, '#ff2222', 18);
-      ECS.destroyEntity(id);
-      gs.score += Math.round(15 * gs.wave); gs.waveKills++;
-      tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-      updateHUD(); checkWave();
-    }
+        const type2 = ECS.get(id, 'enemy')?.type;
+        if (type2 === 'cakeBoss' || type2 === 'boss2') handleBossDeath(id);
+        spawnParticles(epos.x, epos.y, '#ff2222', 18);
+        ECS.destroyEntity(id);
+        gs.score += Math.round(15 * gs.wave); gs.waveKills++;
+        tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+        updateHUD(); checkWave();
+      }
   }
 
   if (didReflect) {
@@ -1337,6 +1339,24 @@ if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
   }
 }
 
+function sysOobCleanup() {
+  for (const id of ECS.query('enemy', 'pos', 'ai')) {
+    const pos = ECS.get(id, 'pos');
+    const ai  = ECS.get(id, 'ai');
+    const oob = pos.x < -60 || pos.x > worldW + 60 || pos.y < -60 || pos.y > worldH + 60;
+    if (oob) {
+      ai._oobTimer = (ai._oobTimer || 0) + 1;
+      if (ai._oobTimer >= 300) { // 5 seconds at 60fps
+        ECS.destroyEntity(id);
+        gs.waveKills++;
+        checkWave();
+      }
+    } else {
+      ai._oobTimer = 0;
+    }
+  }
+}
+
 function sysSpawner() {
   gs.spawnTimer++;
   if (gs.spawnTimer>=gs.spawnInterval){gs.spawnTimer=0;spawnEnemy();}
@@ -1345,7 +1365,8 @@ function sysSpawner() {
 function update() {
   sysPlayerMovement(); sysAI(); sysBullets(); sysBulletEnemyCollision();
   sysDashCollision(); sysEnemyPlayerCollision(); sysEnemyBullets();
-  sysFieldItemPickup(); sysPopcorn();  sysRagingRings(); sysMirrorMaze(); sysTimers(); sysSpawner(); 
+  sysFieldItemPickup(); sysPopcorn();  sysRagingRings(); sysMirrorMaze(); 
+  sysOobCleanup(); sysTimers(); sysSpawner(); 
   tickMeleeWindow(); 
 }
 
@@ -1556,10 +1577,10 @@ function offerItemChoice() {
   const choiceEl=document.getElementById('item-choice'),cardsEl=document.getElementById('item-cards');
   cardsEl.innerHTML='';
   const floorPool=gs.floor===2?FLOOR2_ITEM_IDS:ALL_ITEM_IDS;
-  let floorAvailable=floorPool.filter(id=>{
-    if(id==='tripleCake'&&!gs.hasDoubleCake)return false;
-    if(id==='quadCake'&&!gs.hasTripleCake)return false;
-    if(id==='knockingPins')return true;
+let floorAvailable=floorPool.filter(id=>{
+    if(id==='doubledCake'&&(gs.hasTripleCake||gs.hasQuadCake))return false;
+    if(id==='tripleCake'&&(!gs.hasDoubleCake||(gs.hasTripleCake||gs.hasQuadCake)))return false;
+    if(id==='quadCake'&&(!gs.hasTripleCake||gs.hasQuadCake))return false;
     return !gs.unlockedItems.includes(id);
   });
   const upgradePool=[];
