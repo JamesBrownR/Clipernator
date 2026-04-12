@@ -468,37 +468,15 @@ function startGame() {
 }
 
 function tryPickUpGiftBox() {
-  const ppos = ECS.get(gs.playerId, 'pos');
-
-  // If already driving a car, do nothing (car explodes via timer)
-  if (gs.drivingCar !== null) return;
-
-  // If holding a gift box, throw it
   if (gs.heldGiftBox !== null) {
     throwGiftBox();
     return;
   }
-
-  // Check for nearby clown car first
-  for (const id of ECS.query('enemy', 'pos', 'ai')) {
-    const type = ECS.get(id, 'enemy').type;
-    if (type !== 'clownCar') continue;
-    const epos = ECS.get(id, 'pos');
-    if (Math.hypot(epos.x - ppos.x, epos.y - ppos.y) < 64) {
-      gs.drivingCar = id;
-      gs.drivingCarTimer = CFG.CLOWN_CAR_TAKEOVER_FRAMES;
-      const ai = ECS.get(id, 'ai');
-      ai.takenOver = true;
-      showMsg('TOOTING HONKING DRIVING TIME! WASD TO STEER!');
-      return;
-    }
-  }
-
-  // Otherwise check for gift box
   for (const id of ECS.query('enemy', 'pos', 'ai')) {
     const type = ECS.get(id, 'enemy').type;
     if (type !== 'giftBox') continue;
     const epos = ECS.get(id, 'pos');
+    const ppos = ECS.get(gs.playerId, 'pos');
     if (Math.hypot(epos.x - ppos.x, epos.y - ppos.y) < 48) {
       gs.heldGiftBox = id;
       ECS.get(id, 'ai').heldByPlayer = true;
