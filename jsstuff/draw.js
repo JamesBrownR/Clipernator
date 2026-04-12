@@ -702,7 +702,7 @@ function drawMiniClown(epos, ehp, ai, frozen) {
   ctx.fillRect(x - 10, y - 20, 20 * (ehp.hp / ehp.maxHp), 3);
 
   ctx.restore();
-}
+
 }
 
 // ============================================================
