@@ -1722,11 +1722,12 @@ function checkWave() {
 }
     gs.wave++; gs.spawnInterval=Math.max(55,CFG.SPAWN_INTERVAL_BASE-gs.wave*CFG.WAVE_SPAWN_SPEEDUP);
     
- if (gs.floor === 2) {
-      gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + gs.wave * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
-    } else {
-      gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
-    }    gs.waveKills=0; gs.flawlessThisWave=true;
+if (gs.floor === 2) {
+  const f2wave = gs.wave - 11; // wave 12 = f2wave 1, wave 13 = f2wave 2, etc.
+  gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + f2wave * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
+} else {
+  gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
+}  gs.waveKills=0; gs.flawlessThisWave=true;
     if (gs.hasCursedCandles&&gs.candlesLit>0) {
       gs.maxAmmo=Math.max(CFG.MAX_AMMO,gs.maxAmmo-gs.candlesLit*2);
       gs.ammo=Math.min(gs.ammo,gs.maxAmmo); gs.candlesLit=0; gs.candleHpTimer=0;
