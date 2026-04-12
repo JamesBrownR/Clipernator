@@ -906,7 +906,8 @@ function sysBulletEnemyCollision() {
                 spawnParticles(epos.x, epos.y, '#ccddff', 10);
               }
 
-              if (type === 'clownCar') {
+             const bbType = ECS.get(id, 'enemy')?.type;
+if (bbType === 'clownCar') {
   _clownCarExplode(id, epos, gs, false);
   b.life = 0;
   break;
