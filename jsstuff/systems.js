@@ -596,8 +596,6 @@ function _clownCarExplode(id, pos, gs, playerDriving) {
 
 function sysPlayerMovement() {
 
-  // Skip normal movement while driving car (handled in sysTimers)
-if (gs.drivingCar !== null) return;
 
   if (gs.forkGrabbed) {
     let anyGrabbing = false;
@@ -1381,91 +1379,7 @@ if (nearest) {
   // Clownish: nose grows, blasts bullets + spawns waves; WAVES confuse enemies on contact
 if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
 
-  // Clown car takeover timer
-if (gs.drivingCar !== null) {
-  if (!ECS.has(gs.drivingCar, 'pos')) {
-    // Car already gone somehow
-    gs.drivingCar = null;
-    gs.drivingCarTimer = 0;
-  } else {
-    gs.drivingCarTimer--;
 
-    // Drive car with WASD
-    const carPos = ECS.get(gs.drivingCar, 'pos');
-    const carVel = ECS.get(gs.drivingCar, 'vel');
-    const carAi  = ECS.get(gs.drivingCar, 'ai');
-    const CAR_DRIVE_SPEED = CFG.CLOWN_CAR_SPEED * 1.6;
-
-    let ix = 0, iy = 0;
-    if (keys[KEYBINDS.moveLeft]  || keys['ArrowLeft'])  ix--;
-    if (keys[KEYBINDS.moveRight] || keys['ArrowRight']) ix++;
-    if (keys[KEYBINDS.moveUp]    || keys['ArrowUp'])    iy--;
-    if (keys[KEYBINDS.moveDown]  || keys['ArrowDown'])  iy++;
-    if (ix && iy) { ix *= 0.707; iy *= 0.707; }
-
-    if (ix || iy) {
-      carVel.vx = (carVel.vx || 0) * 0.88 + ix * CAR_DRIVE_SPEED * 0.28;
-      carVel.vy = (carVel.vy || 0) * 0.88 + iy * CAR_DRIVE_SPEED * 0.28;
-      carAi.carAngle = Math.atan2(carVel.vy, carVel.vx);
-    } else {
-      carVel.vx *= 0.85;
-      carVel.vy *= 0.85;
-    }
-    const cspd = Math.hypot(carVel.vx, carVel.vy);
-    if (cspd > CAR_DRIVE_SPEED) {
-      carVel.vx = carVel.vx / cspd * CAR_DRIVE_SPEED;
-      carVel.vy = carVel.vy / cspd * CAR_DRIVE_SPEED;
-    }
-
-    // Move the car
-    carPos.x += carVel.vx;
-    carPos.y += carVel.vy;
-
-    // Wall bounce (still bounces but doesn't count toward explode limit)
-    if (carPos.x < 22)          { carPos.x = 22;          carVel.vx =  Math.abs(carVel.vx); carAi.carAngle = Math.atan2(carVel.vy, carVel.vx); }
-    if (carPos.x > worldW - 22) { carPos.x = worldW - 22; carVel.vx = -Math.abs(carVel.vx); carAi.carAngle = Math.atan2(carVel.vy, carVel.vx); }
-    if (carPos.y < 22)          { carPos.y = 22;           carVel.vy =  Math.abs(carVel.vy); carAi.carAngle = Math.atan2(carVel.vy, carVel.vx); }
-    if (carPos.y > worldH - 22) { carPos.y = worldH - 22;  carVel.vy = -Math.abs(carVel.vy); carAi.carAngle = Math.atan2(carVel.vy, carVel.vx); }
-
-    // Move player to sit on top of car
-    const ppos2 = ECS.get(gs.playerId, 'pos');
-    ppos2.x = carPos.x;
-    ppos2.y = carPos.y - 20;
-
-    // Damage enemies the car rams into
-    for (const eid of ECS.query('enemy', 'pos', 'hp')) {
-      if (eid === gs.drivingCar) continue;
-      const ep = ECS.get(eid, 'pos'), eh = ECS.get(eid, 'hp');
-      if (Math.hypot(ep.x - carPos.x, ep.y - carPos.y) < 44) {
-        eh.hp -= baseBulletDamage() * 3; eh.hitFlash = 12;
-        spawnParticles(ep.x, ep.y, '#ffdd00', 8);
-        // Knock enemy away
-        const evel2 = ECS.get(eid, 'vel');
-        if (evel2) {
-          const kd = Math.hypot(ep.x - carPos.x, ep.y - carPos.y) || 1;
-          evel2.vx += (ep.x - carPos.x) / kd * 14;
-          evel2.vy += (ep.y - carPos.y) / kd * 14;
-        }
-        if (eh.hp <= 0) {
-          spawnParticles(ep.x, ep.y, '#ff2222', 16);
-          ECS.destroyEntity(eid);
-          gs.score += Math.round(10 * gs.wave); gs.waveKills++;
-          tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-          updateHUD(); checkWave();
-        }
-      }
-    }
-
-    // Timer expired — explode
-    if (gs.drivingCarTimer <= 0) {
-      const carId = gs.drivingCar;
-      gs.drivingCar = null;
-      gs.drivingCarTimer = 0;
-      gs.invincible = Math.max(gs.invincible, CFG.INVINCIBLE_FRAMES);
-      _clownCarExplode(carId, carPos, gs, true);
-    }
-  }
-}
 
   // Bowling ball regen: every 15 seconds after use, give one back
   if (gs.hasBowlingBall && !gs.bowlingBallReady) {
