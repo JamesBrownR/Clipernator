@@ -144,7 +144,8 @@ function initGameState() {
     sugarRushActive: false,
     ricochetActive: false,
     cursedSpinTimer: 0,
-    
+    drivingCar: null,
+    drivingCarTimer: 0,
    
   };
 
