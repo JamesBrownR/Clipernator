@@ -23,6 +23,7 @@
 - floor 2 boss doesnt work at all
 - General item pool needs at least 5 more items
 - Clownish is still a bit iffy, when you confuse enemies they still chase you if there aren't any other enemies, they should do nothing. When you confuse enemies that shoot bullets their bullets are still enemy owned bullets, not player-owned. Confused enemies dont do contact damage to other confused enemies, they should
+- reflected cannon balls should not stop the charge until they hit something. current if you are at one side of that stage and reflect a cannonball to another, it stops before it explodes on a wall
 - Clownish upgrade is placeholder
 
 
