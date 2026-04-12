@@ -62,15 +62,15 @@ function detonateExplosiveBullet(b, hitX, hitY) {
       if (ehp.hp <= 0) toKill.push(eid);
     }
   }
-  for (const eid of toKill) {
+ for (const eid of toKill) {
     if (!ECS.has(eid, 'pos')) continue;
     const epos = ECS.get(eid,'pos');
+    const killedType = ECS.get(eid, 'enemy')?.type;  // read BEFORE destroy
     if (epos) spawnParticles(epos.x, epos.y, '#ff2222', 18);
     ECS.destroyEntity(eid);
     gs.score += Math.round(15*gs.wave); gs.waveKills++;
     tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health+CFG.HEALTH_REGEN); updateHUD();
-    const killedType = ECS.get(eid, 'enemy')?.type;
-if (killedType === 'cakeBoss' || killedType === 'boss2') handleBossDeath(eid);
+    if (killedType === 'cakeBoss' || killedType === 'boss2') handleBossDeath(eid);
   }
   if (toKill.length > 0) checkWave();
   b.life = 0;
@@ -761,7 +761,6 @@ if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type
     } else {
       const pp=ECS.get(gs.playerId,'pos');
       if (pp) pos.angle=Math.atan2(pp.y-pos.y,pp.x-pos.x);
-      pos.x=Math.max(-40,Math.min(worldW+40,pos.x)); pos.y=Math.max(-40,Math.min(worldH+40,pos.y));
     }
     const hp=ECS.get(id,'hp'); if (hp&&hp.hitFlash>0) hp.hitFlash--;
     const phy2=ECS.get(id,'physics');
