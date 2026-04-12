@@ -1324,14 +1324,28 @@ const BT_MINI_CLOWN = new BTSelector(
     // ── ROAM / FLEE logic ──
     const enemies = ECS.query('enemy', 'pos', 'hp').filter(eid => eid !== id);
 
-    if (enemies.length === 0) {
-      // No enemies — flee from player
+if (enemies.length === 0) {
+      // No enemies — flee until a safe distance away, then wander
       if (!pp) return BT.RUNNING;
       const dx = pos.x - pp.x, dy = pos.y - pp.y;
       const dist = Math.hypot(dx, dy) || 1;
-      vel.vx = (vel.vx || 0) * 0.85 + (dx / dist) * phy.speed * 0.3;
-      vel.vy = (vel.vy || 0) * 0.85 + (dy / dist) * phy.speed * 0.3;
-      // Soft wall repulsion
+      const SAFE_DIST = 200;
+      if (dist < SAFE_DIST) {
+        vel.vx = (vel.vx || 0) * 0.85 + (dx / dist) * phy.speed * 0.3;
+        vel.vy = (vel.vy || 0) * 0.85 + (dy / dist) * phy.speed * 0.3;
+      } else {
+        // Far enough — wander slowly
+        if (!ai._wanderAngle) ai._wanderAngle = Math.random() * Math.PI * 2;
+        if (!ai._wanderTimer) ai._wanderTimer = 0;
+        ai._wanderTimer--;
+        if (ai._wanderTimer <= 0) {
+          ai._wanderAngle = Math.random() * Math.PI * 2;
+          ai._wanderTimer = 60 + Math.floor(Math.random() * 60);
+        }
+        vel.vx = (vel.vx || 0) * 0.88 + Math.cos(ai._wanderAngle) * phy.speed * 0.08;
+        vel.vy = (vel.vy || 0) * 0.88 + Math.sin(ai._wanderAngle) * phy.speed * 0.08;
+      }
+      // Soft wall repulsion — always active
       if (pos.x < 40)          vel.vx += 0.5;
       if (pos.x > worldW - 40) vel.vx -= 0.5;
       if (pos.y < 40)          vel.vy += 0.5;
