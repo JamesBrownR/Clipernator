@@ -484,7 +484,7 @@ function tryPickUpGiftBox() {
     const type = ECS.get(id, 'enemy').type;
     if (type !== 'clownCar') continue;
     const epos = ECS.get(id, 'pos');
-    if (Math.hypot(epos.x - ppos.x, epos.y - ppos.y) < 52) {
+    if (Math.hypot(epos.x - ppos.x, epos.y - ppos.y) < 64) {
       gs.drivingCar = id;
       gs.drivingCarTimer = CFG.CLOWN_CAR_TAKEOVER_FRAMES;
       const ai = ECS.get(id, 'ai');
