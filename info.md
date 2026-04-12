@@ -17,12 +17,15 @@
 
 ---
 
-## Known Issues / TODO
+## Known Issues / TODO 
+- Sometimes the utensil enemy hitting you makes you unable to move forever. Also, the player sometimes gets stuck on walls, where they can only move left and right on it for a few seconds
+- enemies that go out of bounds (outside the visible stage) for 5 or more seconds should die
 - Floor 2 wave scaling is off: wave 11 feels slow, then enemies spike suddenly after, in waves 12+
 - not sure if any floor 2 enemies other than juggler, cannonball and ringmaster work
 - It seems like when you kill a boss with explosives or melee it doesn't move to the next floor;  killing the boss should move to the next floor regardless of casue of death
 - General item pool needs at least 5 more items
 - Clownish upgrade is placeholder
+
 
 ## Item Pools
 
