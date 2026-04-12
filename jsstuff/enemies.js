@@ -266,7 +266,11 @@ ai.orientAngle += angleDelta * 0.02;
         vel.vx *= 0.3; vel.vy *= 0.3;
       }
     } else {
-      vel.vx *= 0.94; vel.vy *= 0.94;
+      // flee from player while crying
+      vel.vx = (vel.vx||0)*0.88 - (dx/dist)*phy.speed*0.18;
+      vel.vy = (vel.vy||0)*0.88 - (dy/dist)*phy.speed*0.18;
+      const fspd = Math.hypot(vel.vx, vel.vy);
+      if (fspd > phy.speed) { vel.vx = vel.vx/fspd*phy.speed; vel.vy = vel.vy/fspd*phy.speed; }
       ai.cryBurstTimer = (ai.cryBurstTimer||0) - 1;
       if (ai.cryBurstTimer <= 0 && ai.cryBurst > 0) {
         ai.cryBurst--;
