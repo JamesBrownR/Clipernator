@@ -4,7 +4,7 @@
 
 const CFG = {
   W: 700, H: 460,
-  PLAYER_SPEED: 3.2,
+  PLAYER_SPEED: 4,
   SPEED_BOOST_MULT: 1.65,
   DASH_SPEED: 14,
   DASH_FRAMES: 10,
