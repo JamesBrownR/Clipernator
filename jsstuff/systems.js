@@ -179,6 +179,26 @@ function tickMeleeWindow() {
     spawnParticles(eb.x, eb.y, '#00ff88', 8);
     didReflect = true;
 
+  } // Reflect bowling balls back as explosive shots
+  for (let bi = gs.bullets.length - 1; bi >= 0; bi--) {
+    const b = gs.bullets[bi];
+    if (!b.isBowlingBall) continue;
+    const dx = b.x - ppos.x, dy = b.y - ppos.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > CFG.MELEE_RANGE) continue;
+    const dot = (dx/dist)*Math.cos(gunAngle) + (dy/dist)*Math.sin(gunAngle);
+    if (dot < 0.1) continue;
+    // Redirect toward cursor as explosive
+    const reflectAngle = Math.atan2(mouse.y - b.y, mouse.x - b.x);
+    b.vx = Math.cos(reflectAngle) * 7;
+    b.vy = Math.sin(reflectAngle) * 7;
+    b.angle = reflectAngle;
+    b.isExplosive = true;
+    b.isReflected = true;
+    b.bounces = 0; // reset bounces so it can keep going
+    spawnParticles(b.x, b.y, '#00ff88', 12);
+    showMsg('BOWLING BALL REDIRECTED!');
+    didReflect = true;
   }
     // Reflect orbiting raging ring bullets
 if (gs.hasRagingRings && gs.ragingRingBullets) {
@@ -1224,6 +1244,17 @@ if (nearest) {
 
   // Clownish: nose grows, blasts bullets + spawns waves; WAVES confuse enemies on contact
 if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
+
+  // Bowling ball regen: every 15 seconds after use, give one back
+  if (gs.hasBowlingBall && !gs.bowlingBallReady) {
+    gs.bowlingBallRegenTimer = (gs.bowlingBallRegenTimer || 0) + 1;
+    if (gs.bowlingBallRegenTimer >= 900) { // 15 sec at 60fps
+      gs.bowlingBallReady = true;
+      gs.bowlingBallRegenTimer = 0;
+      showMsg('BOWLING BALL READY!');
+      spawnParticles(ECS.get(gs.playerId,'pos').x, ECS.get(gs.playerId,'pos').y, '#aaaaaa', 10);
+    }
+  }
 
  if (gs.hasClownish) {
     if (gs.clownNoseHonkTimer > 0) gs.clownNoseHonkTimer--;
