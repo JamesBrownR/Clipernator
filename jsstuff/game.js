@@ -91,14 +91,14 @@ function initGameState() {
    
 
     // Item flags
-    bouncyHouse: true,
+    bouncyHouse: false,
     hasDoubleCake: false, hasTripleCake: false, hasQuadCake: false,
     hasDash: false,
     dashCharges: 0, dashMaxCharges: CFG.DASH_MAX_CHARGES,
     dashCooldownTimer: 0, dashCooldownMax: CFG.DASH_COOLDOWN_FRAMES,
     dashTimer: 0, dashVx: 0, dashVy: 0,
     frozen: false,
-    hasGlowsticks: true,
+    hasGlowsticks: false,
     glowCooldown: 0,
     hasShakeFizzlePop: false,
     sfpMeter: 0, sfpMax: 600, sfpFull: false,
@@ -114,8 +114,8 @@ function initGameState() {
     hasPopcornBucket: false, popcornKernels: [], popcornFrenzyTimer: 0,
     _kernelsCollected: 0,
     hasTightropeBoots: false,
-    hasBowlingBall: true,
-    bowlingBallReady: true,
+    hasBowlingBall: false,
+    bowlingBallReady: false,
     bowlingBallRegenTimer: 0,
     hasClownish: false,
     clownNoseSize: 0, clownNoseTimer: 0, clownNoseMax: 480,
