@@ -737,18 +737,19 @@ function drawBullet(b) {
   ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.angle);
 
 
-  if (b.isBowlingBall) {
+ if (b.isBowlingBall) {
+    // drawBullet already translated to (b.x, b.y) above — don't re-translate
     const spin = Date.now() / 200;
-    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(spin);
+    ctx.rotate(spin);
     ctx.fillStyle = '#333344';
     ctx.shadowColor = '#666677';
     ctx.shadowBlur = 16;
     ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#222233';
+    ctx.fillStyle = '#666677';
     ctx.beginPath(); ctx.arc(-5, -5, 5, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#111122';
-    for(let i=0;i<3;i++){
-      const a = spin*0.5 + i*2.09;
+    for (let i = 0; i < 3; i++) {
+      const a = spin * 0.5 + i * 2.09;
       ctx.beginPath(); ctx.arc(Math.cos(a)*7, Math.sin(a)*7, 3, 0, Math.PI*2); ctx.fill();
     }
     ctx.restore();
