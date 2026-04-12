@@ -724,8 +724,44 @@ function sysAI() {
       const hp2=ECS.get(id,'hp'); if (hp2&&hp2.hitFlash>0) hp2.hitFlash--;
       continue;
     }
-    const type=ECS.get(id,'enemy').type;
-    const bt=ENEMY_BTS[type]; if (bt) bt.tick(id,gs);
+   const type=ECS.get(id,'enemy').type;
+const bt=ENEMY_BTS[type];
+if (bt) {
+  if (ai2 && ai2.confused) {
+    const prevCount = gs.enemyBullets.length;
+    bt.tick(id, gs);
+    if (gs.enemyBullets.length > prevCount) {
+      const cpos = ECS.get(id, 'pos');
+      let nearestPos = null, nearestDist = 999999;
+      for (const oid of ECS.query('enemy', 'pos')) {
+        if (oid === id) continue;
+        const op = ECS.get(oid, 'pos');
+        const od = Math.hypot(op.x - cpos.x, op.y - cpos.y);
+        if (od < nearestDist) { nearestDist = od; nearestPos = op; }
+      }
+      const newBullets = gs.enemyBullets.splice(prevCount);
+      for (const nb of newBullets) {
+        if (nb.isArcBall) continue;
+        let vx = nb.vx, vy = nb.vy;
+        if (nearestPos) {
+          const dx = nearestPos.x - nb.x, dy = nearestPos.y - nb.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const spd = Math.hypot(nb.vx, nb.vy) || CFG.BULLET_SPEED * 0.7;
+          vx = (dx / dist) * spd; vy = (dy / dist) * spd;
+        }
+        gs.bullets.push({
+          x: nb.x, y: nb.y, vx, vy,
+          angle: Math.atan2(vy, vx),
+          life: nb.life || CFG.BULLET_LIFE + 10,
+          maxLife: nb.maxLife || CFG.BULLET_LIFE + 10,
+          damageMult: 1, isDud: false,
+        });
+      }
+    }
+  } else {
+    bt.tick(id, gs);
+  }
+}
     // Skip position update for player-driven car (sysTimers handles it)
 if (type === 'clownCar' && gs.drivingCar === id) continue;
    if (!ECS.has(id,'pos')||!ECS.has(id,'vel')) continue;
