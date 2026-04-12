@@ -701,6 +701,26 @@ function sysAI() {
     }
   }
 
+  // ── Clown rider buffs ──
+    if (ai2.clownRiders && ai2.clownRiders > 0) {
+      const stackCount = ai2.clownRiders;
+      // Speed boost: +20% per clown, stacking
+      phy2._clownBaseSpeed = phy2._clownBaseSpeed || phy2.speed;
+      const targetSpeed = phy2._clownBaseSpeed * (1 + stackCount * 0.20);
+      phy2.speed = Math.min(targetSpeed, phy2._clownBaseSpeed * 2.5); // cap at 2.5x
+      // Attack cooldown reduction: stored on ai for BTs to read
+      ai2.clownCooldownMult = Math.max(0.35, 1.0 - stackCount * 0.18);
+    } else {
+      // No clowns — restore base speed if it was boosted
+      if (phy2._clownBaseSpeed) {
+        phy2.speed = phy2._clownBaseSpeed;
+        delete phy2._clownBaseSpeed;
+      }
+      ai2.clownCooldownMult = 1.0;
+    }
+    // Reset rider count each tick — BT_MINI_CLOWN re-increments it each frame for attached clowns
+    ai2.clownRiders = 0;
+
   for (const id of ECS.query('enemy','pos','vel','ai','physics')) {
 
      // Guard: entity may have been destroyed mid-iteration
