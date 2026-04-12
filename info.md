@@ -11,7 +11,7 @@
 ## Item Rules
 1. Items can be permanent or temporary
 2. Items can affect the player, enemies, environment, or a combination
-3. Items can have only positive effects, or both positive and negative effects — never only negative
+3. Items can have only positive effects, or both positive and negative effects (never only negative)
 4. Items can and should interact with each other
 5. Item names should be loosely related to their effect
 
@@ -19,8 +19,6 @@
 
 ## Known Issues / TODO 
 
-- enemies that go out of bounds (outside the visible stage) for 5 or more seconds should die
-- Floor 2 wave scaling is off: wave 11 feels slow, then enemies spike suddenly after, in waves 12+
 
 - General item pool needs at least 5 more items
 - Clownish upgrade is placeholder
@@ -44,14 +42,14 @@
 - **Mirror Maze** 🪞 — one shard orbits player; shoot the shard to redirect bullets toward nearest enemy or shard; kills spawn new shards. Permanent
 - **Popcorn Bucket** 🍿 — enemies drop kernels on death; collect 5 for a 4-second bullet explosion frenzy. Permanent
 - **Raging Rings** 💫 — player bullets that touch the player begin orbiting at 3x damage, max 16 rings; Permanent
-- **Knocking Pins** 🎳 — Pierces enemies, damages each one it passes through (no b.life = 0 on hit)
+- **Bowling Balls** 🎳 — Pierces enemies, damages each one it passes through (no b.life = 0 on hit)
    - Explodes on expiry/too many bounces
    - Reflectable by glowstick (already handled since tickMeleeWindow iterates gs.bullets — just needs to not skip isBowlingBall)
    - Mirror shard hit → redirected ball + spawn second ball toward nearest enemy
    - Grey preview circle at gun tip while queued
    - Always uses full cake multiplier, never dud
    
-- **Tightrope Boots** 👢 — +100% move speed, dashing makes player intangible. Permanent
+- **Tightrope Boots** 👢 — +200% move speed. Permanent
 - **Clownish** 🔵 — a nose grows over time; when fully grown and near an enemy it honks, emitting two expanding sound waves that confuse all enemies they pass through. Permanent
 
 ### General Items (any floor, ~20% chance, GENERAL_ITEM_IDS)
