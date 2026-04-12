@@ -580,6 +580,124 @@ function drawJuggler(epos, ehp, ai, frozen) {
   ctx.fillRect(x-bw/2, y-46, bw*(ehp.hp/ehp.maxHp), 6);
 }
 
+function drawClownCar(epos, ehp, ai, frozen) {
+  const { x, y } = epos;
+  const carAngle = ai.carAngle || 0;
+  const bounceRatio = (ai.bounceCount || 0) / CFG.CLOWN_CAR_BOUNCE_MAX;
+  const t = Date.now() / 200;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(carAngle);
+  if (frozen) ctx.globalAlpha = 0.7;
+
+  // Body
+  ctx.shadowColor = frozen ? '#aaccff' : '#ffdd00';
+  ctx.shadowBlur = 16 + Math.sin(t) * 4;
+  ctx.fillStyle = frozen ? '#4488cc' : (bounceRatio > 0.6 ? '#ff4400' : '#ffcc00');
+  ctx.fillRect(-28, -14, 56, 26);
+
+  // Roof
+  ctx.fillStyle = frozen ? '#6699cc' : '#ff4400';
+  ctx.beginPath();
+  ctx.moveTo(-18, -14);
+  ctx.lineTo(-12, -26);
+  ctx.lineTo(12, -26);
+  ctx.lineTo(18, -14);
+  ctx.closePath();
+  ctx.fill();
+
+  // Windows
+  ctx.fillStyle = frozen ? '#88aadd' : '#aaffff';
+  ctx.shadowBlur = 4;
+  ctx.fillRect(-10, -23, 8, 8);
+  ctx.fillRect(2,   -23, 8, 8);
+
+  // Wheels
+  ctx.fillStyle = frozen ? '#446688' : '#333333';
+  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(-18, 14, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 18, 14, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-18, -14, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 18, -14, 7, 0, Math.PI * 2); ctx.fill();
+
+  // Wheel rims
+  ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(-18, 14,  4, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc( 18, 14,  4, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-18, -14, 4, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc( 18, -14, 4, 0, Math.PI * 2); ctx.stroke();
+
+  // Bounce warning pips
+  if (bounceRatio > 0) {
+    for (let i = 0; i < CFG.CLOWN_CAR_BOUNCE_MAX; i++) {
+      ctx.fillStyle = i < (ai.bounceCount || 0) ? '#ff2200' : '#444400';
+      ctx.shadowColor = i < (ai.bounceCount || 0) ? '#ff4400' : 'transparent';
+      ctx.shadowBlur = i < (ai.bounceCount || 0) ? 6 : 0;
+      ctx.beginPath(); ctx.arc(-16 + i * 8, 0, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Honk label
+  if (ai.ejectTimer < 30) {
+    ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 10;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '6px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.fillText('HONK!', 0, -32);
+  }
+
+  ctx.restore();
+
+  // HP bar
+  const bw = 50;
+  ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 42, bw, 5);
+  ctx.fillStyle = ehp.hp < ehp.maxHp / 2 ? '#ff6666' : '#ffcc00';
+  ctx.fillRect(x - bw/2, y - 42, bw * (ehp.hp / ehp.maxHp), 5);
+}
+
+function drawMiniClown(epos, ehp, ai, frozen) {
+  const { x, y } = epos;
+  const t = Date.now() / 120;
+
+  ctx.save();
+  ctx.translate(x, y);
+  if (frozen) ctx.globalAlpha = 0.7;
+
+  // Body
+  ctx.shadowColor = frozen ? '#aaccff' : '#ff4400';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = frozen ? '#4488cc' : '#ff6600';
+  ctx.fillRect(-7, 0, 14, 12);
+
+  // Head
+  ctx.fillStyle = frozen ? '#88aacc' : '#ffccaa';
+  ctx.beginPath(); ctx.arc(0, -6, 8, 0, Math.PI * 2); ctx.fill();
+
+  // Red nose
+  ctx.fillStyle = '#ff0000';
+  ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 6;
+  ctx.beginPath(); ctx.arc(0, -5, 3, 0, Math.PI * 2); ctx.fill();
+
+  // Wild hair
+  ctx.fillStyle = frozen ? '#4488cc' : '#ff4400';
+  ctx.shadowBlur = 4;
+  for (let i = 0; i < 5; i++) {
+    const ha = (i / 5) * Math.PI + t * 0.5;
+    ctx.beginPath();
+    ctx.arc(Math.cos(ha) * 9, -6 + Math.sin(ha) * 9 - 4, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Tiny feet
+  ctx.fillStyle = '#332200';
+  ctx.shadowBlur = 0;
+  ctx.fillRect(-8, 10, 6, 4);
+  ctx.fillRect( 2, 10, 6, 4);
+
+  ctx.restore();
+}
+
 // ============================================================
 // PLAYER DRAW
 // ============================================================
@@ -1002,10 +1120,13 @@ for(const id of ECS.query('enemy','pos','hp')) {
   else if (type==='mask')        drawMask(epos, ehp, ai, frozen);
   else if (type==='giftBox')     drawGiftBox(epos, ehp, ai, frozen);
   else if (type==='partyHat')    drawPartyHat(epos, ehp, frozen);
+     else if (type === 'cakeBoss') drawCakeBoss(epos, ehp, ai, frozen);
   else if (type==='cannonball')  drawCannonball(epos, ehp, ai, frozen);
   else if (type==='ringmaster')  drawRingmaster(epos, ehp, ai, frozen);
   else if (type==='juggler')     drawJuggler(epos, ehp, ai, frozen);
-  else if (type === 'cakeBoss') drawCakeBoss(epos, ehp, ai, frozen);
+    else if (type === 'clownCar')  drawClownCar(epos, ehp, ai, frozen);
+else if (type === 'miniClown') drawMiniClown(epos, ehp, ai, frozen);
+ 
 
   // Red critical mass overlay
   // Critical mass: pulsing red OUTLINE only, not a filled overlay
@@ -1216,6 +1337,22 @@ if (meleeSwingTimer > 0) {
     ctx.fill();
     ctx.restore();
   }
+
+  // Clown car takeover timer bar
+if (gs.drivingCar !== null) {
+  const ratio = gs.drivingCarTimer / CFG.CLOWN_CAR_TAKEOVER_FRAMES;
+  const bw = 120;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(worldW/2 - bw/2, worldH - 28, bw, 8);
+  ctx.fillStyle = ratio > 0.4 ? '#ffdd00' : '#ff4400';
+  ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8;
+  ctx.fillRect(worldW/2 - bw/2, worldH - 28, bw * ratio, 8);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '6px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('CAR EXPLODING SOON', worldW/2, worldH - 32);
+}
 
   // Vignette
   const g=ctx.createRadialGradient(CFG.W/2,CFG.H/2,CFG.H*.28,CFG.W/2,CFG.H/2,CFG.H*.9);
