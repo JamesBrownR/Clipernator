@@ -783,23 +783,23 @@ if (ai2 && ai2.confused) {
         if (od < nearestDist) { nearestDist = od; nearestPos = op; }
       }
       const newBullets = gs.enemyBullets.splice(prevCount);
-      for (const nb of newBullets) {
-        if (nb.isArcBall) continue;
-        let vx = nb.vx, vy = nb.vy;
-        if (nearestPos) {
-          const dx = nearestPos.x - nb.x, dy = nearestPos.y - nb.y;
-          const dist = Math.hypot(dx, dy) || 1;
-          const spd = Math.hypot(nb.vx, nb.vy) || CFG.BULLET_SPEED * 0.7;
-          vx = (dx / dist) * spd; vy = (dy / dist) * spd;
-        }
-        gs.bullets.push({
-          x: nb.x, y: nb.y, vx, vy,
-          angle: Math.atan2(vy, vx),
-          life: nb.life || CFG.BULLET_LIFE + 10,
-          maxLife: nb.maxLife || CFG.BULLET_LIFE + 10,
-          damageMult: 1, isDud: false,
-        });
-      }
+for (const nb of newBullets) {
+  if (nb.isArcBall) continue;
+  // If no other enemy to target, discard the bullet entirely
+  if (!nearestPos) continue;
+  const dx = nearestPos.x - nb.x, dy = nearestPos.y - nb.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const spd = Math.hypot(nb.vx, nb.vy) || CFG.BULLET_SPEED * 0.7;
+  const vx = (dx / dist) * spd;
+  const vy = (dy / dist) * spd;
+  gs.bullets.push({
+    x: nb.x, y: nb.y, vx, vy,
+    angle: Math.atan2(vy, vx),
+    life: nb.life || CFG.BULLET_LIFE + 10,
+    maxLife: nb.maxLife || CFG.BULLET_LIFE + 10,
+    damageMult: 1, isDud: false,
+  });
+}
     }
   } else {
     bt.tick(id, gs);
