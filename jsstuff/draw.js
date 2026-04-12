@@ -1121,28 +1121,35 @@ for(const id of ECS.query('enemy','pos','hp')) {
     else if (type === 'clownCar')  drawClownCar(epos, ehp, ai, frozen);
 else if (type === 'miniClown') drawMiniClown(epos, ehp, ai, frozen);
 
- // Confused tint — hue-shift + light cyan wash on the enemy sprite area
-  if (ai && ai.confused) {
-    const confuseR = (ENEMY_DEFS[type]?.size || 28) + 2;
-    // Hue shift to cyan
-    ctx.save();
-    ctx.globalCompositeOperation = 'hue';
-    ctx.globalAlpha = 0.9;
-    ctx.fillStyle = '#00ffff';
+// Confused tint — blue overlay directly on the sprite
+if (ai && ai.confused) {
+  const confuseR = (ENEMY_DEFS[type]?.size || 28) + 4;
+  const pulse = 0.28 + Math.sin(Date.now() / 120) * 0.10;
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = '#2255ff';
+  ctx.beginPath();
+  ctx.ellipse(epos.x, epos.y, confuseR, confuseR, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // Spiral swirl indicator (small, above enemy)
+  ctx.save();
+  const t2 = Date.now() / 300;
+  ctx.globalAlpha = 0.75;
+  ctx.strokeStyle = '#88bbff';
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = '#4488ff';
+  ctx.shadowBlur = 6;
+  for (let si = 0; si < 3; si++) {
+    const sa = t2 + (si / 3) * Math.PI * 2;
+    const sr = 10 + Math.sin(t2 * 2 + si) * 3;
     ctx.beginPath();
-    ctx.ellipse(epos.x, epos.y, confuseR, confuseR * 1.1, 0, 0, Math.PI * 2);
+    ctx.arc(epos.x + Math.cos(sa) * sr, epos.y - confuseR - 8 + Math.sin(sa) * 4, 2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
-    // Light cyan wash on top for visibility
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 0.20;
-    ctx.fillStyle = '#00ffff';
-    ctx.beginPath();
-    ctx.ellipse(epos.x, epos.y, confuseR, confuseR * 1.1, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
   }
+  ctx.restore();
+}
 
   // Red critical mass overlay
   // Critical mass: pulsing red OUTLINE only, not a filled overlay
