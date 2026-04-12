@@ -190,8 +190,8 @@ function tickMeleeWindow() {
     if (dot < 0.1) continue;
     // Redirect toward cursor as explosive
     const reflectAngle = Math.atan2(mouse.y - b.y, mouse.x - b.x);
-    b.vx = Math.cos(reflectAngle) * 7;
-    b.vy = Math.sin(reflectAngle) * 7;
+    b.vx = Math.cos(reflectAngle) * 14;
+    b.vy = Math.sin(reflectAngle) * 14;
     b.angle = reflectAngle;
     b.isExplosive = true;
     b.isReflected = true;
@@ -1266,7 +1266,7 @@ if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
   // Bowling ball regen: every 15 seconds after use, give one back
   if (gs.hasBowlingBall && !gs.bowlingBallReady) {
     gs.bowlingBallRegenTimer = (gs.bowlingBallRegenTimer || 0) + 1;
-    if (gs.bowlingBallRegenTimer >= 900) { // 15 sec at 60fps
+    if (gs.bowlingBallRegenTimer >= 1200) { // 20 sec at 60fps
       gs.bowlingBallReady = true;
       gs.bowlingBallRegenTimer = 0;
       showMsg('BOWLING BALL READY!');
