@@ -245,6 +245,7 @@ let angleDelta = targetAngle - ai.orientAngle;
 while (angleDelta >  Math.PI) angleDelta -= Math.PI * 2;
 while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
 ai.orientAngle += angleDelta * 0.02;
+    ai.maskOrient = ai.orientAngle;
     
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
 
