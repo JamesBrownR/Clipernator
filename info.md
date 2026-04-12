@@ -4,6 +4,7 @@
 - "Entities" usually refers to both the player and enemies, but can also refer to bosses or projectiles
 - Goal is to make floor 1 & 2 as good as possible before adding more floors
 - When suggesting changes, tell me what part of the code to add or change, do not remake entire files unless necessary
+- Sometimes game states are modified for play testing. I'm not playing 30 minutes until wave 19 to see if mirror maze is reflectable with bowling balls.
 
 ---
 
