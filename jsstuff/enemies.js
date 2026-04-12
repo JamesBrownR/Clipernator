@@ -251,8 +251,8 @@ ai.orientAngle += angleDelta * 0.02;
 
     ai.maskState = ai.maskState || 'SMILE';
     ai.maskTimer = (ai.maskTimer ?? 180) - 1;
-    ai.shootCooldown = (ai.shootCooldown || 0);
-
+ai.shootCooldown = (ai.shootCooldown||180) - (1 / (ai.clownCooldownMult || 1));
+    
     if (ai.maskState === 'SMILE') {
       vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
       vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
@@ -1170,7 +1170,7 @@ if (targetMaxHp > ehp2.maxHp) {
   }
 }
 
-    ai.shootCooldown = (ai.shootCooldown||180) - 1;
+ai.shootCooldown = (ai.shootCooldown||180) - (1 / (ai.clownCooldownMult || 1));
     if (ai.shootCooldown <= 0 && dist < 280) {
       ai.shootCooldown = 180;
       const aim = Math.atan2(dy,dx);
@@ -1259,14 +1259,125 @@ const BT_MINI_CLOWN = new BTSelector(
     const pos = ECS.get(id, 'pos');
     const vel = ECS.get(id, 'vel');
     const phy = ECS.get(id, 'physics');
+    const ai  = ECS.get(id, 'ai');
     const pp  = playerPos(gs);
-    if (!pp || !pos || !vel) return BT.FAILURE;
+    if (!pos || !vel) return BT.FAILURE;
 
-    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
-    vel.vx = (vel.vx || 0) * 0.85 + (dx / dist) * phy.speed * 0.3;
-    vel.vy = (vel.vy || 0) * 0.85 + (dy / dist) * phy.speed * 0.3;
+    // ── Init ──
+    if (ai.clownState === undefined) ai.clownState = 'ROAM';
+    if (ai.attachedTo  === undefined) ai.attachedTo  = null;
+    if (ai.attachSlot  === undefined) ai.attachSlot  = 0; // orbit offset index
+
+    // ── If attached: follow host, apply buffs, keep own hitbox ──
+    if (ai.clownState === 'ATTACHED') {
+      if (!ECS.has(ai.attachedTo, 'pos')) {
+        // Host died — go back to roaming
+        ai.clownState = 'ROAM';
+        ai.attachedTo = null;
+        return BT.RUNNING;
+      }
+      const hpos = ECS.get(ai.attachedTo, 'pos');
+      // Orbit the host at a small offset so the clown has its own hitbox
+      const slotAngle = (ai.attachSlot / 4) * Math.PI * 2;
+      const ORBIT_R = 18;
+      const tx = hpos.x + Math.cos(slotAngle) * ORBIT_R;
+      const ty = hpos.y + Math.sin(slotAngle) * ORBIT_R;
+      vel.vx = (vel.vx || 0) * 0.7 + (tx - pos.x) * 0.28;
+      vel.vy = (vel.vy || 0) * 0.7 + (ty - pos.y) * 0.28;
+      pos.x += vel.vx;
+      pos.y += vel.vy;
+
+      // Apply buff to host each tick (sysAI reads these flags)
+      const hai = ECS.get(ai.attachedTo, 'ai');
+      if (hai) {
+        hai._clownHealTimer = (hai._clownHealTimer || 0) + 1;
+        if (hai._clownHealTimer >= 60) {
+          hai._clownHealTimer = 0;
+          const hhp = ECS.get(ai.attachedTo, 'hp');
+          if (hhp) hhp.hp = Math.min(hhp.maxHp, hhp.hp + 2);
+        }
+        // Mark host as clown-buffed — sysAI applies speed + cooldown boost
+        hai.clownRiders = (hai.clownRiders || 0);
+      }
+      return BT.RUNNING;
+    }
+
+    // ── ROAM / FLEE logic ──
+    const enemies = ECS.query('enemy', 'pos', 'hp').filter(eid => eid !== id);
+
+    if (enemies.length === 0) {
+      // No enemies — flee from player
+      if (!pp) return BT.RUNNING;
+      const dx = pos.x - pp.x, dy = pos.y - pp.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      vel.vx = (vel.vx || 0) * 0.85 + (dx / dist) * phy.speed * 0.3;
+      vel.vy = (vel.vy || 0) * 0.85 + (dy / dist) * phy.speed * 0.3;
+      // Soft wall repulsion
+      if (pos.x < 40)          vel.vx += 0.5;
+      if (pos.x > worldW - 40) vel.vx -= 0.5;
+      if (pos.y < 40)          vel.vy += 0.5;
+      if (pos.y > worldH - 40) vel.vy -= 0.5;
+    } else {
+      // Find biggest (highest maxHp) enemy closest to this clown
+      let bestId = null, bestScore = -1;
+      for (const eid of enemies) {
+        const epos2 = ECS.get(eid, 'pos');
+        const ehp2  = ECS.get(eid, 'hp');
+        const eai2  = ECS.get(eid, 'ai');
+        // Don't attach to another mini clown or to a clown car
+        const etype = ECS.get(eid, 'enemy').type;
+        if (etype === 'miniClown' || etype === 'clownCar') continue;
+        // Don't attach if already has 4 clowns riding it
+        const riders = (eai2 && eai2.clownRiders) ? eai2.clownRiders : 0;
+        if (riders >= 4) continue;
+        const dist2 = Math.hypot(epos2.x - pos.x, epos2.y - pos.y);
+        // Score = maxHp / distance  (bigger + closer = higher priority)
+        const score = (ehp2.maxHp || 1) / (dist2 + 1);
+        if (score > bestScore) { bestScore = score; bestId = eid; }
+      }
+
+      if (bestId !== null) {
+        const bpos = ECS.get(bestId, 'pos');
+        const dist3 = Math.hypot(bpos.x - pos.x, bpos.y - pos.y);
+
+        if (dist3 < 22) {
+          // Attach!
+          ai.clownState = 'ATTACHED';
+          ai.attachedTo = bestId;
+          // Find a free slot index (0-3) on the host
+          const hostAi = ECS.get(bestId, 'ai');
+          if (hostAi) {
+            hostAi.clownRiders = (hostAi.clownRiders || 0) + 1;
+            ai.attachSlot = hostAi.clownRiders - 1;
+          }
+          spawnParticles(pos.x, pos.y, '#ff4400', 6);
+          showMsg('CLOWN LATCHED ON!');
+        } else {
+          // Chase the target enemy
+          const dx = bpos.x - pos.x, dy = bpos.y - pos.y;
+          const dist4 = dist3 || 1;
+          vel.vx = (vel.vx || 0) * 0.85 + (dx / dist4) * phy.speed * 0.3;
+          vel.vy = (vel.vy || 0) * 0.85 + (dy / dist4) * phy.speed * 0.3;
+        }
+      } else {
+        // All enemies full — flee player
+        if (pp) {
+          const dx = pos.x - pp.x, dy = pos.y - pp.y, dist = Math.hypot(dx, dy) || 1;
+          vel.vx = (vel.vx || 0) * 0.85 + (dx / dist) * phy.speed * 0.25;
+          vel.vy = (vel.vy || 0) * 0.85 + (dy / dist) * phy.speed * 0.25;
+        }
+      }
+    }
+
+    // Cap speed
     const spd = Math.hypot(vel.vx, vel.vy);
     if (spd > phy.speed) { vel.vx = vel.vx / spd * phy.speed; vel.vy = vel.vy / spd * phy.speed; }
+
+    // Position update (only when not attached — attached clowns update pos themselves above)
+    pos.x += vel.vx;
+    pos.y += vel.vy;
+    pos.x = Math.max(CFG.WALL_PAD, Math.min(worldW - CFG.WALL_PAD, pos.x));
+    pos.y = Math.max(CFG.WALL_PAD, Math.min(worldH - CFG.WALL_PAD, pos.y));
 
     return BT.RUNNING;
   })
