@@ -532,6 +532,16 @@ if (b.isBowlingBall) {
 }
 
 function sysPlayerMovement() {
+
+  if (gs.forkGrabbed) {
+    let anyGrabbing = false;
+    for (const id of ECS.query('enemy', 'ai')) {
+      const ai2 = ECS.get(id, 'ai');
+      if (ai2.uForkGrabTimer > 0) { anyGrabbing = true; break; }
+    }
+    if (!anyGrabbing) { gs.forkGrabbed = false; }
+  }
+  
   const pId=gs.playerId, pos=ECS.get(pId,'pos'), vel=ECS.get(pId,'vel');
   const dashing=gs.dashTimer>0, slowed=gs.confettiSlowTimer>0;
   let speedMult=1;
