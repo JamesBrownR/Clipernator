@@ -955,106 +955,6 @@ function _cakeBossFrostingLaunch(id, pos, pp, ai, gs) {
   showMsg('⚠️ FROSTING INCOMING!');
 }
 
-// ── Floor 2: Birthday Bomber ──
-const BT_BIRTHDAY_BOMBER = new BTSelector(
-  new BTAction((id, gs) => {
-    if (gs.frozen) return BT.RUNNING;
-    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
-    const ai = ECS.get(id,'ai'), pp = playerPos(gs);
-    if (!pp || !pos || !vel) return BT.FAILURE;
-    const dx = pp.x - pos.x, dy = pp.y - pos.y;
-    const dist = Math.hypot(dx,dy)||1;
-    ai.chargeTimer = (ai.chargeTimer||0) + 1;
-    if (dist < 160 && ai.chargeTimer > 60) {
-      vel.vx = (dx/dist)*phy.speed*1.8;
-      vel.vy = (dy/dist)*phy.speed*1.8;
-      ai.chargeTimer = 0;
-      spawnParticles(pos.x, pos.y, '#ff4400', 6);
-    } else {
-      vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
-      vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
-      const spd = Math.hypot(vel.vx,vel.vy);
-      if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
-    }
-    return BT.RUNNING;
-  })
-);
-
-// ── Floor 2: Piñata ──
-const BT_PINATA = new BTSelector(
-  new BTAction((id, gs) => {
-    if (gs.frozen) return BT.RUNNING;
-    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
-    const hp = ECS.get(id,'hp'), pp = playerPos(gs);
-    if (!pp || !pos || !vel) return BT.FAILURE;
-    const dx = pp.x-pos.x, dy = pp.y-pos.y, dist = Math.hypot(dx,dy)||1;
-    vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
-    vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
-    const spd = Math.hypot(vel.vx,vel.vy);
-    if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
-    const ratio = hp.hp / hp.maxHp;
-    if (ratio < 0.3 && Math.random() < 0.05) spawnParticles(pos.x, pos.y, '#ff88ff', 3);
-    return BT.RUNNING;
-  })
-);
-
-// ── Floor 2: Balloon Witch ──
-const BT_BALLOON_WITCH = new BTSelector(
-  new BTAction((id, gs) => {
-    if (gs.frozen) return BT.RUNNING;
-    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
-    const ai = ECS.get(id,'ai'), pp = playerPos(gs);
-    if (!pp || !pos || !vel) return BT.FAILURE;
-    const dx = pp.x-pos.x, dy = pp.y-pos.y, dist = Math.hypot(dx,dy)||1;
-    const targetDist = 180;
-    const orbitAngle = Math.atan2(dy,dx) + 0.015;
-    const tx = pp.x - Math.cos(orbitAngle)*targetDist;
-    const ty = pp.y - Math.sin(orbitAngle)*targetDist;
-    vel.vx = (vel.vx||0)*0.88 + ((tx-pos.x)/80)*phy.speed*0.18;
-    vel.vy = (vel.vy||0)*0.88 + ((ty-pos.y)/80)*phy.speed*0.18;
-    const spd = Math.hypot(vel.vx,vel.vy);
-    if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
-    ai.shootCooldown = (ai.shootCooldown||150) - 1;
-    if (ai.shootCooldown <= 0) {
-      ai.shootCooldown = 150;
-      const aim = Math.atan2(dy,dx);
-      gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(aim)*0.75, vy:Math.sin(aim)*0.75, life:200, maxLife:200, color:'#9944ff', homing:true, homingStrength:0.03 });
-      spawnParticles(pos.x, pos.y, '#9944ff', 5);
-    }
-    return BT.RUNNING;
-  })
-);
-
-// ── Floor 2: Streamer Ghost ──
-const BT_STREAMER_GHOST = new BTSelector(
-  new BTAction((id, gs) => {
-    if (gs.frozen) return BT.RUNNING;
-    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
-    const ai = ECS.get(id,'ai'), pp = playerPos(gs);
-    if (!pp || !pos || !vel) return BT.FAILURE;
-    const dx = pp.x-pos.x, dy = pp.y-pos.y, dist = Math.hypot(dx,dy)||1;
-    ai.phaseTimer = (ai.phaseTimer||0) + 1;
-    const cycle = ai.phaseTimer % 135;
-    ai.phased = cycle >= 90;
-    if (!ai.phased) {
-      vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
-      vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
-      const spd = Math.hypot(vel.vx,vel.vy);
-      if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
-    } else {
-      if (cycle === 90) {
-        pos.x = pp.x + (Math.random()-.5)*120;
-        pos.y = pp.y + (Math.random()-.5)*120;
-        pos.x = Math.max(40, Math.min(worldW-40, pos.x));
-        pos.y = Math.max(40, Math.min(worldH-40, pos.y));
-        spawnParticles(pos.x, pos.y, '#44ffcc', 12);
-      }
-      vel.vx *= 0.7; vel.vy *= 0.7;
-    }
-    return BT.RUNNING;
-  })
-);
-
 // ── Floor 2: Boss 2 ──
 const BT_BOSS2 = new BTSelector(
   new BTAction((id, gs) => {
@@ -1284,6 +1184,93 @@ gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*1.5, vy:Math.sin(a)*1.5,
   })
 );
 
+// ── Floor 2: Clown Car ──
+const BT_CLOWN_CAR = new BTSelector(
+  new BTAction((id, gs) => {
+    if (gs.frozen) return BT.RUNNING;
+    // If player is driving this car, skip all AI
+    if (gs.drivingCar === id) return BT.RUNNING;
+
+    const pos = ECS.get(id, 'pos');
+    const vel = ECS.get(id, 'vel');
+    const phy = ECS.get(id, 'physics');
+    const ai  = ECS.get(id, 'ai');
+    const pp  = playerPos(gs);
+    if (!pp || !pos || !vel) return BT.FAILURE;
+
+    // Init
+    if (ai.bounceCount    === undefined) ai.bounceCount    = 0;
+    if (ai.ejectTimer     === undefined) ai.ejectTimer     = CFG.CLOWN_CAR_EJECT_INTERVAL;
+    if (ai.carAngle       === undefined) ai.carAngle       = Math.atan2(pp.y - pos.y, pp.x - pos.x);
+
+    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
+    const targetAngle = Math.atan2(dy, dx);
+
+    // Smooth turning
+    let angleDelta = targetAngle - ai.carAngle;
+    while (angleDelta >  Math.PI) angleDelta -= Math.PI * 2;
+    while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+    ai.carAngle += angleDelta * 0.06;
+
+    // Accelerate in facing direction
+    vel.vx = (vel.vx || 0) * 0.92 + Math.cos(ai.carAngle) * phy.speed * 0.22;
+    vel.vy = (vel.vy || 0) * 0.92 + Math.sin(ai.carAngle) * phy.speed * 0.22;
+    const spd = Math.hypot(vel.vx, vel.vy);
+    if (spd > phy.speed) { vel.vx = vel.vx / spd * phy.speed; vel.vy = vel.vy / spd * phy.speed; }
+
+    // Wall bouncing
+    let bounced = false;
+    if (pos.x < 22)          { pos.x = 22;          vel.vx =  Math.abs(vel.vx) * 1.1; bounced = true; }
+    if (pos.x > worldW - 22) { pos.x = worldW - 22; vel.vx = -Math.abs(vel.vx) * 1.1; bounced = true; }
+    if (pos.y < 22)          { pos.y = 22;           vel.vy =  Math.abs(vel.vy) * 1.1; bounced = true; }
+    if (pos.y > worldH - 22) { pos.y = worldH - 22;  vel.vy = -Math.abs(vel.vy) * 1.1; bounced = true; }
+    if (bounced) {
+      ai.bounceCount++;
+      // Reflect car angle off wall
+      ai.carAngle = Math.atan2(vel.vy, vel.vx);
+      spawnParticles(pos.x, pos.y, '#ffdd00', 8);
+      gs.shakeX = 6; gs.shakeY = 6;
+      if (ai.bounceCount >= CFG.CLOWN_CAR_BOUNCE_MAX) {
+        _clownCarExplode(id, pos, gs, false);
+        return BT.FAILURE;
+      }
+    }
+
+    // Eject mini clowns
+    ai.ejectTimer--;
+    if (ai.ejectTimer <= 0) {
+      ai.ejectTimer = CFG.CLOWN_CAR_EJECT_INTERVAL;
+      const ejectCount = 1 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < ejectCount; i++) {
+        _spawnMiniClown(pos.x + (Math.random() - 0.5) * 30, pos.y + (Math.random() - 0.5) * 30, gs);
+      }
+      spawnParticles(pos.x, pos.y, '#ff4400', 10);
+      showMsg('MINI CLOWNS DEPLOYED!');
+    }
+
+    return BT.RUNNING;
+  })
+);
+
+// ── Floor 2: Mini Clown ──
+const BT_MINI_CLOWN = new BTSelector(
+  new BTAction((id, gs) => {
+    if (gs.frozen) return BT.RUNNING;
+    const pos = ECS.get(id, 'pos');
+    const vel = ECS.get(id, 'vel');
+    const phy = ECS.get(id, 'physics');
+    const pp  = playerPos(gs);
+    if (!pp || !pos || !vel) return BT.FAILURE;
+
+    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
+    vel.vx = (vel.vx || 0) * 0.85 + (dx / dist) * phy.speed * 0.3;
+    vel.vy = (vel.vy || 0) * 0.85 + (dy / dist) * phy.speed * 0.3;
+    const spd = Math.hypot(vel.vx, vel.vy);
+    if (spd > phy.speed) { vel.vx = vel.vx / spd * phy.speed; vel.vy = vel.vy / spd * phy.speed; }
+
+    return BT.RUNNING;
+  })
+);
 // ================================================================
 // ENEMY BT MAP
 // ================================================================
@@ -1293,14 +1280,13 @@ const ENEMY_BTS = {
   giftBox:        BT_GIFTBOX,
   partyHat:       BT_PARTYHAT,
   cakeBoss: BT_CAKEBOSS,
-  birthdayBomber: BT_BIRTHDAY_BOMBER,
-  pinata:         BT_PINATA,
-  balloonWitch:   BT_BALLOON_WITCH,
-  streamerGhost:  BT_STREAMER_GHOST,
+  
   boss2:          BT_BOSS2,
   cannonball:     BT_CANNONBALL,
   ringmaster:     BT_RINGMASTER,
   juggler:        BT_JUGGLER,
+  clownCar:  BT_CLOWN_CAR,
+miniClown: BT_MINI_CLOWN,
 };
 
 // ================================================================
@@ -1320,4 +1306,6 @@ const ENEMY_DEFS = {
   cannonball:     { hpMult: 1.6, speedMult: 0.5,  size: 30, color: '#ff6600' },
   ringmaster:     { hpMult: 1.2, speedMult: 0.7,  size: 32, color: '#cc0044' },
   juggler:        { hpMult: 2.0, speedMult: 0.55, size: 36, color: '#ffdd00' },
+  clownCar:  { hpMult: 2.5, speedMult: 1.0, size: 36, color: '#ffdd00' },
+miniClown: { hpMult: 0.1, speedMult: 1.2, size: 16, color: '#ff4400' },
 };
