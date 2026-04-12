@@ -778,18 +778,21 @@ if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type
             if (od<nearD){nearD=od;nearEnemy={pos:ECS.get(oid,'pos'),id:oid};}
           }
           if (nearEnemy) {
-            const cdx=nearEnemy.pos.x-pos.x,cdy=nearEnemy.pos.y-pos.y,cd=Math.hypot(cdx,cdy)||1;
-            vel.vx=(vel.vx||0)*0.88+(cdx/cd)*phy2.speed*0.22;
-            vel.vy=(vel.vy||0)*0.88+(cdy/cd)*phy2.speed*0.22;
-            // Shoot at the target enemy
-            ai2.confuseShootTimer=(ai2.confuseShootTimer||0)-1;
-            if (ai2.confuseShootTimer<=0&&nearD<220) {
-              ai2.confuseShootTimer=45;
-              const aim=Math.atan2(cdy,cdx);
-              gs.enemyBullets.push({x:pos.x,y:pos.y,vx:Math.cos(aim)*0.7,vy:Math.sin(aim)*0.7,life:130,maxLife:130,color:'#4488ff',friendlyFire:true,sourceId:id});
-              spawnParticles(pos.x,pos.y,'#4488ff',4);
-            }
-          }
+  const cdx=nearEnemy.pos.x-pos.x,cdy=nearEnemy.pos.y-pos.y,cd=Math.hypot(cdx,cdy)||1;
+  vel.vx=(vel.vx||0)*0.88+(cdx/cd)*phy2.speed*0.22;
+  vel.vy=(vel.vy||0)*0.88+(cdy/cd)*phy2.speed*0.22;
+} else {
+  // No other enemies — wander slowly, ignore player
+  if (!ai2._confuseWanderAngle) ai2._confuseWanderAngle = Math.random() * Math.PI * 2;
+  if (!ai2._confuseWanderTimer) ai2._confuseWanderTimer = 0;
+  ai2._confuseWanderTimer--;
+  if (ai2._confuseWanderTimer <= 0) {
+    ai2._confuseWanderAngle = Math.random() * Math.PI * 2;
+    ai2._confuseWanderTimer = 60 + Math.floor(Math.random() * 60);
+  }
+  vel.vx = (vel.vx||0)*0.88 + Math.cos(ai2._confuseWanderAngle)*phy2.speed*0.12;
+  vel.vy = (vel.vy||0)*0.88 + Math.sin(ai2._confuseWanderAngle)*phy2.speed*0.12;
+}
         }
       }
        // ── Clown rider buffs ──
