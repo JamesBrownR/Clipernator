@@ -1188,9 +1188,6 @@ gs.enemyBullets.push({ x:pos.x, y:pos.y, vx:Math.cos(a)*1.5, vy:Math.sin(a)*1.5,
 const BT_CLOWN_CAR = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
-    // If player is driving this car, skip all AI
-    if (gs.drivingCar === id) return BT.RUNNING;
-
     const pos = ECS.get(id, 'pos');
     const vel = ECS.get(id, 'vel');
     const phy = ECS.get(id, 'physics');
@@ -1198,21 +1195,44 @@ const BT_CLOWN_CAR = new BTSelector(
     const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    // Init
     if (ai.bounceCount    === undefined) ai.bounceCount    = 0;
     if (ai.ejectTimer     === undefined) ai.ejectTimer     = CFG.CLOWN_CAR_EJECT_INTERVAL;
-    if (ai.carAngle       === undefined) ai.carAngle       = Math.atan2(pp.y - pos.y, pp.x - pos.x);
+    if (ai.carAngle       === undefined) ai.carAngle       = Math.random() * Math.PI * 2;
+    if (ai.roamTarget     === undefined) ai.roamTarget     = null;
+    if (ai.roamTimer      === undefined) ai.roamTimer      = 0;
 
-    const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
-    const targetAngle = Math.atan2(dy, dx);
+    // Find nearest enemy to roam toward; if none, pick a random point
+    ai.roamTimer--;
+    if (ai.roamTimer <= 0) {
+      ai.roamTimer = 90 + Math.floor(Math.random() * 60);
+      let bestDist = 999999, bestPos = null;
+      for (const eid of ECS.query('enemy', 'pos')) {
+        if (eid === id) continue;
+        const ep = ECS.get(eid, 'pos');
+        const d = Math.hypot(ep.x - pos.x, ep.y - pos.y);
+        if (d < bestDist) { bestDist = d; bestPos = { x: ep.x, y: ep.y }; }
+      }
+      if (bestPos) {
+        ai.roamTarget = bestPos;
+      } else {
+        ai.roamTarget = {
+          x: CFG.WALL_PAD + Math.random() * (worldW - CFG.WALL_PAD * 2),
+          y: CFG.WALL_PAD + Math.random() * (worldH - CFG.WALL_PAD * 2),
+        };
+      }
+    }
 
-    // Smooth turning
-    let angleDelta = targetAngle - ai.carAngle;
-    while (angleDelta >  Math.PI) angleDelta -= Math.PI * 2;
-    while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
-    ai.carAngle += angleDelta * 0.06;
+    if (ai.roamTarget) {
+      const dx = ai.roamTarget.x - pos.x, dy = ai.roamTarget.y - pos.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const targetAngle = Math.atan2(dy, dx);
+      let angleDelta = targetAngle - ai.carAngle;
+      while (angleDelta >  Math.PI) angleDelta -= Math.PI * 2;
+      while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+      ai.carAngle += angleDelta * 0.06;
+      if (dist < 40) ai.roamTarget = null;
+    }
 
-    // Accelerate in facing direction
     vel.vx = (vel.vx || 0) * 0.92 + Math.cos(ai.carAngle) * phy.speed * 0.22;
     vel.vy = (vel.vy || 0) * 0.92 + Math.sin(ai.carAngle) * phy.speed * 0.22;
     const spd = Math.hypot(vel.vx, vel.vy);
@@ -1226,7 +1246,6 @@ const BT_CLOWN_CAR = new BTSelector(
     if (pos.y > worldH - 22) { pos.y = worldH - 22;  vel.vy = -Math.abs(vel.vy) * 1.1; bounced = true; }
     if (bounced) {
       ai.bounceCount++;
-      // Reflect car angle off wall
       ai.carAngle = Math.atan2(vel.vy, vel.vx);
       spawnParticles(pos.x, pos.y, '#ffdd00', 8);
       gs.shakeX = 6; gs.shakeY = 6;
