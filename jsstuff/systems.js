@@ -531,6 +531,69 @@ if (b.isBowlingBall) {
   for (const nb of bulletsToAdd) gs.bullets.push(nb);
 }
 
+function _spawnMiniClown(x, y, gs) {
+  const def = ENEMY_DEFS['miniClown'];
+  const baseHp = 1 + Math.floor(gs.wave / 2);
+  const id = ECS.createEntity();
+  ECS.add(id, 'enemy', { type: 'miniClown' });
+  ECS.add(id, 'pos', { x, y, angle: 0 });
+  ECS.add(id, 'vel', { vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4 });
+  ECS.add(id, 'hp', { hp: Math.ceil(baseHp * def.hpMult), maxHp: Math.ceil(baseHp * def.hpMult), hitFlash: 0 });
+  ECS.add(id, 'physics', { speed: CFG.MINI_CLOWN_SPEED });
+  ECS.add(id, 'ai', { shootCooldown: 0, dashHit: false });
+  spawnParticles(x, y, '#ff4400', 6);
+}
+
+function _clownCarExplode(id, pos, gs, playerDriving) {
+  spawnPartyParticles(pos.x, pos.y);
+  spawnParticles(pos.x, pos.y, '#ffdd00', 30);
+  gs.shakeX = 24; gs.shakeY = 24;
+
+  // Spawn a burst of mini clowns
+  const count = 3 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    _spawnMiniClown(pos.x + Math.cos(a) * 30, pos.y + Math.sin(a) * 30, gs);
+  }
+
+  // Damage nearby enemies
+  const toKill = [];
+  for (const eid of ECS.query('enemy', 'pos', 'hp')) {
+    if (eid === id) continue;
+    const epos = ECS.get(eid, 'pos'), ehp = ECS.get(eid, 'hp');
+    if (Math.hypot(epos.x - pos.x, epos.y - pos.y) < 120) {
+      ehp.hp -= baseBulletDamage() * 6; ehp.hitFlash = 14;
+      if (ehp.hp <= 0) toKill.push({ eid, x: epos.x, y: epos.y });
+    }
+  }
+  for (const { eid, x, y } of toKill) {
+    if (!ECS.has(eid, 'pos')) continue;
+    spawnParticles(x, y, '#ff2222', 14);
+    ECS.destroyEntity(eid);
+    gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+    tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+    updateHUD();
+  }
+
+  // Damage player if not driving
+  if (!playerDriving) {
+    const ppos = ECS.get(gs.playerId, 'pos');
+    if (ppos && Math.hypot(pos.x - ppos.x, pos.y - ppos.y) < 120 && gs.invincible <= 0) {
+      gs.health -= 25; gs.invincible = CFG.INVINCIBLE_FRAMES;
+      gs.flawlessThisWave = false;
+      triggerSFPHit(); updateHUD();
+      if (gs.health <= 0) { gameOver(); return; }
+    }
+  }
+
+  if (ECS.has(id, 'pos')) {
+    ECS.destroyEntity(id);
+    gs.waveKills++;
+  }
+  showMsg('CLOWN CAR EXPLODES! MINI CLOWNS EVERYWHERE!');
+  setTimeout(() => checkWave(), 0);
+}
+
 function sysPlayerMovement() {
 
   // Skip normal movement while driving car (handled in sysTimers)
