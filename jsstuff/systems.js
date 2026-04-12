@@ -1500,17 +1500,31 @@ function spawnEnemy() {
   let type='utensil';
   const roll=Math.random();
   if (gs.floor === 2) {
-  if (gs.wave >= 10) {
-    if      (roll < 0.22) type = 'ringmaster';
-    else if (roll < 0.44) type = 'cannonball';
-    else if (roll < 0.66) type = 'juggler';
-    else                  type = 'clownCar';
-  } else {
-    if      (roll < 0.35) type = 'cannonball';
-    else if (roll < 0.65) type = 'juggler';
-    else                  type = 'clownCar';
-  }
-}else if (gs.wave>=6){
+    // Wave-gated unlock curve — new enemy type introduced each bracket
+    // Cannonball unlocks first (wave 1 of floor 2 = wave 12+)
+    // Juggler unlocks wave 14+, Ringmaster wave 17+, Clown Car wave 20+
+    // Rarity stays weighted even after all unlock: cannonball most common, clownCar rarest
+    const w = gs.wave;
+    if (w >= 20) {
+      // All four active — cannonball most common, clown car rarest
+      if      (roll < 0.38) type = 'cannonball';
+      else if (roll < 0.66) type = 'juggler';
+      else if (roll < 0.84) type = 'ringmaster';
+      else                  type = 'clownCar';
+    } else if (w >= 17) {
+      // Ringmaster joins — no clown car yet
+      if      (roll < 0.42) type = 'cannonball';
+      else if (roll < 0.74) type = 'juggler';
+      else                  type = 'ringmaster';
+    } else if (w >= 14) {
+      // Juggler joins cannonball
+      if      (roll < 0.55) type = 'cannonball';
+      else                  type = 'juggler';
+    } else {
+      // Only cannonball (waves 12–13)
+      type = 'cannonball';
+    }
+  } else if (gs.wave>=6){
     if(roll<0.30)type='mask';else if(roll<0.52)type='giftBox';else if(roll<0.72)type='partyHat';
   } else if (gs.wave>=5){
     if(roll<0.32)type='mask';else if(roll<0.58)type='partyHat';
