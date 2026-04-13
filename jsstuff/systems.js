@@ -797,7 +797,7 @@ for (const nb of newBullets) {
     angle: Math.atan2(vy, vx),
     life: nb.life || CFG.BULLET_LIFE + 10,
     maxLife: nb.maxLife || CFG.BULLET_LIFE + 10,
-    damageMult: 1, isDud: false,
+    damageMult: 3, isDud: false,
   });
 }
     }
@@ -860,6 +860,19 @@ if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type
   const cdx=nearEnemy.pos.x-pos.x,cdy=nearEnemy.pos.y-pos.y,cd=Math.hypot(cdx,cdy)||1;
   vel.vx=(vel.vx||0)*0.88+(cdx/cd)*phy2.speed*0.22;
   vel.vy=(vel.vy||0)*0.88+(cdy/cd)*phy2.speed*0.22;
+  // Contact damage to nearest enemy
+  if (cd < 28 && ECS.has(nearEnemy.id, 'hp')) {
+    const nehp = ECS.get(nearEnemy.id, 'hp');
+    nehp.hp -= 3; nehp.hitFlash = 10;
+    spawnParticles(nearEnemy.pos.x, nearEnemy.pos.y, '#4488ff', 5);
+    if (nehp.hp <= 0) {
+      spawnParticles(nearEnemy.pos.x, nearEnemy.pos.y, '#ff2222', 14);
+      ECS.destroyEntity(nearEnemy.id);
+      gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+      tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+      updateHUD(); setTimeout(() => checkWave(), 0);
+    }
+  }
 } else {
   // No other enemies — wander slowly, ignore player
   if (!ai2._confuseWanderAngle) ai2._confuseWanderAngle = Math.random() * Math.PI * 2;
@@ -1493,7 +1506,7 @@ if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
       setTimeout(() => { gs.clownNoseTimer = 0; gs.clownNoseSize = 0; }, 200);
 
       // Two waves with different speeds — NO stray bullets
-  const waveMaxR = gs.hasClownishUpgrade ? 160 : 110;
+  const waveMaxR = gs.hasClownishUpgrade ? 220 : 160;
       gs.clownSoundWaves = [
         { x: ppos3.x, y: ppos3.y, r: 8, maxR: waveMaxR, life: 55, maxLife: 55, speed: 2.4, hitEnemies: new Set() },
         { x: ppos3.x, y: ppos3.y, r: 8, maxR: waveMaxR, life: 44, maxLife: 55, speed: 1.5, hitEnemies: new Set() },
