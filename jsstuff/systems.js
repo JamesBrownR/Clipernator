@@ -8,7 +8,7 @@ function shuffle(arr) {
     const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
-  return a; 
+  return a;  
 }
 
 function spawnParticles(x, y, color, n = 8) {
