@@ -19,10 +19,11 @@
 
 ## Known Issues / TODO 
 
-- the boss floor one spawns on wave 11 instead of at the end of wave ten like its supposed too. this makes wave 11 considerend a floor one level, and it takes a whole bunch on enemies to move on from it. you are suppsoed to go to wave 11 after you kill the boss. also floor 2 waves seem to carry the same spawn cooldown from wave 11, the enemies spawn really fast on wave 12 and more. it also takes too many enemy deaths to move on to the next wave in early floor two waves.
+- the boss floor one spawns on wave 11 instead of at the end of wave ten like its supposed too. this makes wave 11 considerend a floor one level, and it takes a whole bunch on enemies to move on from it, but it should only take 5 kills to move from wave 11. you are suppsoed to go to wave 11 after you kill the boss. 
 - floor 2 boss doesnt work at all
 - General item pool needs at least 5 more items
-- Clownish is still a bit iffy. When you confuse enemies that shoot bullets their bullets are still enemy owned bullets, not player-owned. 
+- Clownish is still a bit iffy. wave radius should be expanded slightly. confused enemies should do 3x damage to other enemies.
+- mask enemies should shoot projectiles from slightly outside themselves, their bullets should not spawn on their hitbox
 - reflected cannon balls should not stop the charge until they hit something. current if you are at one side of that stage and reflect a cannonball to another, it stops before it explodes on a wall
 - cannon ball charge speed should be reduced by 20%
 - Clownish upgrade is placeholder
