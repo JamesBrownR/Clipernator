@@ -770,6 +770,9 @@ function drawPlayer() {
 const BODY_W = 48;
 const BODY_H = 48; // square since image is 959x959
 
+    const bob = Math.sin(playerBobTimer) * 2.5;
+const movingLeft = Math.cos(playerMoveAngle) < 0;
+    
 ctx.save();
 ctx.translate(x, y + bob);
 if (blinking) ctx.globalAlpha = 0.35;
