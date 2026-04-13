@@ -41,20 +41,28 @@ function drawUtensil(epos, ehp, ai, frozen) {
   ctx.save();
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
 
-  for (let i = 0; i < 3; i++) {
-    if (state !== 'IDLE' && i === activeIdx) continue;
-    const u     = utensils[i];
-    const angle = orbitAngle + (i / 3) * Math.PI * 2;
-    const ox    = x + Math.cos(angle) * 20;
-    const oy    = y + Math.sin(angle) * 20;
+ for (let i = 0; i < 3; i++) {
+  if (state !== 'IDLE' && i === activeIdx) continue;
+  const u = utensils[i];
+  const angle = orbitAngle + (i / 3) * Math.PI * 2;
+  const ox = x + Math.cos(angle) * 20;
+  const oy = y + Math.sin(angle) * 20;
+  
+  if (u === 'fork') {
+    // Map orbit angle to frame index 0-7
+    const normalizedAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const frameIndex = Math.floor((normalizedAngle / (Math.PI * 2)) * 8);
+    drawForkFrame(frameIndex, ox, oy, 0); // 0 rotation since frame handles it
+  } else {
     ctx.save();
     ctx.translate(ox, oy);
     ctx.rotate(angle + Math.PI / 2);
     ctx.shadowColor = frozen ? '#aaccff' : colors[u];
-    ctx.shadowBlur  = 8;
+    ctx.shadowBlur = 8;
     _drawUtensilShape(ctx, u, frozen ? '#88aacc' : colors[u]);
     ctx.restore();
   }
+}
 
   if (state !== 'IDLE' && activeIdx >= 0 && ai.uTipX !== undefined) {
     const u       = utensils[activeIdx];
