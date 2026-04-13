@@ -10,10 +10,9 @@ function _drawUtensilShape(ctx, type, color, scale = 1) {
   ctx.lineCap     = 'round';
 
   if (type === 'fork') {
-    ctx.beginPath(); ctx.moveTo(0, 14 * scale); ctx.lineTo(0, -4 * scale); ctx.stroke();
-    for (let i = -2; i <= 2; i += 2) {
-      ctx.beginPath(); ctx.moveTo(0, -4 * scale); ctx.lineTo(i * scale, -14 * scale); ctx.stroke();
-    }
+    // Map orbit angle to frame 0-7
+    return; // sprite handled separately
+  
   } else if (type === 'knife') {
     ctx.beginPath(); ctx.moveTo(0, 14 * scale); ctx.lineTo(0, 2 * scale); ctx.stroke();
     ctx.beginPath();
@@ -79,7 +78,34 @@ function drawUtensil(epos, ehp, ai, frozen) {
   ctx.fillRect(x - bw/2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
 }
 
-
+function drawForkFrame(frameIndex, x, y, angle) {
+  if (!forkSheetImg.complete || forkSheetImg.naturalWidth === 0) return;
+  
+  const FORK_FRAME_W = 180;
+  const FORK_FRAME_H = 752;
+  const FORK_COLS = 3;
+  const DRAW_W = 20;  // adjust this to match in-game size
+  const DRAW_H = 84;  // keeps aspect ratio
+  
+  const col = frameIndex % FORK_COLS;
+  const row = Math.floor(frameIndex / FORK_COLS);
+  
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.drawImage(
+    forkSheetImg,
+    col * FORK_FRAME_W,
+    row * FORK_FRAME_H,
+    FORK_FRAME_W,
+    FORK_FRAME_H,
+    -DRAW_W / 2,
+    -DRAW_H / 2,
+    DRAW_W,
+    DRAW_H
+  );
+  ctx.restore();
+}
 
 function drawMaskFrame(frameIndex, x, y, alpha = 1) {
   if (!maskSheetImg.complete || maskSheetImg.naturalWidth === 0) return;
