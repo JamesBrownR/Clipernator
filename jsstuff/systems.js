@@ -1726,8 +1726,9 @@ function checkWave() {
       gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + Math.max(1, f2wave) * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
       gs.spawnInterval = Math.max(75, CFG.SPAWN_INTERVAL_BASE - Math.max(1, f2wave) * CFG.WAVE_SPAWN_SPEEDUP);
     } else {
-      gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
-      gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
+      const f2wave = gs.wave - 11;
+gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + Math.max(1, f2wave) * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
+gs.spawnInterval = Math.max(75, CFG.SPAWN_INTERVAL_BASE - Math.max(1, f2wave) * CFG.WAVE_SPAWN_SPEEDUP);
     }
 
     gs.waveKills=0; gs.flawlessThisWave=true;
