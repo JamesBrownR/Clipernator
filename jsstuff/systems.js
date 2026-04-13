@@ -1738,22 +1738,22 @@ function checkWave() {
     }
     updateHUD();
    
- if (completed === CFG.BOSS_WAVE) {
-  // Don't increment wave — stay on wave 10 until boss dies
+gs.wave++;
+
+if (completed === CFG.BOSS_WAVE - 1) {
+  gs.wave--; // revert — stay on wave 10 until boss dies
   gs.bossActive = true;
   spawnBoss();
   gs.waveEnemiesLeft = 5;
   gs.waveKills = 0;
   gs.spawnInterval = Math.max(120, CFG.SPAWN_INTERVAL_BASE * 2);
   gs.flawlessThisWave = true;
-  showMsg('BOSS INCOMING — WAVE ' + completed + '!');
+  showMsg('BOSS INCOMING — WAVE ' + gs.wave + '!');
   updateHUD();
   return;
 }
 
-gs.wave++;
-
-if (gs.floor === 2) { else if (gs.wave === CFG.BOSS2_WAVE && gs.floor === 2) {
+if (gs.floor === 2 && gs.wave === CFG.BOSS2_WAVE) {
       // ... boss2 spawn 
       gs.bossActive = true;
       // spawn boss2
