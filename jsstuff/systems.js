@@ -1720,7 +1720,6 @@ function checkWave() {
       showMsg('FLAWLESS BAKING! +2 MAX AMMO!');
       spawnPartyParticles(CFG.W/2, CFG.H/2);
     }
-    gs.wave++;
 
     if (gs.floor === 2) {
       const f2wave = gs.wave - 11;
@@ -1738,13 +1737,23 @@ function checkWave() {
       gs.candleRelightDelay=180; showMsg('CANDLES SNUFFED! THEY WILL RELIGHT...');
     }
     updateHUD();
-   if (completed===CFG.BOSS_WAVE) {
-  gs.bossActive=true; spawnBoss();
-  gs.waveEnemiesLeft = 5;   // boss wave: only need 5 kills to advance after boss dies
+   
+ if (completed === CFG.BOSS_WAVE) {
+  // Don't increment wave — stay on wave 10 until boss dies
+  gs.bossActive = true;
+  spawnBoss();
+  gs.waveEnemiesLeft = 5;
   gs.waveKills = 0;
-  gs.spawnInterval=Math.max(120,CFG.SPAWN_INTERVAL_BASE*2);
-  showMsg('BOSS INCOMING — WAVE '+completed+'!');
-} else if (gs.wave === CFG.BOSS2_WAVE && gs.floor === 2) {
+  gs.spawnInterval = Math.max(120, CFG.SPAWN_INTERVAL_BASE * 2);
+  gs.flawlessThisWave = true;
+  showMsg('BOSS INCOMING — WAVE ' + completed + '!');
+  updateHUD();
+  return;
+}
+
+gs.wave++;
+
+if (gs.floor === 2) { else if (gs.wave === CFG.BOSS2_WAVE && gs.floor === 2) {
       // ... boss2 spawn 
       gs.bossActive = true;
       // spawn boss2
@@ -1869,11 +1878,21 @@ function spinPrizeWheel() {
 }
 
 function handleBossDeath(id) {
-  if (gs.bossId!==id) return;
-  gs.bossActive=false; gs.bossId=null;
-  gs.transitioning=true; gs.transitionT=0;
-  gs.transitionStartW=worldW; gs.transitionStartH=worldH;
-  gs.transitionEndW=1050; gs.transitionEndH=690;
-  gs.transitionDone=false;
+  if (gs.bossId !== id) return;
+  gs.bossActive = false;
+  gs.bossId = null;
+  gs.wave++;         // now advance from 10 → 11
+  gs.waveKills = 0;
+  gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
+  gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
+  gs.flawlessThisWave = true;
+  updateHUD();
+  gs.transitioning = true;
+  gs.transitionT = 0;
+  gs.transitionStartW = worldW;
+  gs.transitionStartH = worldH;
+  gs.transitionEndW = 1050;
+  gs.transitionEndH = 690;
+  gs.transitionDone = false;
   showMsg('BOSS DEFEATED! ARENA EXPANDING...');
 }
