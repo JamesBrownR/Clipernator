@@ -1051,11 +1051,22 @@ const BT_CANNONBALL = new BTSelector(
     ai.chargeTimer = (ai.chargeTimer || 0) - 1;
 
     if (ai.chargeState === 'IDLE') {
-      const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
-      vel.vx = (vel.vx||0)*0.9 + (dx/dist)*phy.speed*0.1;
-      vel.vy = (vel.vy||0)*0.9 + (dy/dist)*phy.speed*0.1;
-      if (ai.chargeTimer <= 0) {
-        ai.chargeTarget = { x: pp.x, y: pp.y };
+  // Confused: target nearest enemy instead of player
+  let targetPos = pp;
+  if (ai.confused) {
+    let nearDist = 999999;
+    for (const eid of ECS.query('enemy', 'pos')) {
+      if (eid === id) continue;
+      const ep = ECS.get(eid, 'pos');
+      const d = Math.hypot(ep.x - pos.x, ep.y - pos.y);
+      if (d < nearDist) { nearDist = d; targetPos = ep; }
+    }
+  }
+  const dx = targetPos.x - pos.x, dy = targetPos.y - pos.y, dist = Math.hypot(dx,dy)||1;
+  vel.vx = (vel.vx||0)*0.9 + (dx/dist)*phy.speed*0.1;
+  vel.vy = (vel.vy||0)*0.9 + (dy/dist)*phy.speed*0.1;
+  if (ai.chargeTimer <= 0) {
+    ai.chargeTarget = { x: targetPos.x, y: targetPos.y };
         ai.chargeState = 'TELEGRAPH';
         ai.chargeTimer = 70;
         vel.vx *= 0.2; vel.vy *= 0.2;
