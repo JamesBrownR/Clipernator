@@ -17,9 +17,18 @@
 
 ---
 
-## Known Issues / TODO 
+## Problems, somewhat ordered by importance 
 
-- the boss floor one spawns on wave 11 instead of at the end of wave ten like its supposed too. this makes wave 11 considerend a floor one level, and it takes a whole bunch on enemies to move on from it, but it should only take 5 kills to move from wave 11. you are suppsoed to go to wave 11 after you kill the boss. 
+
+* replace all enemies, items, etc with cartoon style
+* make floor 1 enemies more interactive and unique. 
+   * the utenstil currently seems to just do damage to enemies when it hits them regardless of which utenstil does it. if a fork hits a enemy it deals damage and doesnt get grabbed, similarly if a spoon hits a enemy it doesnt get knocked back. the fork isnt supposed to do damage but grab things. if a utensil enemy forks a nother enemy, it should bring the enemy closer to them before charging up to lauch the enemy held at the player. the utensil enemy should actively grab giftboxes near them, if the giftboxes and closer to them than the player, to throw at the player.
+   * the birthday hat enemy should chase the player if no masks are around. if a mask is present it should go on the masks head, making it deal twice as much damage, shoot twice as fast and changing its tears to be red. (i think this would require a second mask sprite sheet)
+   * the mask and utensil enemy just chase the player. the utensil enemy should not try and go directly tothe player, it should chase until a certain point. the mask enemy should not try and chase the player at all, unlike how it sometimes does.
+* the cake boss should not mindlessly go to the center all the time. it should just hover around the stage as a idle animation
+* i dont know if cutscenes are possible in html, but if so  I would like a animation of the cake boss falling from the sky
+* there should be a slightl delay between when the boss is defeated and when the stage expands. it should also expand slower
+* clippy should probably have a animation, rather than just being a single sprite
 - floor 2 boss doesnt work at all
 - General item pool needs at least 5 more items
 - Clownish is still a bit iffy. wave radius should be expanded slightly. confused enemies should do 3x damage to other enemies (both from contact damage and bullets). confused enemies currently still dont do contact damage. cannonballs that are confused dont charge at enemies and explode. all enemeies when confused should attack other enenmies
