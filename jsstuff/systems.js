@@ -1740,7 +1740,7 @@ function checkWave() {
    
 gs.wave++;
 
-if (completed === CFG.BOSS_WAVE - 1) {
+if (completed === CFG.BOSS_WAVE) {
   gs.wave--; // revert — stay on wave 10 until boss dies
   gs.bossActive = true;
   spawnBoss();
