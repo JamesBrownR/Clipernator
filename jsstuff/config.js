@@ -89,6 +89,10 @@ let gunY = 0;
 let playerBobTimer = 0;
 
 // At the top of draw.js, add this with the other image loaders (near playerImg/shotgunImg)
+
+const forkSheetImg = new Image();
+forkSheetImg.src = '/Clipernator/sprites/ForkSheet.png';
+
 const maskSheetImg = new Image();
 maskSheetImg.src = '/Clipernator/sprites/MaskSheet.png';
 
