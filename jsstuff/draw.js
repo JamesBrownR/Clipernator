@@ -755,7 +755,7 @@ function drawPlayer() {
   }
 
   const GUN_W = 90;
-  const GUN_H = 20;
+  const GUN_H = 60;
   const GRIP_X = GUN_W * 0.32;
   const GRIP_Y = GUN_H * 0.6;
   const recoilDist = gunRecoil * 6;
@@ -767,20 +767,20 @@ function drawPlayer() {
 
   const sourceImg = playerCanvas || playerImg;
   if (sourceImg && (sourceImg.complete !== false)) {
-    const BODY_W = 36;
-    const BODY_H = 56;
-    const bob = Math.sin(playerBobTimer) * 1.0;
-    ctx.save();
-    ctx.translate(x, y + bob);
-    if (blinking) ctx.globalAlpha = 0.35;
-    const movingLeft = Math.cos(playerMoveAngle) < 0;
-    if (movingLeft) ctx.scale(-1, 1);
-    ctx.drawImage(sourceImg,
-      290, 160, 440, 740,
-      -BODY_W / 2, -BODY_H * 0.75,
-      BODY_W, BODY_H
-    );
-    ctx.restore();
+const BODY_W = 48;
+const BODY_H = 48; // square since image is 959x959
+
+ctx.save();
+ctx.translate(x, y + bob);
+if (blinking) ctx.globalAlpha = 0.35;
+if (movingLeft) ctx.scale(-1, 1);
+ctx.drawImage(
+  sourceImg,
+  0, 0, 959, 959,        // use full image, no crop
+  -BODY_W / 2, -BODY_H * 0.75,
+  BODY_W, BODY_H
+);
+ctx.restore();
   }
 
   if (shotgunImg.complete && shotgunImg.naturalWidth > 0) {
@@ -789,11 +789,12 @@ function drawPlayer() {
     ctx.rotate(gunAngle);
     if (aimingLeft) ctx.scale(1, -1);
     if (blinking) ctx.globalAlpha = 0.35;
-    ctx.drawImage(shotgunImg,
-      56, 523, 897, 195,
-      -GRIP_X, -GRIP_Y,
-      GUN_W, GUN_H
-    );
+    ctx.drawImage(
+  shotgunImg,
+  0, 0, 1536, 1024,      // use full image, no crop
+  -GRIP_X, -GRIP_Y,
+  GUN_W, GUN_H
+);
     ctx.restore();
   }
 
