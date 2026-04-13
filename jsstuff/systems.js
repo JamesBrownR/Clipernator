@@ -1738,11 +1738,13 @@ function checkWave() {
       gs.candleRelightDelay=180; showMsg('CANDLES SNUFFED! THEY WILL RELIGHT...');
     }
     updateHUD();
-    if (completed===CFG.BOSS_WAVE) {
-      gs.bossActive=true; spawnBoss();
-      gs.spawnInterval=Math.max(120,CFG.SPAWN_INTERVAL_BASE*2);
-      showMsg('BOSS INCOMING — WAVE '+completed+'!');
-    } else if (gs.wave === CFG.BOSS2_WAVE && gs.floor === 2) {
+   if (completed===CFG.BOSS_WAVE) {
+  gs.bossActive=true; spawnBoss();
+  gs.waveEnemiesLeft = 5;   // boss wave: only need 5 kills to advance after boss dies
+  gs.waveKills = 0;
+  gs.spawnInterval=Math.max(120,CFG.SPAWN_INTERVAL_BASE*2);
+  showMsg('BOSS INCOMING — WAVE '+completed+'!');
+} else if (gs.wave === CFG.BOSS2_WAVE && gs.floor === 2) {
       // ... boss2 spawn 
       gs.bossActive = true;
       // spawn boss2
