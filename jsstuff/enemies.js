@@ -15,7 +15,6 @@ const BOSS_PHASE = {
 // BEHAVIOR TREES
 // ================================================================
 
-// ── Utensil: fork / knife / spoon ──
 const BT_UTENSIL = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
@@ -26,17 +25,20 @@ const BT_UTENSIL = new BTSelector(
     const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    const utensils = ['fork', 'knife', 'spoon'];
+    const subtype = ECS.get(id, 'enemy').subtype || 'fork';
 
     // ── Init ──
-    if (ai.uState       === undefined) ai.uState       = 'IDLE';
-    if (ai.uOrbitAngle  === undefined) ai.uOrbitAngle  = Math.random() * Math.PI * 2;
-    if (ai.uLaunchTimer === undefined) ai.uLaunchTimer = 80 + Math.floor(Math.random() * 60);
-    if (ai.uActiveIdx   === undefined) ai.uActiveIdx   = -1;
-    if (ai.uLaunchDir   === undefined) ai.uLaunchDir   = null;
-    if (ai.uTravelTimer === undefined) ai.uTravelTimer = 0;
+    if (ai.uState        === undefined) ai.uState        = 'IDLE';
+    if (ai.uOrbitAngle   === undefined) ai.uOrbitAngle   = Math.random() * Math.PI * 2;
+    if (ai.uLaunchTimer  === undefined) ai.uLaunchTimer  = 80 + Math.floor(Math.random() * 60);
+    if (ai.uActiveIdx    === undefined) ai.uActiveIdx    = -1;
+    if (ai.uLaunchDir    === undefined) ai.uLaunchDir    = null;
+    if (ai.uTravelTimer  === undefined) ai.uTravelTimer  = 0;
     if (ai.uForkGrabTimer === undefined) ai.uForkGrabTimer = 0;
     if (ai.uTelegraphTimer === undefined) ai.uTelegraphTimer = 0;
+    if (ai.uGrabbedId    === undefined) ai.uGrabbedId    = null;  // fork: grabbed entity id
+    if (ai.uPullTimer    === undefined) ai.uPullTimer    = 0;     // fork: pull-in frames
+    if (ai.uHoldTimer    === undefined) ai.uHoldTimer    = 0;     // fork: windup before throw
 
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
 
@@ -46,47 +48,321 @@ const BT_UTENSIL = new BTSelector(
     const spd = Math.hypot(vel.vx, vel.vy);
     if (spd > phy.speed) { vel.vx = vel.vx / spd * phy.speed; vel.vy = vel.vy / spd * phy.speed; }
 
-    // ── Tick down any active fork grab ──
+    // ── Tick down player fork-grab ──
     if (ai.uForkGrabTimer > 0) {
       ai.uForkGrabTimer--;
       const pvel = ECS.get(gs.playerId, 'vel');
       if (pvel) { pvel.vx *= 0.35; pvel.vy *= 0.35; }
       gs.forkGrabbed = true;
-      if (ai.uForkGrabTimer <= 0) {
-        gs.forkGrabbed = false;
-        showMsg('FORK RELEASED!');
-      }
+      if (ai.uForkGrabTimer <= 0) { gs.forkGrabbed = false; showMsg('FORK RELEASED!'); }
     }
+
+    // ================================================================
+    // FORK STATE MACHINE
+    // ================================================================
+    if (subtype === 'fork') {
+
+      // ── IDLE: orbit, then decide target ──
+      if (ai.uState === 'IDLE') {
+        ai.uOrbitAngle += 0.045;
+        ai.uLaunchTimer--;
+
+        if (ai.uLaunchTimer <= 0 && dist < 400) {
+          // Decide target: nearest giftbox within 220px, else player
+          let forkTargetId = null;
+          let forkTargetPos = null;
+          let nearestGift = 999999;
+
+          for (const eid of ECS.query('enemy', 'pos', 'ai')) {
+            if (eid === id) continue;
+            const etype = ECS.get(eid, 'enemy').type;
+            const eai2  = ECS.get(eid, 'ai');
+            if (etype !== 'giftBox' && etype !== 'utensil') continue; // only grab giftboxes or other enemies
+            if (eai2 && eai2.heldByPlayer) continue; // skip player-held boxes
+            const ep = ECS.get(eid, 'pos');
+            const d  = Math.hypot(ep.x - pos.x, ep.y - pos.y);
+            if (d < 220 && d < nearestGift) { nearestGift = d; forkTargetId = eid; forkTargetPos = ep; }
+          }
+
+          // Only prefer giftbox if it's closer than the player
+          if (forkTargetId && nearestGift < dist) {
+            ai.uForkTargetId = forkTargetId;
+            ai.uState = 'FORK_GRAB_TELEGRAPH';
+            ai.uTelegraphTimer = 24;
+            const fdx = forkTargetPos.x - pos.x, fdy = forkTargetPos.y - pos.y;
+            const fd = Math.hypot(fdx, fdy) || 1;
+            ai.uLaunchDir = { x: fdx / fd, y: fdy / fd };
+            ai.uTipX = pos.x + Math.cos(ai.uOrbitAngle) * 20;
+            ai.uTipY = pos.y + Math.sin(ai.uOrbitAngle) * 20;
+          } else {
+            // Target nearest enemy (not giftbox, not self) within range for grab-and-throw
+            let nearestEnemy = null, nearestEnemyDist = 999999, nearestEnemyId = null;
+            for (const eid of ECS.query('enemy', 'pos')) {
+              if (eid === id) continue;
+              const etype = ECS.get(eid, 'enemy').type;
+              if (etype === 'miniClown') continue; // too small to grab
+              const ep = ECS.get(eid, 'pos');
+              const d  = Math.hypot(ep.x - pos.x, ep.y - pos.y);
+              if (d < 260 && d < nearestEnemyDist) {
+                nearestEnemyDist = d; nearestEnemy = ep; nearestEnemyId = eid;
+              }
+            }
+
+            if (nearestEnemyId) {
+              ai.uForkTargetId = nearestEnemyId;
+              ai.uState = 'FORK_GRAB_TELEGRAPH';
+              ai.uTelegraphTimer = 24;
+              const fdx = nearestEnemy.x - pos.x, fdy = nearestEnemy.y - pos.y;
+              const fd = Math.hypot(fdx, fdy) || 1;
+              ai.uLaunchDir = { x: fdx / fd, y: fdy / fd };
+              ai.uTipX = pos.x + Math.cos(ai.uOrbitAngle) * 20;
+              ai.uTipY = pos.y + Math.sin(ai.uOrbitAngle) * 20;
+            } else {
+              // No grab target — stab player directly (original behaviour)
+              ai.uForkTargetId = null;
+              ai.uState = 'TELEGRAPH';
+              ai.uActiveIdx = 0; // fork is always index 0 conceptually
+              ai.uTelegraphTimer = 28;
+              ai.uLaunchDir = { x: dx / dist, y: dy / dist };
+              ai.uTipX = pos.x + Math.cos(ai.uOrbitAngle) * 20;
+              ai.uTipY = pos.y + Math.sin(ai.uOrbitAngle) * 20;
+            }
+            ai.uLaunchTimer = 100 + Math.floor(Math.random() * 60);
+          }
+        }
+      }
+
+      // ── FORK_GRAB_TELEGRAPH: wobble tines toward target ──
+      else if (ai.uState === 'FORK_GRAB_TELEGRAPH') {
+        ai.uTelegraphTimer--;
+        if (ai.uTelegraphTimer % 5 === 0) spawnParticles(ai.uTipX, ai.uTipY, '#ffcc88', 4);
+        const orbitA = ai.uOrbitAngle;
+        ai.uTipX = pos.x + Math.cos(orbitA) * 20 + Math.sin(Date.now() / 60) * 4;
+        ai.uTipY = pos.y + Math.sin(orbitA) * 20 + Math.sin(Date.now() / 80) * 4;
+        if (ai.uTelegraphTimer <= 0) {
+          // Validate target still exists
+          if (ai.uForkTargetId && ECS.has(ai.uForkTargetId, 'pos')) {
+            const tpos = ECS.get(ai.uForkTargetId, 'pos');
+            const fdx = tpos.x - pos.x, fdy = tpos.y - pos.y, fd = Math.hypot(fdx, fdy) || 1;
+            ai.uLaunchDir = { x: fdx / fd, y: fdy / fd };
+            ai.uTipVx = ai.uLaunchDir.x * 10;
+            ai.uTipVy = ai.uLaunchDir.y * 10;
+          } else {
+            // Target gone — abort
+            ai.uState = 'IDLE'; ai.uForkTargetId = null; return BT.RUNNING;
+          }
+          ai.uTravelTimer = 0;
+          ai.uState = 'FORK_REACHING';
+          spawnParticles(pos.x, pos.y, '#ffcc88', 8);
+        }
+      }
+
+      // ── FORK_REACHING: tines fly toward grabbed target ──
+      else if (ai.uState === 'FORK_REACHING') {
+        ai.uTipX += ai.uTipVx;
+        ai.uTipY += ai.uTipVy;
+        ai.uTravelTimer++;
+
+        const hitWall   = ai.uTipX < 20 || ai.uTipX > worldW - 20 || ai.uTipY < 20 || ai.uTipY > worldH - 20;
+        const maxTravel = ai.uTravelTimer > 60;
+
+        // ── Player stab (fallback if no target) ──
+        if (!ai.uForkTargetId) {
+          const ppos2 = ECS.get(gs.playerId, 'pos');
+          if (ppos2 && Math.hypot(ai.uTipX - ppos2.x, ai.uTipY - ppos2.y) < 22 && gs.invincible <= 0) {
+            ai.uForkGrabTimer = 75; gs.forkGrabbed = true;
+            showMsg('FORK GRABBED YOU! WIGGLE FREE!');
+            spawnParticles(ai.uTipX, ai.uTipY, '#ffcc88', 14);
+            ai.uState = 'RETURN'; return BT.RUNNING;
+          }
+        }
+
+        // ── Check hit on intended grab target ──
+        if (ai.uForkTargetId && ECS.has(ai.uForkTargetId, 'pos')) {
+          const tpos = ECS.get(ai.uForkTargetId, 'pos');
+          if (Math.hypot(ai.uTipX - tpos.x, ai.uTipY - tpos.y) < 28) {
+            // Grabbed!
+            ai.uGrabbedId  = ai.uForkTargetId;
+            ai.uForkTargetId = null;
+            ai.uPullTimer  = 35;
+            ai.uState      = 'FORK_PULLING';
+            // Freeze the grabbed entity's velocity
+            const gvel = ECS.get(ai.uGrabbedId, 'vel');
+            if (gvel) { gvel.vx = 0; gvel.vy = 0; }
+            spawnParticles(tpos.x, tpos.y, '#ffcc88', 12);
+            showMsg('FORK GRABS ENEMY!');
+            return BT.RUNNING;
+          }
+        }
+
+        if (hitWall || maxTravel) { ai.uState = 'RETURN'; ai.uForkTargetId = null; }
+      }
+
+      // ── FORK_PULLING: drag grabbed entity back toward body ──
+      else if (ai.uState === 'FORK_PULLING') {
+        ai.uPullTimer--;
+
+        if (!ai.uGrabbedId || !ECS.has(ai.uGrabbedId, 'pos')) {
+          // Entity died while being pulled
+          ai.uGrabbedId = null; ai.uState = 'IDLE'; return BT.RUNNING;
+        }
+
+        const gpos = ECS.get(ai.uGrabbedId, 'pos');
+        const gvel = ECS.get(ai.uGrabbedId, 'vel');
+
+        // Pull toward body
+        const pdx = pos.x - gpos.x, pdy = pos.y - gpos.y;
+        const pd  = Math.hypot(pdx, pdy) || 1;
+        if (gvel) { gvel.vx = (pdx / pd) * 9; gvel.vy = (pdy / pd) * 9; }
+
+        // Keep tip at grabbed entity
+        ai.uTipX = gpos.x; ai.uTipY = gpos.y;
+
+        // Close enough or timer done → enter hold/windup
+        if (pd < 30 || ai.uPullTimer <= 0) {
+          if (gvel) { gvel.vx = 0; gvel.vy = 0; }
+          ai.uHoldTimer = 40;
+          ai.uState = 'FORK_HOLDING';
+        }
+      }
+
+      // ── FORK_HOLDING: windup, then arc-throw toward player ──
+      else if (ai.uState === 'FORK_HOLDING') {
+        ai.uHoldTimer--;
+
+        if (!ai.uGrabbedId || !ECS.has(ai.uGrabbedId, 'pos')) {
+          ai.uGrabbedId = null; ai.uState = 'IDLE'; return BT.RUNNING;
+        }
+
+        const gpos = ECS.get(ai.uGrabbedId, 'pos');
+        const gvel = ECS.get(ai.uGrabbedId, 'vel');
+
+        // Hover grabbed entity near body with slight wobble
+        gpos.x = pos.x + Math.sin(Date.now() / 80) * 12;
+        gpos.y = pos.y - 28 + Math.cos(Date.now() / 100) * 6;
+        ai.uTipX = gpos.x; ai.uTipY = gpos.y;
+        if (gvel) { gvel.vx = 0; gvel.vy = 0; }
+
+        // Warning particles
+        if (ai.uHoldTimer % 8 === 0) spawnParticles(pos.x, pos.y, '#ff8800', 5);
+
+        if (ai.uHoldTimer <= 0) {
+          // Arc-throw toward player
+          const etype = ECS.get(ai.uGrabbedId, 'enemy').type;
+          const targetX = pp.x, targetY = pp.y;
+          const horizDist = Math.hypot(targetX - pos.x, targetY - pos.y);
+          const GRAVITY   = 0.12;
+          const HANG_TIME = Math.max(45, Math.min(100, horizDist / 5));
+          const vx        = (targetX - pos.x) / HANG_TIME;
+          const vyHoriz   = (targetY - pos.y) / HANG_TIME;
+          const vyUp      = -HANG_TIME * GRAVITY * 0.5;
+          const isGift    = etype === 'giftBox';
+
+          // Move entity off-screen during flight
+          gpos.x = -200; gpos.y = -200;
+          if (gvel) { gvel.vx = 0; gvel.vy = 0; }
+
+          gs.enemyBullets.push({
+            x: pos.x, y: pos.y,
+            vx, vy: vyUp,
+            vyHoriz, gravity: GRAVITY,
+            life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
+            color: isGift ? '#ff8800' : '#ffcc88',
+            isArcBall: true,
+            isArcEnemy: true,
+            carriedEnemyType: etype,
+            carriedId: ai.uGrabbedId,
+            isCannonball: false,
+            targetX, targetY,
+            hangTime: HANG_TIME,
+            startX: pos.x, startY: pos.y,
+            shadowX: pos.x, shadowY: pos.y,
+            sizeScale: isGift ? 1.1 : 0.85,
+          });
+
+          spawnParticles(pos.x, pos.y, '#ffcc88', 14);
+          showMsg(isGift ? 'FORK LAUNCHES GIFT BOX!' : 'FORK THROWS AN ENEMY!');
+          ai.uGrabbedId = null;
+          ai.uState = 'RETURN';
+          ai.uLaunchTimer = 120 + Math.floor(Math.random() * 60);
+        }
+      }
+
+      // ── RETURN: tines snap back ──
+      else if (ai.uState === 'RETURN') {
+        const rdx = pos.x - ai.uTipX, rdy = pos.y - ai.uTipY;
+        const rd  = Math.hypot(rdx, rdy) || 1;
+        ai.uTipX += (rdx / rd) * 10;
+        ai.uTipY += (rdy / rd) * 10;
+        if (rd < 22) { ai.uState = 'IDLE'; ai.uActiveIdx = -1; ai.uForkTargetId = null; spawnParticles(pos.x, pos.y, '#cccccc', 4); }
+      }
+
+      // ── Legacy TELEGRAPH/LAUNCH for player-stab fallback ──
+      else if (ai.uState === 'TELEGRAPH') {
+        ai.uTelegraphTimer--;
+        if (ai.uTelegraphTimer % 5 === 0) spawnParticles(ai.uTipX, ai.uTipY, '#ffcc88', 4);
+        const orbitA = ai.uOrbitAngle;
+        ai.uTipX = pos.x + Math.cos(orbitA) * 20 + Math.sin(Date.now() / 60) * 5;
+        ai.uTipY = pos.y + Math.sin(orbitA) * 20 + Math.sin(Date.now() / 80) * 5;
+        if (ai.uTelegraphTimer <= 0) {
+          const ldx = pp.x - pos.x, ldy = pp.y - pos.y, ldist = Math.hypot(ldx, ldy) || 1;
+          ai.uLaunchDir = { x: ldx / ldist, y: ldy / ldist };
+          ai.uTipVx = ai.uLaunchDir.x * 9;
+          ai.uTipVy = ai.uLaunchDir.y * 9;
+          ai.uTravelTimer = 0;
+          ai.uState = 'LAUNCH';
+          spawnParticles(pos.x, pos.y, '#ffcc88', 10);
+        }
+      }
+
+      else if (ai.uState === 'LAUNCH') {
+        ai.uTipX += ai.uTipVx;
+        ai.uTipY += ai.uTipVy;
+        ai.uTravelTimer++;
+        const hitWall   = ai.uTipX < 20 || ai.uTipX > worldW - 20 || ai.uTipY < 20 || ai.uTipY > worldH - 20;
+        const maxTravel = ai.uTravelTimer > 65;
+        const ppos2 = ECS.get(gs.playerId, 'pos');
+        if (ppos2 && Math.hypot(ai.uTipX - ppos2.x, ai.uTipY - ppos2.y) < 22 && gs.invincible <= 0) {
+          ai.uForkGrabTimer = 75; gs.forkGrabbed = true;
+          showMsg('FORK GRABBED YOU! WIGGLE FREE!');
+          spawnParticles(ai.uTipX, ai.uTipY, '#ffcc88', 14);
+          ai.uState = 'RETURN'; return BT.RUNNING;
+        }
+        if (hitWall || maxTravel) ai.uState = 'RETURN';
+      }
+
+      return BT.RUNNING;
+    }
+
+    // ================================================================
+    // KNIFE & SPOON (unchanged original logic)
+    // ================================================================
+    const utensils = ['fork', 'knife', 'spoon'];
+    const colors   = { fork: '#ffcc88', knife: '#ccccee', spoon: '#ffddaa' };
 
     if (ai.uState === 'IDLE') {
       ai.uOrbitAngle += 0.045;
       ai.uLaunchTimer--;
-
       if (ai.uLaunchTimer <= 0 && dist < 360) {
-        // ── Telegraph phase before launch ──
-        ai.uActiveIdx     = Math.floor(Math.random() * 3);
-        ai.uState         = 'TELEGRAPH';
+        // knife/spoon always target player
+        ai.uActiveIdx = subtype === 'knife' ? 1 : 2;
+        ai.uState     = 'TELEGRAPH';
         ai.uTelegraphTimer = 28;
-        ai.uLaunchDir     = { x: dx / dist, y: dy / dist };
-        // Store starting tip position (from orbit)
-        const orbitA = ai.uOrbitAngle + (ai.uActiveIdx / 3) * Math.PI * 2;
+        ai.uLaunchDir  = { x: dx / dist, y: dy / dist };
+        const orbitA   = ai.uOrbitAngle + (ai.uActiveIdx / 3) * Math.PI * 2;
         ai.uTipX = pos.x + Math.cos(orbitA) * 20;
         ai.uTipY = pos.y + Math.sin(orbitA) * 20;
         ai.uLaunchTimer = 100 + Math.floor(Math.random() * 60);
       }
     }
     else if (ai.uState === 'TELEGRAPH') {
-      // Wobble the chosen utensil in place, emit warning particles
       ai.uTelegraphTimer--;
-      const subtype = utensils[ai.uActiveIdx];
-      const warnColor = subtype === 'knife' ? '#ff4444' : subtype === 'spoon' ? '#aaddff' : '#ffcc88';
+      const warnColor = subtype === 'knife' ? '#ff4444' : '#aaddff';
       if (ai.uTelegraphTimer % 5 === 0) spawnParticles(ai.uTipX, ai.uTipY, warnColor, 4);
-      // Keep tip hovering near body
       const orbitA = ai.uOrbitAngle + (ai.uActiveIdx / 3) * Math.PI * 2;
-      ai.uTipX = pos.x + Math.cos(orbitA) * 20 + Math.sin(Date.now()/60) * 5;
-      ai.uTipY = pos.y + Math.sin(orbitA) * 20 + Math.sin(Date.now()/80) * 5;
+      ai.uTipX = pos.x + Math.cos(orbitA) * 20 + Math.sin(Date.now() / 60) * 5;
+      ai.uTipY = pos.y + Math.sin(orbitA) * 20 + Math.sin(Date.now() / 80) * 5;
       if (ai.uTelegraphTimer <= 0) {
-        // Refresh aim direction at launch moment
         const ldx = pp.x - pos.x, ldy = pp.y - pos.y, ldist = Math.hypot(ldx, ldy) || 1;
         ai.uLaunchDir = { x: ldx / ldist, y: ldy / ldist };
         ai.uTipVx = ai.uLaunchDir.x * 9;
@@ -100,29 +376,23 @@ const BT_UTENSIL = new BTSelector(
       ai.uTipX += ai.uTipVx;
       ai.uTipY += ai.uTipVy;
       ai.uTravelTimer++;
-
       const hitWall   = ai.uTipX < 20 || ai.uTipX > worldW - 20 || ai.uTipY < 20 || ai.uTipY > worldH - 20;
       const maxTravel = ai.uTravelTimer > 65;
-      const subtype   = utensils[ai.uActiveIdx];
 
-      // ── Check player hit ──
       const ppos2 = ECS.get(gs.playerId, 'pos');
       const playerHit = ppos2 && Math.hypot(ai.uTipX - ppos2.x, ai.uTipY - ppos2.y) < 22;
 
       if (playerHit && gs.invincible <= 0) {
         if (subtype === 'knife') {
           gs.health -= 25; gs.invincible = CFG.INVINCIBLE_FRAMES;
-          gs.shakeX = 16; gs.shakeY = 16;
-          gs.flawlessThisWave = false;
-          gs.knifeBleedTimer = 180;
-          triggerSFPHit(); updateHUD();
+          gs.shakeX = 16; gs.shakeY = 16; gs.flawlessThisWave = false;
+          gs.knifeBleedTimer = 180; triggerSFPHit(); updateHUD();
           showMsg('KNIFE SLASH! YOU\'RE BLEEDING!');
           spawnParticles(ppos2.x, ppos2.y, '#ff2244', 16);
           if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
         } else if (subtype === 'spoon') {
           gs.health -= 14; gs.invincible = CFG.INVINCIBLE_FRAMES;
-          gs.shakeX = 22; gs.shakeY = 22;
-          gs.flawlessThisWave = false;
+          gs.shakeX = 22; gs.shakeY = 22; gs.flawlessThisWave = false;
           triggerSFPHit(); updateHUD();
           const pvel = ECS.get(gs.playerId, 'vel');
           if (pvel) {
@@ -131,98 +401,60 @@ const BT_UTENSIL = new BTSelector(
             pvel.vy = ((ppos2.y - ai.uTipY) / kd) * 22;
             gs.spoonKnockbackTimer = 18;
           }
-          // Also knock nearby enemies
           for (const eid of ECS.query('enemy', 'pos', 'vel')) {
             if (eid === id) continue;
             const ep = ECS.get(eid, 'pos'), ev = ECS.get(eid, 'vel');
             const kd = Math.hypot(ep.x - ai.uTipX, ep.y - ai.uTipY);
-            if (kd < 110) {
-              const kn = kd || 1;
-              ev.vx += ((ep.x - ai.uTipX) / kn) * 12;
-              ev.vy += ((ep.y - ai.uTipY) / kn) * 12;
-            }
+            if (kd < 110) { ev.vx += ((ep.x - ai.uTipX) / (kd||1)) * 12; ev.vy += ((ep.y - ai.uTipY) / (kd||1)) * 12; }
           }
           spawnParticles(ai.uTipX, ai.uTipY, '#aaddff', 20);
           showMsg('SPOON LAUNCHED! KNOCKED AWAY!');
           if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
-        } else if (subtype === 'fork') {
-          gs.invincible = CFG.INVINCIBLE_FRAMES;
-          ai.uForkGrabTimer = 75;
-          gs.forkGrabbed = true;
-          showMsg('FORK GRABBED YOU! WIGGLE FREE!');
-          spawnParticles(ai.uTipX, ai.uTipY, '#ffcc88', 14);
         }
-        ai.uState = 'RETURN';
-        return BT.RUNNING;
+        ai.uState = 'RETURN'; return BT.RUNNING;
       }
 
-      // ── Check enemy hits (knife/spoon damage other enemies) ──
-      // CRASH FIX: use setTimeout for checkWave, break loop after kill
-     if (!playerHit) {
-  let hitEnemy = false;
-  let killedEnemy = null;
-
-  for (const eid of ECS.query('enemy', 'pos', 'hp', 'vel')) {
-    if (eid === id) continue;
-    if (!ECS.has(eid, 'pos')) continue;
-    const epos = ECS.get(eid, 'pos');
-    const ehp  = ECS.get(eid, 'hp');
-    const evel = ECS.get(eid, 'vel');
-    if (Math.hypot(ai.uTipX - epos.x, ai.uTipY - epos.y) < 24) {
-      if (subtype === 'knife') {
-        ehp.hp -= 15; ehp.hitFlash = 12;
-        spawnParticles(epos.x, epos.y, '#ff2244', 8);
-        if (ehp.hp <= 0) killedEnemy = { eid, x: epos.x, y: epos.y };
-      } else if (subtype === 'spoon') {
-        ehp.hp -= 8; ehp.hitFlash = 10;
-        const kd = Math.hypot(epos.x - ai.uTipX, epos.y - ai.uTipY) || 1;
-        evel.vx += ((epos.x - ai.uTipX) / kd) * 14;
-        evel.vy += ((epos.y - ai.uTipY) / kd) * 14;
-        spawnParticles(epos.x, epos.y, '#aaddff', 8);
-        if (ehp.hp <= 0) killedEnemy = { eid, x: epos.x, y: epos.y };
+      // Enemy hits (knife/spoon damage other enemies)
+      if (!playerHit) {
+        let killedEnemy = null;
+        for (const eid of ECS.query('enemy', 'pos', 'hp', 'vel')) {
+          if (eid === id) continue;
+          if (!ECS.has(eid, 'pos')) continue;
+          const epos = ECS.get(eid, 'pos'), ehp = ECS.get(eid, 'hp'), evel = ECS.get(eid, 'vel');
+          if (Math.hypot(ai.uTipX - epos.x, ai.uTipY - epos.y) < 24) {
+            if (subtype === 'knife') {
+              ehp.hp -= 15; ehp.hitFlash = 12; spawnParticles(epos.x, epos.y, '#ff2244', 8);
+              if (ehp.hp <= 0) killedEnemy = { eid, x: epos.x, y: epos.y };
+            } else if (subtype === 'spoon') {
+              ehp.hp -= 8; ehp.hitFlash = 10;
+              const kd = Math.hypot(epos.x - ai.uTipX, epos.y - ai.uTipY) || 1;
+              evel.vx += ((epos.x - ai.uTipX) / kd) * 14; evel.vy += ((epos.y - ai.uTipY) / kd) * 14;
+              spawnParticles(epos.x, epos.y, '#aaddff', 8);
+              if (ehp.hp <= 0) killedEnemy = { eid, x: epos.x, y: epos.y };
+            }
+            break;
+          }
+        }
+        if (killedEnemy) {
+          const { eid, x, y } = killedEnemy;
+          if (ECS.has(eid, 'pos')) {
+            spawnParticles(x, y, '#ff2222', 14); ECS.destroyEntity(eid);
+            gs.score += Math.round(10 * gs.wave); gs.waveKills++;
+            tryDropTicket(); gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
+            updateHUD(); setTimeout(() => checkWave(), 0);
+          }
+        }
+        if (killedEnemy) { ai.uState = 'RETURN'; return BT.RUNNING; }
       }
-      hitEnemy = true;
-      break;
-    }
-  }
 
-  // Process kill AFTER the loop exits — never destroy mid-iteration
-  if (killedEnemy) {
-    const { eid, x, y } = killedEnemy;
-    if (ECS.has(eid, 'pos')) {
-      spawnParticles(x, y, '#ff2222', 14);
-      ECS.destroyEntity(eid);
-      gs.score += Math.round(10 * gs.wave);
-      gs.waveKills++;
-      tryDropTicket();
-      gs.health = Math.min(gs.maxHealth, gs.health + CFG.HEALTH_REGEN);
-      updateHUD();
-      setTimeout(() => checkWave(), 0);
-    }
-  }
-
-  if (hitEnemy) {
-    ai.uState = 'RETURN';
-    return BT.RUNNING;
-  }
-}
-
-      if (hitWall || maxTravel) {
-        ai.uState = 'RETURN';
-      }
+      if (hitWall || maxTravel) ai.uState = 'RETURN';
     }
     else if (ai.uState === 'RETURN') {
       const rdx = pos.x - ai.uTipX, rdy = pos.y - ai.uTipY;
-      const rdist = Math.hypot(rdx, rdy) || 1;
-
-      ai.uTipX += (rdx / rdist) * 10;
-      ai.uTipY += (rdy / rdist) * 10;
-
-      if (rdist < 22) {
-        ai.uState     = 'IDLE';
-        ai.uActiveIdx = -1;
-        spawnParticles(pos.x, pos.y, '#cccccc', 4);
-      }
+      const rd  = Math.hypot(rdx, rdy) || 1;
+      ai.uTipX += (rdx / rd) * 10;
+      ai.uTipY += (rdy / rd) * 10;
+      if (rd < 22) { ai.uState = 'IDLE'; ai.uActiveIdx = -1; spawnParticles(pos.x, pos.y, '#cccccc', 4); }
     }
 
     return BT.RUNNING;
