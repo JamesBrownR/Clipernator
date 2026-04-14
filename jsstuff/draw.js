@@ -32,63 +32,76 @@ function _drawUtensilShape(ctx, type, color, scale = 1) {
 
 function drawUtensil(epos, ehp, ai, frozen) {
   const { x, y } = epos;
-  const utensils    = ['fork', 'knife', 'spoon'];
-  const colors      = { fork: '#ffcc88', knife: '#ccccee', spoon: '#ffddaa' };
-  const orbitAngle  = ai.uOrbitAngle || 0;
-  const activeIdx   = ai.uActiveIdx !== undefined ? ai.uActiveIdx : -1;
-  const state       = ai.uState || 'IDLE';
+  const utensils   = ['fork', 'knife', 'spoon'];
+  const colors     = { fork: '#ffcc88', knife: '#ccccee', spoon: '#ffddaa' };
+  const orbitAngle = ai.uOrbitAngle || 0;
+  const activeIdx  = ai.uActiveIdx !== undefined ? ai.uActiveIdx : -1;
+  const state      = ai.uState || 'IDLE';
 
   ctx.save();
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
 
- for (let i = 0; i < 3; i++) {
-  if (state !== 'IDLE' && i === activeIdx) continue;
-  const u = utensils[i];
-  const angle = orbitAngle + (i / 3) * Math.PI * 2;
-  const ox = x + Math.cos(angle) * 20;
-  const oy = y + Math.sin(angle) * 20;
-   // Already computed in the REACHING state — add this to drawUtensil when state is LAUNCH or FORK_REACHING:
-const tipAngle = Math.atan2(ai.uTipY - pos.y, ai.uTipX - pos.x);
-  
-if (u === 'fork') {
-  ctx.save();
-  ctx.translate(ai.uTipX, ai.uTipY);
-  ctx.rotate(tipAngle + Math.PI / 2);
-  ctx.drawImage(forkTipImg, -10, -42, 20, 84); // same size as drawForkFrame
-  ctx.restore();
-} else {
-  ctx.save();
-  ctx.translate(ai.uTipX, ai.uTipY);
-  ctx.rotate(tipAngle + Math.PI / 2);
-  ctx.shadowColor = frozen ? '#aaccff' : colors[u];
-  ctx.shadowBlur  = frozen ? 10 : 20;
-  _drawUtensilShape(ctx, u, frozen ? '#aaddff' : colors[u], 1.4);
-  ctx.restore();
-}
+  // Draw orbiting utensils (skip the active one while launched)
+  for (let i = 0; i < 3; i++) {
+    if (state !== 'IDLE' && i === activeIdx) continue;
+    const u     = utensils[i];
+    const angle = orbitAngle + (i / 3) * Math.PI * 2;
+    const ox    = x + Math.cos(angle) * 20;
+    const oy    = y + Math.sin(angle) * 20;
 
+    if (u === 'fork') {
+      const frame = Math.floor((orbitAngle / (Math.PI * 2)) * 8) % 8;
+      drawForkFrame(frame, ox, oy, angle + Math.PI / 2);
+    } else {
+      ctx.save();
+      ctx.translate(ox, oy);
+      ctx.rotate(angle + Math.PI / 2);
+      ctx.shadowColor = frozen ? '#aaccff' : colors[u];
+      ctx.shadowBlur  = frozen ? 10 : 20;
+      _drawUtensilShape(ctx, u, frozen ? '#aaddff' : colors[u], 1.0);
+      ctx.restore();
+    }
+  }
 
-  if (state !== 'IDLE' && activeIdx >= 0 && ai.uTipX !== undefined) {
-    const u       = utensils[activeIdx];
+  // Draw the launched tip
+  const tipStates = ['TELEGRAPH','LAUNCH','FORK_GRAB_TELEGRAPH','FORK_REACHING','FORK_PULLING','FORK_HOLDING','RETURN'];
+  if (tipStates.includes(state) && ai.uTipX !== undefined) {
     const tipAngle = ai.uLaunchDir
       ? Math.atan2(ai.uLaunchDir.y, ai.uLaunchDir.x)
       : 0;
-    ctx.save();
-    ctx.translate(ai.uTipX, ai.uTipY);
-    ctx.rotate(tipAngle + Math.PI / 2);
-    ctx.shadowColor = frozen ? '#aaccff' : colors[u];
-    ctx.shadowBlur  = frozen ? 10 : 20;
-    _drawUtensilShape(ctx, u, frozen ? '#aaddff' : colors[u], 1.4);
-    ctx.restore();
+    const subtype = utensils[Math.max(0, activeIdx)] || 'fork';
+
+    if (subtype === 'fork' || state.startsWith('FORK_')) {
+      ctx.save();
+      ctx.translate(ai.uTipX, ai.uTipY);
+      ctx.rotate(tipAngle + Math.PI / 2);
+      if (forkTipImg.complete && forkTipImg.naturalWidth > 0) {
+        ctx.drawImage(forkTipImg, -10, -42, 20, 84);
+      } else {
+        ctx.shadowColor = frozen ? '#aaccff' : '#ffcc88';
+        ctx.shadowBlur  = frozen ? 10 : 20;
+        _drawUtensilShape(ctx, 'fork', frozen ? '#aaddff' : '#ffcc88', 1.4);
+      }
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(ai.uTipX, ai.uTipY);
+      ctx.rotate(tipAngle + Math.PI / 2);
+      ctx.shadowColor = frozen ? '#aaccff' : colors[subtype];
+      ctx.shadowBlur  = frozen ? 10 : 20;
+      _drawUtensilShape(ctx, subtype, frozen ? '#aaddff' : colors[subtype], 1.4);
+      ctx.restore();
+    }
   }
 
   ctx.restore();
 
+  // HP bar
   const bw = 36;
-  ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 36, bw, 5);
-  ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cccccc';
-  ctx.fillRect(x - bw/2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
-}
-
+  ctx.fillStyle = '#330000';
+  ctx.fillRect(x - bw / 2, y - 36, bw, 5);
+  ctx.fillStyle = ehp.hp < ehp.maxHp / 2 ? '#ff6666' : '#cccccc';
+  ctx.fillRect(x - bw / 2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
 }
 
 function drawForkFrame(frameIndex, x, y, angle) {
