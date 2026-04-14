@@ -1032,8 +1032,12 @@ function drawBullet(b) {
       ctx.restore();
     }
 
-    ctx.drawImage(normalBulletImg, -W / 2, -H / 2, W, H);
-
+// flip horizontally so bullet head faces right (angle 0)
+ctx.save();
+ctx.scale(-1, 1);
+ctx.drawImage(normalBulletImg, -W / 2, -H / 2, W, H);
+ctx.restore();
+    
   } else {
     // Fallback canvas drawing if image not loaded
     const color = tint || (gs.bouncyHouse ? '#88ffdd' : '#ffcc44');
