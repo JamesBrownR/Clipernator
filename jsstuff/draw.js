@@ -41,24 +41,67 @@ function drawUtensil(epos, ehp, ai, frozen) {
   ctx.save();
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
 
-  // Draw orbiting utensils (skip the active one while launched)
+// Draw orbiting utensils (skip the active one while launched)
   for (let i = 0; i < 3; i++) {
     if (state !== 'IDLE' && i === activeIdx) continue;
     const u     = utensils[i];
     const angle = orbitAngle + (i / 3) * Math.PI * 2;
     const ox    = x + Math.cos(angle) * 20;
     const oy    = y + Math.sin(angle) * 20;
+    const frame = Math.floor(((orbitAngle % (Math.PI * 2)) / (Math.PI * 2)) * 8) % 8;
 
     if (u === 'fork') {
-      const frame = Math.floor((orbitAngle / (Math.PI * 2)) * 8) % 8;
-      drawForkFrame(frame, ox, oy, angle + Math.PI / 2);
-    } else {
+      drawForkFrame(frame, ox, oy, 0);
+    } else if (u === 'knife') {
+      drawKnifeFrame(frame, ox, oy, 0);
+    } else if (u === 'spoon') {
+      drawSpoonFrame(frame, ox, oy, 0);
+    }
+  }
+
+  // Draw the launched tip
+  const tipStates = ['TELEGRAPH','LAUNCH','FORK_GRAB_TELEGRAPH','FORK_REACHING','FORK_PULLING','FORK_HOLDING','RETURN'];
+  if (tipStates.includes(state) && ai.uTipX !== undefined) {
+    const tipAngle = ai.uLaunchDir
+      ? Math.atan2(ai.uLaunchDir.y, ai.uLaunchDir.x)
+      : 0;
+    const subtype = utensils[Math.max(0, activeIdx)] || 'fork';
+
+    if (subtype === 'fork' || state.startsWith('FORK_')) {
       ctx.save();
-      ctx.translate(ox, oy);
-      ctx.rotate(angle + Math.PI / 2);
-      ctx.shadowColor = frozen ? '#aaccff' : colors[u];
-      ctx.shadowBlur  = frozen ? 10 : 20;
-      _drawUtensilShape(ctx, u, frozen ? '#aaddff' : colors[u], 1.0);
+      ctx.translate(ai.uTipX, ai.uTipY);
+      ctx.rotate(tipAngle + Math.PI / 2);
+      if (forkTipImg.complete && forkTipImg.naturalWidth > 0) {
+        ctx.drawImage(forkTipImg, -10, -42, 20, 84);
+      } else {
+        ctx.shadowColor = frozen ? '#aaccff' : '#ffcc88';
+        ctx.shadowBlur  = frozen ? 10 : 20;
+        _drawUtensilShape(ctx, 'fork', frozen ? '#aaddff' : '#ffcc88', 1.4);
+      }
+      ctx.restore();
+    } else if (subtype === 'knife') {
+      ctx.save();
+      ctx.translate(ai.uTipX, ai.uTipY);
+      ctx.rotate(tipAngle + Math.PI / 2);
+      if (knifeTipImg.complete && knifeTipImg.naturalWidth > 0) {
+        ctx.drawImage(knifeTipImg, -10, -42, 20, 84);
+      } else {
+        ctx.shadowColor = frozen ? '#aaccff' : '#ccccee';
+        ctx.shadowBlur  = frozen ? 10 : 20;
+        _drawUtensilShape(ctx, 'knife', frozen ? '#aaddff' : '#ccccee', 1.4);
+      }
+      ctx.restore();
+    } else if (subtype === 'spoon') {
+      ctx.save();
+      ctx.translate(ai.uTipX, ai.uTipY);
+      ctx.rotate(tipAngle + Math.PI / 2);
+      if (spoonTipImg.complete && spoonTipImg.naturalWidth > 0) {
+        ctx.drawImage(spoonTipImg, -10, -42, 20, 84);
+      } else {
+        ctx.shadowColor = frozen ? '#aaccff' : '#ffddaa';
+        ctx.shadowBlur  = frozen ? 10 : 20;
+        _drawUtensilShape(ctx, 'spoon', frozen ? '#aaddff' : '#ffddaa', 1.4);
+      }
       ctx.restore();
     }
   }
@@ -129,6 +172,46 @@ function drawForkFrame(frameIndex, x, y, angle) {
     -DRAW_H / 2,
     DRAW_W,
     DRAW_H
+  );
+  ctx.restore();
+}
+
+function drawKnifeFrame(frameIndex, x, y, angle) {
+  if (!knifeSheetImg.complete || knifeSheetImg.naturalWidth === 0) return;
+  const KNIFE_FRAME_W = 180;
+  const KNIFE_FRAME_H = 752;
+  const KNIFE_COLS = 3;
+  const DRAW_W = 20;
+  const DRAW_H = 84;
+  const col = frameIndex % KNIFE_COLS;
+  const row = Math.floor(frameIndex / KNIFE_COLS);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.drawImage(
+    knifeSheetImg,
+    col * KNIFE_FRAME_W, row * KNIFE_FRAME_H, KNIFE_FRAME_W, KNIFE_FRAME_H,
+    -DRAW_W / 2, -DRAW_H / 2, DRAW_W, DRAW_H
+  );
+  ctx.restore();
+}
+
+function drawSpoonFrame(frameIndex, x, y, angle) {
+  if (!spoonSheetImg.complete || spoonSheetImg.naturalWidth === 0) return;
+  const SPOON_FRAME_W = 180;
+  const SPOON_FRAME_H = 752;
+  const SPOON_COLS = 3;
+  const DRAW_W = 20;
+  const DRAW_H = 84;
+  const col = frameIndex % SPOON_COLS;
+  const row = Math.floor(frameIndex / SPOON_COLS);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.drawImage(
+    spoonSheetImg,
+    col * SPOON_FRAME_W, row * SPOON_FRAME_H, SPOON_FRAME_W, SPOON_FRAME_H,
+    -DRAW_W / 2, -DRAW_H / 2, DRAW_W, DRAW_H
   );
   ctx.restore();
 }
