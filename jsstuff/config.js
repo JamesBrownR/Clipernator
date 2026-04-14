@@ -81,6 +81,9 @@ playerImg.src = '/Clipernator/sprites/Clippy.png';
 const shotgunImg = new Image();
 shotgunImg.src = '/Clipernator/sprites/Shotgun.png';
 
+const normalBulletImg = new Image();
+normalBulletImg.src = '/Clipernator/sprites/bullets/normalbullet.png';
+
 let gunAngle = 0;
 let gunRecoil = 0;
 let playerMoveAngle = 0;
