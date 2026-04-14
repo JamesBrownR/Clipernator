@@ -106,35 +106,7 @@ function drawUtensil(epos, ehp, ai, frozen) {
     }
   }
 
-  // Draw the launched tip
-  if (tipStates.includes(state) && ai.uTipX !== undefined) {
-    const tipAngle = ai.uLaunchDir
-      ? Math.atan2(ai.uLaunchDir.y, ai.uLaunchDir.x)
-      : 0;
-    const subtype = utensils[Math.max(0, activeIdx)] || 'fork';
 
-    if (subtype === 'fork' || state.startsWith('FORK_')) {
-      ctx.save();
-      ctx.translate(ai.uTipX, ai.uTipY);
-      ctx.rotate(tipAngle + Math.PI / 2);
-      if (forkTipImg.complete && forkTipImg.naturalWidth > 0) {
-        ctx.drawImage(forkTipImg, -10, -42, 20, 84);
-      } else {
-        ctx.shadowColor = frozen ? '#aaccff' : '#ffcc88';
-        ctx.shadowBlur  = frozen ? 10 : 20;
-        _drawUtensilShape(ctx, 'fork', frozen ? '#aaddff' : '#ffcc88', 1.4);
-      }
-      ctx.restore();
-    } else {
-      ctx.save();
-      ctx.translate(ai.uTipX, ai.uTipY);
-      ctx.rotate(tipAngle + Math.PI / 2);
-      ctx.shadowColor = frozen ? '#aaccff' : colors[subtype];
-      ctx.shadowBlur  = frozen ? 10 : 20;
-      _drawUtensilShape(ctx, subtype, frozen ? '#aaddff' : colors[subtype], 1.4);
-      ctx.restore();
-    }
-  }
 
   ctx.restore();
 
