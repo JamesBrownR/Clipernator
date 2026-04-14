@@ -35,6 +35,7 @@
 - reflected cannon balls should not stop the charge until they hit something. current if you are at one side of that stage and reflect a cannonball to another, it stops before it explodes on a wall
 - cannon ball charge speed should be reduced by 20%
 - Clownish upgrade is placeholder
+- im not sure tightrope boots actually works
 
 
 ## Item Pools
