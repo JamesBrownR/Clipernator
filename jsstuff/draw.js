@@ -956,11 +956,11 @@ ctx.restore();
 }
 
 function drawBullet(b) {
-  ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.angle);
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(b.angle);
 
-
- if (b.isBowlingBall) {
-    // drawBullet already translated to (b.x, b.y) above — don't re-translate
+  if (b.isBowlingBall) {
     const spin = Date.now() / 200;
     ctx.rotate(spin);
     ctx.fillStyle = '#333344';
@@ -977,20 +977,73 @@ function drawBullet(b) {
     ctx.restore();
     return;
   }
-    
+
   if (b.isDud) {
-    ctx.fillStyle='#777'; ctx.shadowColor='#555'; ctx.shadowBlur=4; ctx.fillRect(-7,-1.5,14,3);
-  } else {
-    let color, glow;
-    if (b.isMirror)             { color='#8899ff'; glow='#aabbff'; }
-    else if (b.damageMult >= 4) { color='#ff3333'; glow='#ff8888'; }
-    else if (b.damageMult >= 3) { color='#cc44ff'; glow='#ee88ff'; }
-    else if (b.damageMult >= 2) { color='#4488ff'; glow='#88bbff'; }
-    else                        { color=gs.bouncyHouse?'#88ffdd':'#ffcc44'; glow=gs.bouncyHouse?'#00ffcc':'#ff8800'; }
-    ctx.fillStyle=color; ctx.shadowColor=glow; ctx.shadowBlur=b.damageMult>1?16:9;
-    const sc=b.damageMult>1?1.4:1;
-    ctx.fillRect(-8*sc,-2.5*sc,16*sc,5*sc);
+    // Dud: greyed out, smaller, no trail
+    if (normalBulletImg.complete && normalBulletImg.naturalWidth > 0) {
+      ctx.globalAlpha = 0.45;
+      ctx.filter = 'grayscale(100%)';
+      ctx.drawImage(normalBulletImg, -8, -4, 16, 8);
+      ctx.filter = 'none';
+    } else {
+      ctx.fillStyle = '#777';
+      ctx.fillRect(-7, -1.5, 14, 3);
+    }
+    ctx.restore();
+    return;
   }
+
+  // Tint color per damage tier
+  let tint = null;
+  let scale = 1;
+  if      (b.damageMult >= 4) { tint = '#ff3333'; scale = 1.6; }
+  else if (b.damageMult >= 3) { tint = '#cc44ff'; scale = 1.4; }
+  else if (b.damageMult >= 2) { tint = '#4488ff'; scale = 1.2; }
+  else if (b.isMirrorRicochet) { tint = '#8899ff'; scale = 1.1; }
+
+  const W = 24 * scale;
+  const H = 10 * scale;
+
+  if (normalBulletImg.complete && normalBulletImg.naturalWidth > 0) {
+    // Draw tinted trail behind bullet (simple tapered rectangle in code)
+    if (tint) {
+      ctx.save();
+      const trailLen = W * 1.2;
+      const grad = ctx.createLinearGradient(-W * 0.5 - trailLen, 0, -W * 0.5, 0);
+      grad.addColorStop(0, 'transparent');
+      grad.addColorStop(1, tint + 'aa');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(-W * 0.5 - trailLen, -H * 0.25);
+      ctx.lineTo(-W * 0.5, -H * 0.45);
+      ctx.lineTo(-W * 0.5, H * 0.45);
+      ctx.lineTo(-W * 0.5 - trailLen, H * 0.25);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Tint overlay on bullet
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = tint;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, W * 0.5, H * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.drawImage(normalBulletImg, -W / 2, -H / 2, W, H);
+
+  } else {
+    // Fallback canvas drawing if image not loaded
+    const color = tint || (gs.bouncyHouse ? '#88ffdd' : '#ffcc44');
+    const glow  = tint || (gs.bouncyHouse ? '#00ffcc' : '#ff8800');
+    ctx.fillStyle = color;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = b.damageMult > 1 ? 16 : 9;
+    ctx.fillRect(-8 * scale, -2.5 * scale, 16 * scale, 5 * scale);
+  }
+
   ctx.restore();
 }
 
