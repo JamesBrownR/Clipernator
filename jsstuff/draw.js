@@ -1001,8 +1001,8 @@ function drawBullet(b) {
   else if (b.damageMult >= 2) { tint = '#4488ff'; scale = 1.2; }
   else if (b.isMirrorRicochet) { tint = '#8899ff'; scale = 1.1; }
 
-  const W = 24 * scale;
-  const H = 10 * scale;
+  const W = 36 * scale;
+  const H = 14 * scale;
 
   if (normalBulletImg.complete && normalBulletImg.naturalWidth > 0) {
     // Draw tinted trail behind bullet (simple tapered rectangle in code)
