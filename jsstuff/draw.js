@@ -62,9 +62,8 @@ if (u === 'fork') {
   ctx.shadowBlur  = frozen ? 10 : 20;
   _drawUtensilShape(ctx, u, frozen ? '#aaddff' : colors[u], 1.4);
   ctx.restore();
-}x.restore();
-  }
 }
+
 
   if (state !== 'IDLE' && activeIdx >= 0 && ai.uTipX !== undefined) {
     const u       = utensils[activeIdx];
@@ -86,6 +85,8 @@ if (u === 'fork') {
   ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 36, bw, 5);
   ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cccccc';
   ctx.fillRect(x - bw/2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
+}
+
 }
 
 function drawForkFrame(frameIndex, x, y, angle) {
