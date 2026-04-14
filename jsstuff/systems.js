@@ -745,9 +745,21 @@ function sysAI() {
     
     const ai2=ECS.get(id,'ai');
 // Thrown enemies need full position updates — skip only the BT tick, not movement
+   // Thrown enemies: skip BT entirely, just let velocity carry them
     if (ai2 && ai2.thrownByFork) {
       const hp2 = ECS.get(id,'hp'); if (hp2 && hp2.hitFlash > 0) hp2.hitFlash--;
-      // Position update handled below — don't skip
+      const pos2 = ECS.get(id,'pos'), vel2 = ECS.get(id,'vel');
+      if (pos2 && vel2) {
+        // Decay velocity slightly so it doesn't go forever, but keep most speed
+        vel2.vx *= 0.97; vel2.vy *= 0.97;
+        pos2.x += vel2.vx; pos2.y += vel2.vy;
+        // Wall clamp
+        pos2.x = Math.max(CFG.WALL_PAD, Math.min(worldW - CFG.WALL_PAD, pos2.x));
+        pos2.y = Math.max(CFG.WALL_PAD, Math.min(worldH - CFG.WALL_PAD, pos2.y));
+      }
+      ai2.forkThrowTimer--;
+      if (ai2.forkThrowTimer <= 0) { ai2.thrownByFork = false; }
+      continue; // skip BT and normal position update
     }
 
    if (ai2 && ai2.juggled && !ai2.thrownByFork) {
@@ -1126,15 +1138,7 @@ function sysDashCollision() {
 function sysEnemyPlayerCollision() {
 
 
-      // Thrown enemies deal extra damage and become normal on player hit or timer expiry
-for (const id of ECS.query('enemy', 'pos', 'ai')) {
-  const eai = ECS.get(id, 'ai');
-  if (!eai || !eai.thrownByFork) continue;
-  eai.forkThrowTimer--;
-  if (eai.forkThrowTimer <= 0) {
-    eai.thrownByFork = false; // becomes a normal enemy again
-  }
-}
+   
 
  
   // Tightrope Boots: intangible while dashing
