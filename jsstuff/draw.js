@@ -107,7 +107,6 @@ function drawUtensil(epos, ehp, ai, frozen) {
   }
 
   // Draw the launched tip
-  const tipStates = ['TELEGRAPH','LAUNCH','FORK_GRAB_TELEGRAPH','FORK_REACHING','FORK_PULLING','FORK_HOLDING','RETURN'];
   if (tipStates.includes(state) && ai.uTipX !== undefined) {
     const tipAngle = ai.uLaunchDir
       ? Math.atan2(ai.uLaunchDir.y, ai.uLaunchDir.x)
