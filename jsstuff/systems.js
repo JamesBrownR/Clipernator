@@ -1118,13 +1118,42 @@ function sysDashCollision() {
 }
 
 function sysEnemyPlayerCollision() {
+
+
+      // Thrown enemies deal extra damage and become normal on player hit or timer expiry
+for (const id of ECS.query('enemy', 'pos', 'ai')) {
+  const eai = ECS.get(id, 'ai');
+  if (!eai || !eai.thrownByFork) continue;
+  eai.forkThrowTimer--;
+  if (eai.forkThrowTimer <= 0) {
+    eai.thrownByFork = false; // becomes a normal enemy again
+  }
+}
+
+ 
   // Tightrope Boots: intangible while dashing
   if (gs.dashTimer > 0 && gs.hasTightropeBoots) return;
   if (gs.invincible>0||gs.frozen) return;
   const ppos=ECS.get(gs.playerId,'pos'); if (!ppos) return;
+
+ 
   for (const id of ECS.query('enemy','pos')) {
     const epos=ECS.get(id,'pos');
     if (Math.hypot(ppos.x-epos.x,ppos.y-epos.y)<28) {
+
+     const eaiCheck2 = ECS.get(id, 'ai');
+if (eaiCheck2 && eaiCheck2.thrownByFork) {
+  eaiCheck2.thrownByFork = false;
+  gs.health -= 30; // harder hit than normal contact
+  gs.invincible = CFG.INVINCIBLE_FRAMES;
+  gs.shakeX = 20; gs.shakeY = 20;
+  gs.flawlessThisWave = false;
+  triggerSFPHit();
+  spawnParticles(ppos.x, ppos.y, '#ffcc88', 18);
+  updateHUD();
+  if (gs.health <= 0) { gameOver(); return; }
+  return;
+}
       // Add before gs.health -= line, inside the enemy loop:
 const eaiCheck = ECS.get(id,'ai');
 if (eaiCheck && eaiCheck.criticalMass && gs.invincible <= 0) {
@@ -1139,6 +1168,10 @@ if (eaiCheck && eaiCheck.criticalMass && gs.invincible <= 0) {
   }
   return;
 }
+
+
+
+     
       // Knocking Pins: reduced contact damage (8 instead of 20),
       // and the bowl itself damages the enemy it rams into
       if (gs.knockingPinsActive) {
