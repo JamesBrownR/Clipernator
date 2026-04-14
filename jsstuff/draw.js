@@ -48,19 +48,21 @@ function drawUtensil(epos, ehp, ai, frozen) {
   const ox = x + Math.cos(angle) * 20;
   const oy = y + Math.sin(angle) * 20;
   
-  if (u === 'fork') {
-    // Map orbit angle to frame index 0-7
-    const normalizedAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    const frameIndex = Math.floor((normalizedAngle / (Math.PI * 2)) * 8);
-    drawForkFrame(frameIndex, ox, oy, 0); // 0 rotation since frame handles it
-  } else {
-    ctx.save();
-    ctx.translate(ox, oy);
-    ctx.rotate(angle + Math.PI / 2);
-    ctx.shadowColor = frozen ? '#aaccff' : colors[u];
-    ctx.shadowBlur = 8;
-    _drawUtensilShape(ctx, u, frozen ? '#88aacc' : colors[u]);
-    ctx.restore();
+if (u === 'fork') {
+  ctx.save();
+  ctx.translate(ai.uTipX, ai.uTipY);
+  ctx.rotate(tipAngle + Math.PI / 2);
+  ctx.drawImage(forkTipImg, -10, -42, 20, 84); // same size as drawForkFrame
+  ctx.restore();
+} else {
+  ctx.save();
+  ctx.translate(ai.uTipX, ai.uTipY);
+  ctx.rotate(tipAngle + Math.PI / 2);
+  ctx.shadowColor = frozen ? '#aaccff' : colors[u];
+  ctx.shadowBlur  = frozen ? 10 : 20;
+  _drawUtensilShape(ctx, u, frozen ? '#aaddff' : colors[u], 1.4);
+  ctx.restore();
+}x.restore();
   }
 }
 
