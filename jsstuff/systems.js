@@ -744,7 +744,13 @@ function sysAI() {
 
     
     const ai2=ECS.get(id,'ai');
-    if (ai2&&ai2.juggled) {
+// Thrown enemies need full position updates — skip only the BT tick, not movement
+    if (ai2 && ai2.thrownByFork) {
+      const hp2 = ECS.get(id,'hp'); if (hp2 && hp2.hitFlash > 0) hp2.hitFlash--;
+      // Position update handled below — don't skip
+    }
+
+   if (ai2 && ai2.juggled && !ai2.thrownByFork) {
       const type=ECS.get(id,'enemy').type;
       if (type==='mask') {
         const pos2=ECS.get(id,'pos'),pp2=playerPos(gs);
