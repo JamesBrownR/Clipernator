@@ -47,6 +47,8 @@ function drawUtensil(epos, ehp, ai, frozen) {
   const angle = orbitAngle + (i / 3) * Math.PI * 2;
   const ox = x + Math.cos(angle) * 20;
   const oy = y + Math.sin(angle) * 20;
+   // Already computed in the REACHING state — add this to drawUtensil when state is LAUNCH or FORK_REACHING:
+const tipAngle = Math.atan2(ai.uTipY - pos.y, ai.uTipX - pos.x);
   
 if (u === 'fork') {
   ctx.save();
