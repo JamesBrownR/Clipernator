@@ -96,6 +96,18 @@ forkSheetImg.src = '/Clipernator/sprites/ForkSheet.png';
 const forkTipImg = new Image();
 forkTipImg.src = '/Clipernator/sprites/ForkTip.png';
 
+const knifeSheetImg = new Image();
+knifeSheetImg.src = '/Clipernator/sprites/KnifeSheet.png';
+
+const knifeTipImg = new Image();
+knifeTipImg.src = '/Clipernator/sprites/KnifeTip.png';
+
+const spoonSheetImg = new Image();
+spoonSheetImg.src = '/Clipernator/sprites/SpoonSheet.png';
+
+const spoonTipImg = new Image();
+spoonTipImg.src = '/Clipernator/sprites/SpoonTip.png';
+
 const maskSheetImg = new Image();
 maskSheetImg.src = '/Clipernator/sprites/MaskSheet.png';
 
