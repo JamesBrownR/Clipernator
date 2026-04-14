@@ -227,6 +227,7 @@ const BT_UTENSIL = new BTSelector(
       }
 
       // ── FORK_HOLDING: windup, then arc-throw toward player ──
+     // ── FORK_HOLDING: windup, then arc-throw toward player ──
       else if (ai.uState === 'FORK_HOLDING') {
         ai.uHoldTimer--;
 
@@ -237,54 +238,73 @@ const BT_UTENSIL = new BTSelector(
         const gpos = ECS.get(ai.uGrabbedId, 'pos');
         const gvel = ECS.get(ai.uGrabbedId, 'vel');
 
-        // Hover grabbed entity near body with slight wobble
-        gpos.x = pos.x + Math.sin(Date.now() / 80) * 12;
-        gpos.y = pos.y - 28 + Math.cos(Date.now() / 100) * 6;
-        ai.uTipX = gpos.x; ai.uTipY = gpos.y;
-        if (gvel) { gvel.vx = 0; gvel.vy = 0; }
+        // Windup: pull grabbed entity back behind the fork body, then sweep forward
+        const windupRatio = 1 - (ai.uHoldTimer / 40); // 0→1 as timer counts down
+        const aimAngle = Math.atan2(pp.y - pos.y, pp.x - pos.x);
 
-        // Warning particles
-        if (ai.uHoldTimer % 8 === 0) spawnParticles(pos.x, pos.y, '#ff8800', 5);
+        if (ai.uHoldTimer > 10) {
+          // Pull back phase: orbit behind the body opposite to player direction
+          const pullAngle = aimAngle + Math.PI + Math.sin(windupRatio * Math.PI) * 0.6;
+          const pullDist = 28 + windupRatio * 10;
+          gpos.x = pos.x + Math.cos(pullAngle) * pullDist;
+          gpos.y = pos.y + Math.sin(pullAngle) * pullDist;
+          ai.uTipX = gpos.x;
+          ai.uTipY = gpos.y;
+          if (gvel) { gvel.vx = 0; gvel.vy = 0; }
+          // Warning particles during windup
+          if (ai.uHoldTimer % 6 === 0) spawnParticles(pos.x, pos.y, '#ff8800', 5);
+        } else {
+          // Sweep forward phase: snap the tip out toward player fast
+          const sweepRatio = 1 - (ai.uHoldTimer / 10); // 0→1 in final 10 frames
+          const sweepDist = 28 + sweepRatio * 44; // tip flies out 44px in front
+          gpos.x = pos.x + Math.cos(aimAngle) * sweepDist;
+          gpos.y = pos.y + Math.sin(aimAngle) * sweepDist;
+          ai.uTipX = gpos.x;
+          ai.uTipY = gpos.y;
+          if (gvel) { gvel.vx = 0; gvel.vy = 0; }
+        }
 
-       if (ai.uHoldTimer <= 0) {
-  if (!ai.uGrabbedId || !ECS.has(ai.uGrabbedId, 'pos')) {
-    ai.uGrabbedId = null; ai.uState = 'IDLE'; return BT.RUNNING;
-  }
+        if (ai.uHoldTimer <= 0) {
+          if (!ai.uGrabbedId || !ECS.has(ai.uGrabbedId, 'pos')) {
+            ai.uGrabbedId = null; ai.uState = 'IDLE'; return BT.RUNNING;
+          }
 
-  const gpos = ECS.get(ai.uGrabbedId, 'pos');
-  const gvel = ECS.get(ai.uGrabbedId, 'vel');
-  const gai  = ECS.get(ai.uGrabbedId, 'ai');
+          const gai  = ECS.get(ai.uGrabbedId, 'ai');
 
-  // Detach from fork
-  if (gai) { gai.juggled = false; gai.juggledBy = null; }
+          // Detach from fork
+          if (gai) { gai.juggled = false; gai.juggledBy = null; }
 
-  // Place it at the fork body position
-  gpos.x = pos.x;
-  gpos.y = pos.y - 20;
+          // Place at the swept-out tip position so it launches from in front
+          gpos.x = ai.uTipX;
+          gpos.y = ai.uTipY;
 
-  // Launch it toward the player with real velocity
-  const targetX = pp.x, targetY = pp.y;
-  const dx2 = targetX - gpos.x, dy2 = targetY - gpos.y;
-  const d2 = Math.hypot(dx2, dy2) || 1;
-  const throwSpd = 9 + Math.min(dist / 40, 5); // faster if player is far
-  if (gvel) {
-    gvel.vx = (dx2 / d2) * throwSpd;
-    gvel.vy = (dy2 / d2) * throwSpd;
-  }
+          // Launch toward player
+          const targetX = pp.x, targetY = pp.y;
+          const dx2 = targetX - gpos.x, dy2 = targetY - gpos.y;
+          const d2 = Math.hypot(dx2, dy2) || 1;
+          const throwSpd = 11 + Math.min(dist / 40, 5);
+          if (gvel) {
+            gvel.vx = (dx2 / d2) * throwSpd;
+            gvel.vy = (dy2 / d2) * throwSpd;
+          }
 
-  // Tag it so sysEnemyPlayerCollision deals bonus damage on impact
-  if (gai) {
-    gai.thrownByFork = true;
-    gai.forkThrowTimer = 90; // live for ~1.5 sec before becoming normal again
-  }
+          // Tag it so sysEnemyPlayerCollision deals bonus damage on impact
+          if (gai) {
+            gai.thrownByFork = true;
+            gai.forkThrowTimer = 90;
+            // Clear juggled state so sysAI processes movement normally
+            gai.juggled = false;
+            gai.juggledBy = null;
+          }
 
-  spawnParticles(gpos.x, gpos.y, '#ffcc88', 16);
-  showMsg('FORK LAUNCHES AN ENEMY!');
+          spawnParticles(gpos.x, gpos.y, '#ffcc88', 20);
+          spawnParticles(gpos.x, gpos.y, '#ff8800', 12);
+          showMsg('FORK LAUNCHES AN ENEMY!');
 
-  ai.uGrabbedId = null;
-  ai.uState = 'RETURN';
-  ai.uLaunchTimer = 120 + Math.floor(Math.random() * 60);
-}
+          ai.uGrabbedId = null;
+          ai.uState = 'RETURN';
+          ai.uLaunchTimer = 120 + Math.floor(Math.random() * 60);
+        }
       }
 
       // ── RETURN: tines snap back ──
