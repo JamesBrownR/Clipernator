@@ -96,8 +96,8 @@ forkSheetImg.src = '/Clipernator/sprites/ForkSheet.png';
 const maskSheetImg = new Image();
 maskSheetImg.src = '/Clipernator/sprites/MaskSheet.png';
 
-const MASK_FRAME_W = 640;
-const MASK_FRAME_H = 640;
+const MASK_FRAME_W = 204;
+const MASK_FRAME_H = 204;
 const MASK_COLS = 5;  // changed from 4 to 5
 
 // Updated frame mappings for 5-col, 5-row sheet (25 frames)
