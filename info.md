@@ -22,7 +22,6 @@
 
 * replace all enemies, items, bullets, bosses etc with cartoon style
 * make floor 1 enemies more interactive and unique. 
-   * the utenstil currently seems to just do damage to enemies when it hits them regardless of which utenstil does it. if a fork hits a enemy it deals damage and doesnt get grabbed, similarly if a spoon hits a enemy it doesnt get knocked back. the fork isnt supposed to do damage but grab things. if a utensil enemy forks a nother enemy, it should bring the enemy closer to them before charging up to lauch the enemy held at the player. the utensil enemy should actively grab giftboxes near them, if the giftboxes and closer to them than the player, to throw at the player.
    * the birthday hat enemy should chase the player if no masks are around. if a mask is present it should go on the masks head, making it deal twice as much damage, shoot twice as fast, gain homing and changing its tears to be red. (i think this would require a second mask sprite sheet)
    * the mask and utensil enemy just chase the player. the utensil enemy should not try and go directly tothe player, it should chase until a certain point. the mask enemy should not try and chase the player at all, unlike how it sometimes does.
 * the cake boss should not mindlessly go to the center all the time. it should just hover around the stage as a idle animation
