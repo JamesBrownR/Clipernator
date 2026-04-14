@@ -93,6 +93,9 @@ let playerBobTimer = 0;
 const forkSheetImg = new Image();
 forkSheetImg.src = '/Clipernator/sprites/ForkSheet.png';
 
+const forkTipImg = new Image();
+forkTipImg.src = '/Clipernator/sprites/ForkTip.png';
+
 const maskSheetImg = new Image();
 maskSheetImg.src = '/Clipernator/sprites/MaskSheet.png';
 
