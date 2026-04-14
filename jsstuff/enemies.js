@@ -246,46 +246,45 @@ const BT_UTENSIL = new BTSelector(
         // Warning particles
         if (ai.uHoldTimer % 8 === 0) spawnParticles(pos.x, pos.y, '#ff8800', 5);
 
-        if (ai.uHoldTimer <= 0) {
-          // Arc-throw toward player
-          const etype = ECS.get(ai.uGrabbedId, 'enemy').type;
-          const targetX = pp.x, targetY = pp.y;
-          const horizDist = Math.hypot(targetX - pos.x, targetY - pos.y);
-          const GRAVITY   = 0.12;
-          const HANG_TIME = Math.max(45, Math.min(100, horizDist / 5));
-          const vx        = (targetX - pos.x) / HANG_TIME;
-          const vyHoriz   = (targetY - pos.y) / HANG_TIME;
-          const vyUp      = -HANG_TIME * GRAVITY * 0.5;
-          const isGift    = etype === 'giftBox';
+       if (ai.uHoldTimer <= 0) {
+  if (!ai.uGrabbedId || !ECS.has(ai.uGrabbedId, 'pos')) {
+    ai.uGrabbedId = null; ai.uState = 'IDLE'; return BT.RUNNING;
+  }
 
-          // Move entity off-screen during flight
-          gpos.x = -200; gpos.y = -200;
-          if (gvel) { gvel.vx = 0; gvel.vy = 0; }
+  const gpos = ECS.get(ai.uGrabbedId, 'pos');
+  const gvel = ECS.get(ai.uGrabbedId, 'vel');
+  const gai  = ECS.get(ai.uGrabbedId, 'ai');
 
-          gs.enemyBullets.push({
-            x: pos.x, y: pos.y,
-            vx, vy: vyUp,
-            vyHoriz, gravity: GRAVITY,
-            life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
-            color: isGift ? '#ff8800' : '#ffcc88',
-            isArcBall: true,
-            isArcEnemy: true,
-            carriedEnemyType: etype,
-            carriedId: ai.uGrabbedId,
-            isCannonball: false,
-            targetX, targetY,
-            hangTime: HANG_TIME,
-            startX: pos.x, startY: pos.y,
-            shadowX: pos.x, shadowY: pos.y,
-            sizeScale: isGift ? 1.1 : 0.85,
-          });
+  // Detach from fork
+  if (gai) { gai.juggled = false; gai.juggledBy = null; }
 
-          spawnParticles(pos.x, pos.y, '#ffcc88', 14);
-          showMsg(isGift ? 'FORK LAUNCHES GIFT BOX!' : 'FORK THROWS AN ENEMY!');
-          ai.uGrabbedId = null;
-          ai.uState = 'RETURN';
-          ai.uLaunchTimer = 120 + Math.floor(Math.random() * 60);
-        }
+  // Place it at the fork body position
+  gpos.x = pos.x;
+  gpos.y = pos.y - 20;
+
+  // Launch it toward the player with real velocity
+  const targetX = pp.x, targetY = pp.y;
+  const dx2 = targetX - gpos.x, dy2 = targetY - gpos.y;
+  const d2 = Math.hypot(dx2, dy2) || 1;
+  const throwSpd = 9 + Math.min(dist / 40, 5); // faster if player is far
+  if (gvel) {
+    gvel.vx = (dx2 / d2) * throwSpd;
+    gvel.vy = (dy2 / d2) * throwSpd;
+  }
+
+  // Tag it so sysEnemyPlayerCollision deals bonus damage on impact
+  if (gai) {
+    gai.thrownByFork = true;
+    gai.forkThrowTimer = 90; // live for ~1.5 sec before becoming normal again
+  }
+
+  spawnParticles(gpos.x, gpos.y, '#ffcc88', 16);
+  showMsg('FORK LAUNCHES AN ENEMY!');
+
+  ai.uGrabbedId = null;
+  ai.uState = 'RETURN';
+  ai.uLaunchTimer = 120 + Math.floor(Math.random() * 60);
+}
       }
 
       // ── RETURN: tines snap back ──
