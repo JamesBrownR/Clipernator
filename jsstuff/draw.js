@@ -1556,3 +1556,4 @@ if (gs.drivingCar !== null) {
     ctx.restore();
   }
 }
+}
