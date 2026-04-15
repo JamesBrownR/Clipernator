@@ -81,15 +81,40 @@ playerImg.src = '/Clipernator/sprites/Clippy.png';
 const shotgunImg = new Image();
 shotgunImg.src = '/Clipernator/sprites/Shotgun.png';
 
-const normalBulletImg = new Image();
-normalBulletImg.src = '/Clipernator/sprites/bullets/normalbullet.png';
-
 let gunAngle = 0;
 let gunRecoil = 0;
 let playerMoveAngle = 0;
 let gunX = 0;
 let gunY = 0;
 let playerBobTimer = 0;
+
+const normalBulletImg = new Image();
+normalBulletImg.src = '/Clipernator/sprites/bullets/normalbullet.png';
+
+const dudBulletImg = new Image();
+dudBulletImg.src = '/Clipernator/sprites/bullets/dudbullet.png'; // pill image
+
+const tearBulletImg = new Image();
+tearBulletImg.src = '/Clipernator/sprites/bullets/tearBullet.png'; // water balloon image
+
+const arcBallImg = new Image();
+arcBulletImg = arcBallImg; // alias
+arcBallImg.onload = function() {
+  const off = document.createElement('canvas');
+  off.width = arcBallImg.naturalWidth; off.height = arcBallImg.naturalHeight;
+  const offCtx = off.getContext('2d');
+  offCtx.drawImage(arcBallImg, 0, 0);
+  const d = offCtx.getImageData(0, 0, off.width, off.height);
+  for (let i = 0; i < d.data.length; i += 4) {
+    if (d.data[i] < 25 && d.data[i+1] < 25 && d.data[i+2] < 25) d.data[i+3] = 0;
+  }
+  offCtx.putImageData(d, 0, 0);
+  arcBallCanvas = off;
+};
+arcBallImg.src = '/Clipernator/sprites/bullets/arcball.png'; // sphere image
+let arcBallCanvas = null;
+
+
 
 // At the top of draw.js, add this with the other image loaders (near playerImg/shotgunImg)
 
