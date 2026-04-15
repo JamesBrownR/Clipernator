@@ -963,9 +963,7 @@ function drawBullet(b) {
   if (b.isBowlingBall) {
     const spin = Date.now() / 200;
     ctx.rotate(spin);
-    ctx.fillStyle = '#333344';
-    ctx.shadowColor = '#666677';
-    ctx.shadowBlur = 16;
+    ctx.fillStyle = '#333344'; ctx.shadowColor = '#666677'; ctx.shadowBlur = 16;
     ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#666677';
     ctx.beginPath(); ctx.arc(-5, -5, 5, 0, Math.PI*2); ctx.fill();
@@ -978,34 +976,28 @@ function drawBullet(b) {
     return;
   }
 
+  // ── DUD: pill image ──
   if (b.isDud) {
-    // Dud: greyed out, smaller, no trail
-    if (normalBulletImg.complete && normalBulletImg.naturalWidth > 0) {
-      ctx.globalAlpha = 0.45;
-      ctx.filter = 'grayscale(100%)';
-      ctx.drawImage(normalBulletImg, -8, -4, 16, 8);
-      ctx.filter = 'none';
+    ctx.globalAlpha = 0.55;
+    if (dudBulletImg.complete && dudBulletImg.naturalWidth > 0) {
+      ctx.drawImage(dudBulletImg, -14, -7, 28, 14);
     } else {
-      ctx.fillStyle = '#777';
-      ctx.fillRect(-7, -1.5, 14, 3);
+      ctx.fillStyle = '#888'; ctx.fillRect(-7, -1.5, 14, 3);
     }
     ctx.restore();
     return;
   }
 
-  // Tint color per damage tier
-  let tint = null;
-  let scale = 1;
+  // Tint/scale per damage tier
+  let tint = null, scale = 1;
   if      (b.damageMult >= 4) { tint = '#ff3333'; scale = 1.6; }
   else if (b.damageMult >= 3) { tint = '#cc44ff'; scale = 1.4; }
   else if (b.damageMult >= 2) { tint = '#4488ff'; scale = 1.2; }
   else if (b.isMirrorRicochet) { tint = '#8899ff'; scale = 1.1; }
 
-  const W = 36 * scale;
-  const H = 14 * scale;
+  const W = 36 * scale, H = 14 * scale;
 
   if (normalBulletImg.complete && normalBulletImg.naturalWidth > 0) {
-    // Draw tinted trail behind bullet (simple tapered rectangle in code)
     if (tint) {
       ctx.save();
       const trailLen = W * 1.2;
@@ -1016,34 +1008,21 @@ function drawBullet(b) {
       ctx.beginPath();
       ctx.moveTo(-W * 0.5 - trailLen, -H * 0.25);
       ctx.lineTo(-W * 0.5, -H * 0.45);
-      ctx.lineTo(-W * 0.5, H * 0.45);
-      ctx.lineTo(-W * 0.5 - trailLen, H * 0.25);
-      ctx.closePath();
-      ctx.fill();
+      ctx.lineTo(-W * 0.5,  H * 0.45);
+      ctx.lineTo(-W * 0.5 - trailLen,  H * 0.25);
+      ctx.closePath(); ctx.fill();
       ctx.restore();
-
-      // Tint overlay on bullet
       ctx.save();
       ctx.globalCompositeOperation = 'multiply';
       ctx.fillStyle = tint;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, W * 0.5, H * 0.5, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 0, W*0.5, H*0.5, 0, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
-
-// flip horizontally so bullet head faces right (angle 0)
-ctx.drawImage(normalBulletImg, -W / 2, -H / 2, W, H);
-
-    
+    ctx.drawImage(normalBulletImg, -W/2, -H/2, W, H);
   } else {
-    // Fallback canvas drawing if image not loaded
-    const color = tint || (gs.bouncyHouse ? '#88ffdd' : '#ffcc44');
-    const glow  = tint || (gs.bouncyHouse ? '#00ffcc' : '#ff8800');
-    ctx.fillStyle = color;
-    ctx.shadowColor = glow;
-    ctx.shadowBlur = b.damageMult > 1 ? 16 : 9;
-    ctx.fillRect(-8 * scale, -2.5 * scale, 16 * scale, 5 * scale);
+    const color = tint || '#ffcc44';
+    ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 9;
+    ctx.fillRect(-8*scale, -2.5*scale, 16*scale, 5*scale);
   }
 
   ctx.restore();
@@ -1172,30 +1151,42 @@ if (gs.hasMirrorMaze && gs.mirrorShards) {
 
   // Player bullets
 for (const b of gs.bullets) {
- if (b.isArcBall) {
+if (b.isArcBall) {
   // Shadow
   ctx.save();
-  ctx.globalAlpha = 0.35;
-  ctx.fillStyle = '#000000';
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#000';
   ctx.beginPath();
-  ctx.ellipse(b.shadowX, b.shadowY || b.y, 18 * (b.sizeScale||1), 8 * (b.sizeScale||1), 0, 0, Math.PI * 2);
+  ctx.ellipse(b.shadowX, b.shadowY || b.y, 18*(b.sizeScale||1), 8*(b.sizeScale||1), 0, 0, Math.PI*2);
   ctx.fill();
   ctx.restore();
-  // Ball
-  const arcColor = b.isMirrorArc ? '#ff2244' : '#00ff88';
-  const arcGlow  = b.isMirrorArc ? '#ff0022' : '#00ffaa';
+  // Ball — use sphere image
+  const src = arcBallCanvas || arcBallImg;
+  const r = 18 * (b.sizeScale || 1);
+  const arcColor = b.isMirrorArc ? '#ff2244' : null;
   ctx.save();
   ctx.translate(b.x, b.y);
-  ctx.fillStyle = arcColor;
-  ctx.shadowColor = arcGlow;
-  ctx.shadowBlur = 22;
-  ctx.beginPath();
-  ctx.arc(0, 0, 10 * (b.sizeScale||1), 0, Math.PI * 2);
-  ctx.fill();
+  if (arcColor) {
+    // Tint mirror arcs red
+    ctx.shadowColor = arcColor; ctx.shadowBlur = 18;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  if (src && src.complete !== false) {
+    ctx.drawImage(src, -r, -r, r*2, r*2);
+    if (arcColor) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = arcColor;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+    }
+  } else {
+    ctx.fillStyle = arcColor || '#aaaaff';
+    ctx.shadowColor = arcColor || '#8888ff'; ctx.shadowBlur = 22;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+  }
   ctx.restore();
 } else {
-    drawBullet(b);
-  }
+  drawBullet(b);
+}
 }
   // Enemy bullets
   for(const eb of gs.enemyBullets) {
@@ -1229,26 +1220,22 @@ for (const b of gs.bullets) {
       continue; // skip default bullet drawing
     }
     if (eb.isTear) {
-      const tearAngle = Math.atan2(eb.vy, eb.vx);
-      ctx.translate(eb.x, eb.y); ctx.rotate(tearAngle + Math.PI/2);
-      ctx.fillStyle='#44aaff'; ctx.shadowColor='#44aaff'; ctx.shadowBlur=10;
-      ctx.beginPath();
-      ctx.moveTo(0, -6);
-      ctx.bezierCurveTo(4, -2, 4, 4, 0, 6);
-      ctx.bezierCurveTo(-4, 4, -4, -2, 0, -6);
-      ctx.fill();
-    } else if (eb.isConfused) {
-      // Cyan diamond shape to distinguish confused shots
-      ctx.fillStyle='#00ffff'; ctx.shadowColor='#00ffff'; ctx.shadowBlur=10;
-      ctx.save(); ctx.translate(eb.x, eb.y); ctx.rotate(Math.PI/4);
-      ctx.fillRect(-4,-4,8,8);
-      ctx.restore();
-    } else {
-      ctx.fillStyle=eb.color; ctx.shadowColor=eb.color; ctx.shadowBlur=8;
-      ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,Math.PI*2); ctx.fill();
-    }
-    ctx.restore();
+  const tearAngle = Math.atan2(eb.vy, eb.vx);
+  ctx.save();
+  ctx.translate(eb.x, eb.y);
+  ctx.rotate(tearAngle + Math.PI / 2); // point in travel direction
+  const tw = 18, th = 26;
+  if (tearBulletImg.complete && tearBulletImg.naturalWidth > 0) {
+    ctx.drawImage(tearBulletImg, -tw/2, -th/2, tw, th);
+  } else {
+    // Fallback teardrop
+    ctx.fillStyle = '#44aaff'; ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, -6); ctx.bezierCurveTo(4,-2,4,4,0,6); ctx.bezierCurveTo(-4,4,-4,-2,0,-6);
+    ctx.fill();
   }
+  ctx.restore();
+}
 
   // Enemies
   const frozen = gs.partyFreezeTimer > 0;
