@@ -1236,6 +1236,7 @@ if (b.isArcBall) {
   }
   ctx.restore();
 }
+  }
 
   // Enemies
   const frozen = gs.partyFreezeTimer > 0;
