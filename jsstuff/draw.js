@@ -401,17 +401,39 @@ function drawGiftBox(epos, ehp, ai, frozen) {
 }
 
 function drawPartyHat(epos, ehp, frozen) {
-  const {x,y,angle}=epos;
-  ctx.save(); ctx.translate(x,y); ctx.rotate(angle+(frozen?0:Math.sin(Date.now()/80)*.4));
-  if (frozen) ctx.globalAlpha=0.7;
-  ctx.shadowColor=frozen?'#aaccff':'#ffdd00'; ctx.shadowBlur=18;
-  ctx.fillStyle=frozen?'#88ccff':'#ff6699'; ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(-14,12); ctx.lineTo(14,12); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,-24,5,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#ffffff'; ctx.lineWidth=2;
-  for(let i=-10;i<12;i+=6){ctx.beginPath(); ctx.moveTo(-12,i); ctx.lineTo(12,i+4); ctx.stroke();}
+  const {x, y} = epos;
+  ctx.save();
+  ctx.translate(x, y);
+  if (frozen) {
+    ctx.globalAlpha = 0.7;
+    ctx.shadowColor = '#aaccff';
+    ctx.shadowBlur = 16;
+  } else {
+    ctx.shadowColor = '#ffdd00';
+    ctx.shadowBlur = 14 + Math.sin(Date.now()/80) * 4;
+  }
+
+  if (partyHatImg && partyHatImg.complete && partyHatImg.naturalWidth > 0) {
+    const bobAngle = frozen ? 0 : Math.sin(Date.now()/80) * 0.3;
+    ctx.rotate(bobAngle);
+    // Black background is transparent via CSS image-rendering; draw with black removal
+    const SIZE = 52;
+    ctx.drawImage(partyHatImg, -SIZE/2, -SIZE, SIZE, SIZE);
+  } else {
+    // Fallback shape
+    ctx.rotate(Math.sin(Date.now()/80) * 0.4);
+    ctx.fillStyle = frozen ? '#88ccff' : '#ff6699';
+    ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(-14,12); ctx.lineTo(14,12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(0,-24,5,0,Math.PI*2); ctx.fill();
+  }
+
   ctx.restore();
-  const bw=36; ctx.fillStyle='#330000'; ctx.fillRect(x-bw/2,y-38,bw,5);
-  ctx.fillStyle=ehp.hp<ehp.maxHp/2?'#ff6666':'#cc0000'; ctx.fillRect(x-bw/2,y-38,bw*(ehp.hp/ehp.maxHp),5);
+
+  const bw = 36;
+  ctx.fillStyle = '#330000'; ctx.fillRect(x-bw/2, y-42, bw, 5);
+  ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cc0000';
+  ctx.fillRect(x-bw/2, y-42, bw * (ehp.hp/ehp.maxHp), 5);
 }
 
 function drawCakeBoss(epos, ehp, ai, frozen) {
@@ -988,39 +1010,46 @@ function drawBullet(b) {
     return;
   }
 
-  // Tint/scale per damage tier
-  let tint = null, scale = 1;
-  if      (b.damageMult >= 4) { tint = '#ff3333'; scale = 1.6; }
-  else if (b.damageMult >= 3) { tint = '#cc44ff'; scale = 1.4; }
-  else if (b.damageMult >= 2) { tint = '#4488ff'; scale = 1.2; }
-  else if (b.isMirrorRicochet) { tint = '#8899ff'; scale = 1.1; }
+  // Pick the right sprite based on damage tier and bouncy house
+  let bulletImg = null;
+  let scale = 1;
+
+  if (b.damageMult >= 4) {
+    bulletImg = bullet4xImg; scale = 1.6;
+  } else if (b.damageMult >= 3) {
+    bulletImg = bullet3xImg; scale = 1.4;
+  } else if (b.damageMult >= 2) {
+    bulletImg = bullet2xImg; scale = 1.2;
+  } else if (gs.bouncyHouse) {
+    bulletImg = bouncyBulletImg; scale = 1.0;
+  } else {
+    bulletImg = normalBulletImg; scale = 1.0;
+  }
+
+  // Mirror ricochet tint overlay
+  const isMirror = b.isMirrorRicochet;
 
   const W = 36 * scale, H = 14 * scale;
 
-  if (normalBulletImg.complete && normalBulletImg.naturalWidth > 0) {
-    if (tint) {
+  if (bulletImg && bulletImg.complete && bulletImg.naturalWidth > 0) {
+    if (isMirror) {
+      // Draw tinted version for mirror ricochets
       ctx.save();
-      const trailLen = W * 1.2;
-      const grad = ctx.createLinearGradient(-W * 0.5 - trailLen, 0, -W * 0.5, 0);
-      grad.addColorStop(0, 'transparent');
-      grad.addColorStop(1, tint + 'aa');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(-W * 0.5 - trailLen, -H * 0.25);
-      ctx.lineTo(-W * 0.5, -H * 0.45);
-      ctx.lineTo(-W * 0.5,  H * 0.45);
-      ctx.lineTo(-W * 0.5 - trailLen,  H * 0.25);
-      ctx.closePath(); ctx.fill();
-      ctx.restore();
-      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(bulletImg, -W/2, -H/2, W, H);
       ctx.globalCompositeOperation = 'multiply';
-      ctx.fillStyle = tint;
+      ctx.fillStyle = '#8899ff';
       ctx.beginPath(); ctx.ellipse(0, 0, W*0.5, H*0.5, 0, 0, Math.PI*2); ctx.fill();
       ctx.restore();
+    } else {
+      ctx.drawImage(bulletImg, -W/2, -H/2, W, H);
     }
-    ctx.drawImage(normalBulletImg, -W/2, -H/2, W, H);
   } else {
-    const color = tint || '#ffcc44';
+    // Fallback canvas drawing
+    const color = b.damageMult >= 4 ? '#ff3333' :
+                  b.damageMult >= 3 ? '#cc44ff' :
+                  b.damageMult >= 2 ? '#4488ff' :
+                  gs.bouncyHouse    ? '#88ffdd' : '#ffcc44';
     ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 9;
     ctx.fillRect(-8*scale, -2.5*scale, 16*scale, 5*scale);
   }
@@ -1160,18 +1189,15 @@ if (b.isArcBall) {
   ctx.ellipse(b.shadowX, b.shadowY || b.y, 18*(b.sizeScale||1), 8*(b.sizeScale||1), 0, 0, Math.PI*2);
   ctx.fill();
   ctx.restore();
-  // Ball — use sphere image
-  const src = arcBallCanvas || arcBallImg;
+  // Ball
   const r = 18 * (b.sizeScale || 1);
   const arcColor = b.isMirrorArc ? '#ff2244' : null;
+  const src = (arcBallCanvas && arcBallCanvas.width > 0) ? arcBallCanvas : 
+              (arcBallImg.complete && arcBallImg.naturalWidth > 0 ? arcBallImg : null);
   ctx.save();
   ctx.translate(b.x, b.y);
-  if (arcColor) {
-    // Tint mirror arcs red
-    ctx.shadowColor = arcColor; ctx.shadowBlur = 18;
-    ctx.globalCompositeOperation = 'source-over';
-  }
-  if (src && src.complete !== false) {
+  if (arcColor) { ctx.shadowColor = arcColor; ctx.shadowBlur = 18; }
+  if (src) {
     ctx.drawImage(src, -r, -r, r*2, r*2);
     if (arcColor) {
       ctx.globalCompositeOperation = 'multiply';
@@ -1202,29 +1228,36 @@ if (b.isArcBall) {
       ctx.fill();
       ctx.restore();
       // Draw the ball itself
-     const spin = Date.now() / 80;
+   // Draw the ball itself — use arcBallCanvas/arcBallImg if available
       const bScale = eb.sizeScale || 1.0;
-      const bR = 9 * bScale;
+      const bR = 14 * bScale; // slightly larger so it's visible
       const bColor = eb.isCannonball ? '#ff6600' : (eb.isArcEnemy ? '#ff8800' : '#ffdd00');
-      const bGlow = eb.isCannonball ? '#ff4400' : (eb.isArcEnemy ? '#ff6600' : '#ffaa00');
+      const bGlow  = eb.isCannonball ? '#ff4400' : (eb.isArcEnemy ? '#ff6600' : '#ffaa00');
+      const arcSrc = (arcBallCanvas && arcBallCanvas.width > 0) ? arcBallCanvas :
+                     (arcBallImg.complete && arcBallImg.naturalWidth > 0 ? arcBallImg : null);
       ctx.save();
       ctx.translate(eb.x, eb.y);
-      ctx.rotate(spin);
-      ctx.fillStyle = bColor; ctx.shadowColor = bGlow; ctx.shadowBlur = 14 * bScale;
-      ctx.beginPath(); ctx.arc(0, 0, bR, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = bGlow; ctx.lineWidth = 2 * bScale;
-      ctx.beginPath(); ctx.moveTo(-bR, 0); ctx.lineTo(bR, 0); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, -bR); ctx.lineTo(0, bR); ctx.stroke();
-      ctx.restore();
+      if (arcSrc) {
+        // Tint the sphere image to match the ball type
+        ctx.drawImage(arcSrc, -bR, -bR, bR*2, bR*2);
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = bColor;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.arc(0, 0, bR, 0, Math.PI*2); ctx.fill();
+      } else {
+        ctx.fillStyle = bColor; ctx.shadowColor = bGlow; ctx.shadowBlur = 14 * bScale;
+        ctx.beginPath(); ctx.arc(0, 0, bR, 0, Math.PI*2); ctx.fill();
+      }
       ctx.restore();
       continue; // skip default bullet drawing
     }
-    if (eb.isTear) {
+   if (eb.isTear) {
+  // The water balloon image points RIGHT (tail on left), so rotate to travel direction
   const tearAngle = Math.atan2(eb.vy, eb.vx);
   ctx.save();
   ctx.translate(eb.x, eb.y);
-  ctx.rotate(tearAngle + Math.PI / 2); // point in travel direction
-  const tw = 18, th = 26;
+  ctx.rotate(tearAngle); // no offset — image already horizontal
+  const tw = 32, th = 20; // wider since the water balloon is landscape
   if (tearBulletImg.complete && tearBulletImg.naturalWidth > 0) {
     ctx.drawImage(tearBulletImg, -tw/2, -th/2, tw, th);
   } else {
