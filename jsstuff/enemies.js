@@ -924,20 +924,115 @@ const BT_PARTYHAT = new BTSelector(
     const ai  = ECS.get(id, 'ai');
     const pp  = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
+
+    // ── Init state ──
+    if (ai.hatState      === undefined) ai.hatState      = 'IDLE';
+    if (ai.hatTimer      === undefined) ai.hatTimer      = 60 + Math.floor(Math.random() * 40);
+    if (ai.hatAnimFrame  === undefined) ai.hatAnimFrame  = 0;
+    if (ai.hatAnimTimer  === undefined) ai.hatAnimTimer  = 0;
+    if (ai.hatDiveTarget === undefined) ai.hatDiveTarget = null;
+
     const dx = pp.x - pos.x, dy = pp.y - pos.y;
     const dist = Math.hypot(dx, dy) || 1;
-    ai.diveTimer = (ai.diveTimer||0) + 1;
-    vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
-    vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
-    const spd = Math.hypot(vel.vx, vel.vy);
-    if (spd > phy.speed) { vel.vx = vel.vx/spd*phy.speed; vel.vy = vel.vy/spd*phy.speed; }
-    if (ai.diveTimer > 70 && dist < 140) {
-      phy.speed = Math.min(phy.speed * 1.5, 2.8);
-      ai.diveTimer = -150;
-      spawnParticles(pos.x, pos.y, '#ffdd00', 8);
+
+    const baseSpeed = (1.2 + gs.wave * 0.12) * ENEMY_DEFS.partyHat.speedMult;
+
+    // ── Advance anim timer ──
+    ai.hatAnimTimer++;
+
+    if (ai.hatState === 'IDLE') {
+      // Slow drift toward player
+      vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * baseSpeed * 0.14;
+      vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * baseSpeed * 0.14;
+      const spd = Math.hypot(vel.vx, vel.vy);
+      if (spd > baseSpeed * 0.5) { vel.vx = vel.vx / spd * baseSpeed * 0.5; vel.vy = vel.vy / spd * baseSpeed * 0.5; }
+
+      // Cycle idle frames: 12 frames, ~8 ticks each
+      if (ai.hatAnimTimer >= 8) { ai.hatAnimTimer = 0; ai.hatAnimFrame = (ai.hatAnimFrame + 1) % 12; }
+
+      ai.hatTimer--;
+      if (ai.hatTimer <= 0 && dist < 380) {
+        ai.hatState = 'TELEGRAPH';
+        ai.hatTimer = 32;
+        ai.hatAnimFrame = 0;
+        ai.hatAnimTimer = 0;
+        vel.vx *= 0.2; vel.vy *= 0.2;
+        spawnParticles(pos.x, pos.y, '#ffdd00', 6);
+      }
+
+    } else if (ai.hatState === 'TELEGRAPH') {
+      vel.vx *= 0.85; vel.vy *= 0.85;
+
+      // 4 transition frames spread across telegraph duration (~8 ticks each)
+      if (ai.hatAnimTimer >= 8) { ai.hatAnimTimer = 0; ai.hatAnimFrame = Math.min(3, ai.hatAnimFrame + 1); }
+      if (ai.hatTimer % 6 === 0) spawnParticles(pos.x, pos.y, '#ff4400', 4);
+
+      ai.hatTimer--;
+      if (ai.hatTimer <= 0) {
+        // Lock target to player's current position
+        ai.hatDiveTarget = { x: pp.x, y: pp.y };
+        ai.hatState = 'DIVE';
+        ai.hatTimer = 42;
+        ai.hatAnimFrame = 0;
+        ai.hatAnimTimer = 0;
+        const tdx = ai.hatDiveTarget.x - pos.x, tdy = ai.hatDiveTarget.y - pos.y;
+        const td = Math.hypot(tdx, tdy) || 1;
+        const diveSpd = baseSpeed * 4.5;
+        vel.vx = (tdx / td) * diveSpd;
+        vel.vy = (tdy / td) * diveSpd;
+        spawnParticles(pos.x, pos.y, '#ff2200', 12);
+      }
+
+    } else if (ai.hatState === 'DIVE') {
+      // Hold velocity — just let it fly
+      // Animate: single dive frame held, or cycle dive sheet (4 frames, fast)
+      if (ai.hatAnimTimer >= 4) { ai.hatAnimTimer = 0; ai.hatAnimFrame = (ai.hatAnimFrame + 1) % 4; }
+
+      ai.hatTimer--;
+      const hitWall = pos.x < CFG.WALL_PAD || pos.x > worldW - CFG.WALL_PAD ||
+                      pos.y < CFG.WALL_PAD || pos.y > worldH - CFG.WALL_PAD;
+      const hitPlayer = dist < 24 && gs.invincible <= 0;
+      const reachedTarget = ai.hatDiveTarget &&
+        Math.hypot(pos.x - ai.hatDiveTarget.x, pos.y - ai.hatDiveTarget.y) < 20;
+
+      if (hitPlayer || hitWall || reachedTarget || ai.hatTimer <= 0) {
+        if (hitPlayer && gs.invincible <= 0) {
+          gs.health -= 18; gs.invincible = CFG.INVINCIBLE_FRAMES;
+          gs.shakeX = 14; gs.shakeY = 14; gs.flawlessThisWave = false;
+          triggerSFPHit(); updateHUD();
+          spawnParticles(pos.x, pos.y, '#ffdd00', 16);
+          if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
+        }
+        ai.hatState = 'RECOVER';
+        ai.hatTimer = 50;
+        ai.hatAnimFrame = 0;
+        ai.hatAnimTimer = 0;
+        vel.vx *= 0.15; vel.vy *= 0.15;
+        spawnParticles(pos.x, pos.y, '#ffdd00', 14);
+        gs.shakeX = 8; gs.shakeY = 8;
+      }
+
+    } else if (ai.hatState === 'RECOVER') {
+      vel.vx *= 0.88; vel.vy *= 0.88;
+
+      // 4 recover frames, ~12 ticks each
+      if (ai.hatAnimTimer >= 12) { ai.hatAnimTimer = 0; ai.hatAnimFrame = Math.min(3, ai.hatAnimFrame + 1); }
+
+      ai.hatTimer--;
+      if (ai.hatTimer <= 0) {
+        ai.hatState = 'IDLE';
+        ai.hatTimer = 55 + Math.floor(Math.random() * 35);
+        ai.hatAnimFrame = 0;
+        ai.hatAnimTimer = 0;
+      }
     }
-    const base = (1.2 + gs.wave * 0.12) * ENEMY_DEFS.partyHat.speedMult;
-    if (phy.speed > base) phy.speed = Math.max(phy.speed * 0.985, base);
+
+    // Wall clamp (non-dive states)
+    if (ai.hatState !== 'DIVE') {
+      pos.x = Math.max(CFG.WALL_PAD, Math.min(worldW - CFG.WALL_PAD, pos.x));
+      pos.y = Math.max(CFG.WALL_PAD, Math.min(worldH - CFG.WALL_PAD, pos.y));
+    }
+
     return BT.RUNNING;
   })
 );
