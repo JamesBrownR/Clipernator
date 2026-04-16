@@ -1423,7 +1423,6 @@ function sysTimers() {
       if (hint) hint.textContent=`WASD:MOVE | MOUSE:AIM | CLICK:SHOOT | ${formatKey(KEYBINDS.reload)}:RELOAD | SHIFT:DASH | ${formatKey(KEYBINDS.prizeWheel)}:PRIZE WHEEL (3 TICKETS)`;
       updateHUD();
     }
-    return;  // skip spawner/timers during transition — but particles already updated above
   }
 
   if (gs.partyFreezeTimer>0) gs.partyFreezeTimer--;
@@ -1477,10 +1476,7 @@ function sysTimers() {
   if (eai.explodeCooldown > 0) eai.explodeCooldown--;
 }
   
-  for (const p of gs.particles){p.x+=p.vx;p.y+=p.vy;p.vx*=0.91;p.vy*=0.91;p.life--;}
-  gs.particles=gs.particles.filter(p=>p.life>0);
-  gs.shakeX*=0.72; gs.shakeY*=0.72;
-  if (muzzleFlash>0) muzzleFlash--;
+
 
   if (gs.prizeEffect){gs.prizeEffect.timer--;if(gs.prizeEffect.timer<=0){gs.sugarRushActive=false;gs.ricochetActive=false;gs.prizeEffect=null;}}
 
@@ -1938,18 +1934,21 @@ function handleBossDeath(id) {
   if (gs.bossId !== id) return;
   gs.bossActive = false;
   gs.bossId = null;
-  gs.wave++;         // now advance from 10 → 11
+  gs.wave++;
   gs.waveKills = 0;
   gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
   gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
   gs.flawlessThisWave = true;
   updateHUD();
-  gs.transitioning = true;
-  gs.transitionT = 0;
-  gs.transitionStartW = worldW;
-  gs.transitionStartH = worldH;
-  gs.transitionEndW = 1050;
-  gs.transitionEndH = 690;
-  gs.transitionDone = false;
   showMsg('BOSS DEFEATED! ARENA EXPANDING...');
+  // Delay the transition slightly so death particles finish
+  setTimeout(() => {
+    gs.transitioning = true;
+    gs.transitionT = 0;
+    gs.transitionStartW = worldW;
+    gs.transitionStartH = worldH;
+    gs.transitionEndW = 1050;
+    gs.transitionEndH = 690;
+    gs.transitionDone = false;
+  }, 1200);
 }
