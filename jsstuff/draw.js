@@ -400,40 +400,111 @@ function drawGiftBox(epos, ehp, ai, frozen) {
   }
 }
 
-function drawPartyHat(epos, ehp, frozen) {
-  const {x, y} = epos;
-  ctx.save();
-  ctx.translate(x, y);
-  if (frozen) {
-    ctx.globalAlpha = 0.7;
-    ctx.shadowColor = '#aaccff';
-    ctx.shadowBlur = 16;
-  } else {
-    ctx.shadowColor = '#ffdd00';
-    ctx.shadowBlur = 14 + Math.sin(Date.now()/80) * 4;
+function drawPartyHat(epos, ehp, ai, frozen) {
+  const { x, y } = epos;
+  const state = ai.hatState || 'IDLE';
+  const frame = ai.hatAnimFrame || 0;
+
+  // Pick sheet + layout based on state
+  let sheet = null;
+  let cols = 4, rows = 3, totalFrames = 12;
+  let drawW = 52, drawH = 52;
+  let frameIdx = frame;
+  let angle = 0;
+
+  if (state === 'IDLE') {
+    sheet = partyHatIdleSheet;
+    cols = 4; rows = 3; totalFrames = 12;
+    drawW = 52; drawH = 52;
+  } else if (state === 'TELEGRAPH') {
+    sheet = partyHatTransitionSheet;
+    cols = 2; rows = 2; totalFrames = 4;
+    drawW = 56; drawH = 56;
+  } else if (state === 'DIVE') {
+    // Use single dive image for the dart shape, with speed-line rotation
+    const vel = ECS.get(
+      ECS.query('enemy', 'pos').find(id => ECS.get(id, 'pos') === epos) ?? -1,
+      'vel'
+    );
+    // Fallback: just use diveSheet cycling
+    sheet = partyHatDiveSheet;
+    cols = 2; rows = 2; totalFrames = 4;
+    drawW = 44; drawH = 66;
+    // Rotate to face movement direction using vel stored on entity
+    // We approximate using hatDiveTarget vs current pos
+    if (ai.hatDiveTarget) {
+      angle = Math.atan2(ai.hatDiveTarget.y - epos.y, ai.hatDiveTarget.x - epos.x) - Math.PI / 2;
+    }
+  } else if (state === 'RECOVER') {
+    sheet = partyHatRecoverSheet;
+    cols = 2; rows = 2; totalFrames = 4;
+    drawW = 60; drawH = 44; // squashed wide shape
   }
 
-  if (partyHatImg && partyHatImg.complete && partyHatImg.naturalWidth > 0) {
-    const bobAngle = frozen ? 0 : Math.sin(Date.now()/80) * 0.3;
-    ctx.rotate(bobAngle);
-    // Black background is transparent via CSS image-rendering; draw with black removal
-    const SIZE = 52;
-    ctx.drawImage(partyHatImg, -SIZE/2, -SIZE, SIZE, SIZE);
+  frameIdx = Math.min(frame, totalFrames - 1);
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
+  else {
+    ctx.shadowColor = state === 'DIVE' ? '#ff2200' : '#ffdd00';
+    ctx.shadowBlur  = state === 'DIVE' ? 22 : 14 + Math.sin(Date.now() / 80) * 4;
+  }
+
+  if (sheet && sheet.complete && sheet.naturalWidth > 0) {
+    // Remove black background pixels by checking if image is dark
+    // (already handled by the black-removal pattern used elsewhere in config.js)
+    const frameW = Math.floor(sheet.naturalWidth  / cols);
+    const frameH = Math.floor(sheet.naturalHeight / rows);
+    const col = frameIdx % cols;
+    const row = Math.floor(frameIdx / cols);
+
+    ctx.drawImage(
+      sheet,
+      col * frameW, row * frameH, frameW, frameH,
+      -drawW / 2, -drawH / 2, drawW, drawH
+    );
+
+    // Overlay single dive image on top during DIVE for the elongated dart look
+    if (state === 'DIVE' && partyHatDiveImg.complete && partyHatDiveImg.naturalWidth > 0) {
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(partyHatDiveImg, -22, -44, 44, 88);
+    }
   } else {
     // Fallback shape
-    ctx.rotate(Math.sin(Date.now()/80) * 0.4);
-    ctx.fillStyle = frozen ? '#88ccff' : '#ff6699';
-    ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(-14,12); ctx.lineTo(14,12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = frozen ? '#88ccff' : (state === 'DIVE' ? '#ff4400' : '#ff6699');
+    ctx.beginPath();
+    if (state === 'DIVE') {
+      ctx.ellipse(0, 0, 10, 28, 0, 0, Math.PI * 2);
+    } else if (state === 'RECOVER') {
+      ctx.ellipse(0, 0, 22, 8, 0, 0, Math.PI * 2);
+    } else {
+      ctx.moveTo(0, -22); ctx.lineTo(-14, 12); ctx.lineTo(14, 12); ctx.closePath();
+    }
+    ctx.fill();
     ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(0,-24,5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -24, 5, 0, Math.PI * 2); ctx.fill();
   }
 
   ctx.restore();
 
+  // HP bar
   const bw = 36;
-  ctx.fillStyle = '#330000'; ctx.fillRect(x-bw/2, y-42, bw, 5);
-  ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cc0000';
-  ctx.fillRect(x-bw/2, y-42, bw * (ehp.hp/ehp.maxHp), 5);
+  ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 44, bw, 5);
+  ctx.fillStyle = ehp.hp < ehp.maxHp / 2 ? '#ff6666' : '#cc0000';
+  ctx.fillRect(x - bw/2, y - 44, bw * (ehp.hp / ehp.maxHp), 5);
+
+  // Telegraph warning ring
+  if (state === 'TELEGRAPH') {
+    const prog = 1 - (ai.hatTimer / 32);
+    ctx.save();
+    ctx.globalAlpha = prog * 0.6;
+    ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2;
+    ctx.shadowColor = '#ff4400'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(x, y, 20 + prog * 14, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function drawCakeBoss(epos, ehp, ai, frozen) {
@@ -1298,7 +1369,7 @@ for(const id of ECS.query('enemy','pos','hp')) {
   if (type==='utensil')     drawUtensil(epos, ehp, ai, frozen);
   else if (type==='mask')        drawMask(epos, ehp, ai, frozen);
   else if (type==='giftBox')     drawGiftBox(epos, ehp, ai, frozen);
-  else if (type==='partyHat')    drawPartyHat(epos, ehp, frozen);
+else if (type==='partyHat')    drawPartyHat(epos, ehp, ai, frozen);
      else if (type === 'cakeBoss') drawCakeBoss(epos, ehp, ai, frozen);
   else if (type==='cannonball')  drawCannonball(epos, ehp, ai, frozen);
   else if (type==='ringmaster')  drawRingmaster(epos, ehp, ai, frozen);
