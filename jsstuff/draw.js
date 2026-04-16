@@ -1251,17 +1251,16 @@ if (b.isArcBall) {
       ctx.restore();
       continue; // skip default bullet drawing
     }
-   if (eb.isTear) {
-  // The water balloon image points RIGHT (tail on left), so rotate to travel direction
+if (eb.isTear) {
   const tearAngle = Math.atan2(eb.vy, eb.vx);
   ctx.save();
   ctx.translate(eb.x, eb.y);
-  ctx.rotate(tearAngle); // no offset — image already horizontal
-  const tw = 32, th = 20; // wider since the water balloon is landscape
+  ctx.rotate(tearAngle);
+  const tw = 40, th = 26;  // wider proportions to match image
   if (tearBulletImg.complete && tearBulletImg.naturalWidth > 0) {
-    ctx.drawImage(tearBulletImg, -tw/2, -th/2, tw, th);
+    // Offset so balloon (right side of image) is at the front of travel
+    ctx.drawImage(tearBulletImg, -tw * 0.35, -th/2, tw, th);
   } else {
-    // Fallback teardrop
     ctx.fillStyle = '#44aaff'; ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.moveTo(0, -6); ctx.bezierCurveTo(4,-2,4,4,0,6); ctx.bezierCurveTo(-4,4,-4,-2,0,-6);
