@@ -132,32 +132,32 @@ bullet4xImg.src = '/Clipernator/sprites/bullets/bullet4x.png';
 // At the top of draw.js, add this with the other image loaders (near playerImg/shotgunImg)
 
 const forkSheetImg = new Image();
-forkSheetImg.src = '/Clipernator/sprites/ForkSheet.png';
+forkSheetImg.src = '/Clipernator/sprites/enemies/Utensil/Fork/ForkSheet.png';
 
 const forkTipImg = new Image();
-forkTipImg.src = '/Clipernator/sprites/ForkTip.png';
+forkTipImg.src = '/Clipernator/sprites/enemies/Utensil/Fork/ForkTip.png';
 
 const knifeSheetImg = new Image();
-knifeSheetImg.src = '/Clipernator/sprites/KnifeSheet.png';
+knifeSheetImg.src = '/Clipernator/sprites/enemies/Utensil/Knife/KnifeSheet.png';
 
 const knifeTipImg = new Image();
-knifeTipImg.src = '/Clipernator/sprites/KnifeTip.png';
+knifeTipImg.src = '/Clipernator/sprites/enemies/Utensil/Knife/KnifeTip.png';
 
 const spoonSheetImg = new Image();
-spoonSheetImg.src = '/Clipernator/sprites/SpoonSheet.png';
+spoonSheetImg.src = '/Clipernator/sprites/enemies/Utensil/Spoon/SpoonSheet.png';
 
 const spoonTipImg = new Image();
-spoonTipImg.src = '/Clipernator/sprites/SpoonTip.png';
+spoonTipImg.src = '/Clipernator/sprites/enemies/Utensil/Spoon/SpoonTip.png';
 
 
 
 const partyHatImg = new Image();
-partyHatImg.src = '/Clipernator/sprites/PartyHat.png';
+partyHatImg.src = '/Clipernator/sprites/enemies/PartyHat/PartyHat.png';
 
 
 
 const maskSheetImg = new Image();
-maskSheetImg.src = '/Clipernator/sprites/MaskSheet.png';
+maskSheetImg.src = '/Clipernator/sprites/enemies/Mask/MaskSheet.png';
 
 const MASK_FRAME_W = 204;
 const MASK_FRAME_H = 204;
