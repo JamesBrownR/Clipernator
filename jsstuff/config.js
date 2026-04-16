@@ -160,7 +160,7 @@ partyHatIdleSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatIdleSheet
 
 const partyHatTransitionSheet = new Image();
 partyHatTransitionSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatTransitionSheet.png';
-
+ 
 const partyHatDiveSheet = new Image();
 partyHatDiveSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatDiveSheet.png';
 
