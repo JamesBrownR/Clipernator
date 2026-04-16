@@ -115,6 +115,19 @@ arcBallImg.src = '/Clipernator/sprites/bullets/arcball.png'; // sphere image
 let arcBallCanvas = null;
 
 
+const bouncyBulletImg = new Image();
+bouncyBulletImg.src = '/Clipernator/sprites/bullets/bouncybullet.png';
+
+const bullet2xImg = new Image();
+bullet2xImg.src = '/Clipernator/sprites/bullets/bullet2x.png';
+
+const bullet3xImg = new Image();
+bullet3xImg.src = '/Clipernator/sprites/bullets/bullet3x.png';
+
+const bullet4xImg = new Image();
+bullet4xImg.src = '/Clipernator/sprites/bullets/bullet4x.png';
+
+
 
 // At the top of draw.js, add this with the other image loaders (near playerImg/shotgunImg)
 
@@ -135,6 +148,13 @@ spoonSheetImg.src = '/Clipernator/sprites/SpoonSheet.png';
 
 const spoonTipImg = new Image();
 spoonTipImg.src = '/Clipernator/sprites/SpoonTip.png';
+
+
+
+const partyHatImg = new Image();
+partyHatImg.src = '/Clipernator/sprites/PartyHat.png';
+
+
 
 const maskSheetImg = new Image();
 maskSheetImg.src = '/Clipernator/sprites/MaskSheet.png';
