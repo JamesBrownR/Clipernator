@@ -155,6 +155,20 @@ const partyHatImg = new Image();
 partyHatImg.src = '/Clipernator/sprites/enemies/PartyHat/PartyHat.png';
 
 
+const partyHatIdleSheet = new Image();
+partyHatIdleSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatIdleSheet.png';
+
+const partyHatTransitionSheet = new Image();
+partyHatTransitionSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatTransitionSheet.png';
+
+const partyHatDiveSheet = new Image();
+partyHatDiveSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatDiveSheet.png';
+
+const partyHatDiveImg = new Image();
+partyHatDiveImg.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatDive.png';
+
+const partyHatRecoverSheet = new Image();
+partyHatRecoverSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatRecoverSheet.png';
 
 const maskSheetImg = new Image();
 maskSheetImg.src = '/Clipernator/sprites/enemies/Mask/MaskSheet.png';
