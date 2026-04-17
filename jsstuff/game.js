@@ -117,7 +117,7 @@ function initGameState() {
     hasBowlingBall: false,
     bowlingBallReady: false,
     bowlingBallRegenTimer: 0,
-    hasClownish: true,
+    hasClownish: false,
     clownNoseSize: 0, clownNoseTimer: 0, clownNoseMax: 480,
     clownNoseHonkTimer: 0,
     clownConfuseActive: false,
