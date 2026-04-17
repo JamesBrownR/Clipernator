@@ -414,7 +414,7 @@ function drawPartyHat(epos, ehp, ai, frozen) {
 
  if (state === 'IDLE') {
     sheet = partyHatIdleSheet;
-    cols = 3; rows = 3; totalFrames = 8;  // was cols=4, rows=3, totalFrames=12
+    cols = 4; rows = 3; totalFrames = 12;  // was cols=4, rows=3, totalFrames=12
     drawW = 52; drawH = 52;
   } else if (state === 'TELEGRAPH') {
     sheet = partyHatTransitionSheet;
