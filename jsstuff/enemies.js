@@ -522,28 +522,22 @@ const targetAngle = Math.atan2(dy, dx);    let ad = targetAngle - ai.orientAngle
     ai.balloonOrient = ai.orientAngle;
 
     // ── State machine ──
-    if (ai.wbState === 'ROAM') {
-      // Move toward player but keep slight distance
-      const PREFERRED = 180;
-const FLEE_DIST  = 120; // actively flee if player gets this close
-const err = dist - PREFERRED;
-let dirMult;
-if (dist < FLEE_DIST) {
-  dirMult = -0.35; // flee hard
-} else if (dist < PREFERRED) {
-  dirMult = -0.10; // soft push away — don't let it drift in
-} else {
-  dirMult = 0; // at or beyond preferred distance — don't chase at all, just strafe
-}
-// Strafe perpendicular to player when at range
-const perpX = -dy / dist, perpY = dx / dist;
-vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*dirMult + perpX*phy.speed*0.08;
-vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*dirMult + perpY*phy.speed*0.08;
-const spd = Math.hypot(vel.vx, vel.vy);
-if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
+if (ai.wbState === 'ROAM') {
+      // Random drift — pick a wander direction and change it periodically
+      if (ai._wanderAngle === undefined) ai._wanderAngle = Math.random() * Math.PI * 2;
+      if (ai._wanderTimer === undefined) ai._wanderTimer = 0;
+      ai._wanderTimer--;
+      if (ai._wanderTimer <= 0) {
+        ai._wanderAngle = Math.random() * Math.PI * 2;
+        ai._wanderTimer = 80 + Math.floor(Math.random() * 80);
+      }
+      vel.vx = (vel.vx||0)*0.92 + Math.cos(ai._wanderAngle)*phy.speed*0.10;
+      vel.vy = (vel.vy||0)*0.92 + Math.sin(ai._wanderAngle)*phy.speed*0.10;
+      const spd = Math.hypot(vel.vx, vel.vy);
+      if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
 
       // Soft wall repulsion
-      const M = 40;
+      const M = 70;
       if (pos.x < M)          vel.vx += (M - pos.x)*0.15;
       if (pos.x > worldW - M) vel.vx -= (pos.x-(worldW-M))*0.15;
       if (pos.y < M)          vel.vy += (M - pos.y)*0.15;
@@ -554,7 +548,9 @@ if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed;
       if (ai.wbAnimTick >= 8) { ai.wbAnimTick = 0; ai.wbAnimFrame = (ai.wbAnimFrame+1) % 8; }
 
       // Shoot countdown
-const hatMult = (ai.hatrider && ECS.has(ai.hatrider, 'pos')) ? 4 : 1;
+const hasHatRider = ai.hatrider && ECS.has(ai.hatrider, 'pos');
+// Hat-buffed balloon shoots faster (2x) not 4x — 4x was too aggressive with random drift
+const hatMult = hasHatRider ? 0.65 : 1;
 ai.wbShootTimer -= hatMult / (ai.clownCooldownMult || 1);
       if (ai.wbShootTimer <= 0) {
         // Stop and begin turn
@@ -641,9 +637,9 @@ gs.enemyBullets.push({
         ai.wbTurnFrame--;
         if (ai.wbTurnFrame < 0) {
           ai.wbTurnFrame = 0;
-          ai.wbState = 'ROAM';
+         ai.wbState = 'ROAM';
           ai.wbAnimFrame = 0;
-          ai.wbShootTimer = 180 + Math.random()*120;
+          ai.wbShootTimer = (ai.hatrider && ECS.has(ai.hatrider, 'pos')) ? 80 + Math.random()*60 : 180 + Math.random()*120;
         }
       }
     }
@@ -1028,7 +1024,6 @@ const baseSpeed = (1.2 + gs.wave * 0.12) * ENEMY_DEFS.partyHat.speedMult;
 
 ai.hatAnimTimer++;
 
-// ── RIDING: hat is on a balloon's head ──
 if (ai.hatState === 'RIDING') {
   // Validate host still alive
   if (!ECS.has(ai.ridingId, 'pos')) {
@@ -1037,9 +1032,21 @@ if (ai.hatState === 'RIDING') {
     ai.hatTimer = 40;
   } else {
     const hpos = ECS.get(ai.ridingId, 'pos');
-    pos.x = hpos.x;
-    pos.y = hpos.y - 36; // sit on top of balloon
+    const hai = ECS.get(ai.ridingId, 'ai');
+    // Orient hat on the opposite side of the knot (knot is at +Y in sprite = "back" end)
+    // balloonOrient is the angle the balloon faces; knot is at orientAngle + PI (rear)
+    // Hat should sit at the front (nozzle/top of balloon in sprite = -Y before rotation)
+    const bOrient = (hai && typeof hai.balloonOrient === 'number') ? hai.balloonOrient : 0;
+    // The balloon sprite's "top" (nozzle) is at angle bOrient - PI/2 in world space
+    // We want the hat on the nozzle side (opposite the knot)
+    const RIDE_DIST = 30;
+    const nozzleAngle = bOrient - Math.PI / 2; // sprite top = nozzle
+    pos.x = hpos.x + Math.cos(nozzleAngle) * RIDE_DIST;
+    pos.y = hpos.y + Math.sin(nozzleAngle) * RIDE_DIST;
     vel.vx = 0; vel.vy = 0;
+    // Keep hat animation ticking
+    ai.hatAnimTimer++;
+    if (ai.hatAnimTimer >= 8) { ai.hatAnimTimer = 0; ai.hatAnimFrame = (ai.hatAnimFrame + 1) % 12; }
   }
   return BT.RUNNING;
 }
