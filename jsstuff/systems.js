@@ -1400,7 +1400,9 @@ function sysTimers() {
   // ── Always run these regardless of transition state ──
   for (const p of gs.particles){p.x+=p.vx;p.y+=p.vy;p.vx*=0.91;p.vy*=0.91;p.life--;}
   gs.particles=gs.particles.filter(p=>p.life>0);
-  gs.shakeX*=0.72; gs.shakeY*=0.72;
+ gs.shakeX*=0.72; gs.shakeY*=0.72;
+if (Math.abs(gs.shakeX) < 0.1) gs.shakeX = 0;
+if (Math.abs(gs.shakeY) < 0.1) gs.shakeY = 0;
   if (muzzleFlash>0) muzzleFlash--;
   if (gs.glowExplosionTimer>0) gs.glowExplosionTimer--;
 
