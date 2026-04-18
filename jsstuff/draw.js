@@ -205,113 +205,144 @@ function drawMaskFrame(frameIndex, x, y, alpha = 1) {
 function drawMask(epos, ehp, ai, frozen) {
   const { x, y } = epos;
 
-  // Init animation state
-  if (ai.maskAnimFrame  === undefined) ai.maskAnimFrame  = 0;
-  if (ai.maskAnimTimer  === undefined) ai.maskAnimTimer  = 0;
-  if (ai.maskAnimState  === undefined) ai.maskAnimState  = 'SMILE';
-  const ANIM_SPEED = 12; // frames per sprite frame
+  // ── Init anim state ──
+  if (ai.wbAnimFrame   === undefined) ai.wbAnimFrame   = 0;
+  if (ai.wbAnimTimer   === undefined) ai.wbAnimTimer   = 0;
+  if (ai.wbAnimState   === undefined) ai.wbAnimState   = 'IDLE';
+  if (ai.wbShootFrame  === undefined) ai.wbShootFrame  = 0;
+  if (ai.wbShootTimer  === undefined) ai.wbShootTimer  = 0;
 
-  const prevState = ai.maskAnimState;
+  const IDLE_SPEED  = 8;  // ticks per frame
+  const TURN_SPEED  = 6;
+  const SHOOT_SPEED = 4;
 
-  // Sync animation state to behavior state
-  if (ai.maskState === 'SMILE' && ai.maskAnimState === 'CRY') {
-    ai.maskAnimState = 'TO_SMILE';
-    ai.maskAnimFrame = 0;
-    ai.maskAnimTimer = 0;
-  } else if (ai.maskState === 'CRY' && ai.maskAnimState === 'SMILE') {
-    ai.maskAnimState = 'TO_CRY';
-    ai.maskAnimFrame = 0;
-    ai.maskAnimTimer = 0;
+  // ── Sync anim state to behavior state ──
+  const behaviorState = ai.maskState || 'SMILE';
+
+  if (behaviorState === 'SMILE' && ai.wbAnimState === 'HOLD_NOZZLE') {
+    ai.wbAnimState = 'RETURNING';
+    ai.wbAnimFrame = WBALLOON_TURN_FRAMES - 1; // play turn backwards
+    ai.wbAnimTimer = 0;
+  } else if (behaviorState === 'CRY' && ai.wbAnimState === 'IDLE') {
+    ai.wbAnimState = 'TURNING';
+    ai.wbAnimFrame = 0;
+    ai.wbAnimTimer = 0;
   }
 
-  // Advance animation timer
-  ai.maskAnimTimer++;
-  if (ai.maskAnimTimer >= ANIM_SPEED) {
-    ai.maskAnimTimer = 0;
-    ai.maskAnimFrame++;
+  // ── Advance animation ──
+  ai.wbAnimTimer++;
 
-    // Handle state transitions
-    if (ai.maskAnimState === 'SMILE') {
-      if (ai.maskAnimFrame >= MASK_SMILE_FRAMES.length)
-        ai.maskAnimFrame = 0; // loop
-    } else if (ai.maskAnimState === 'TO_CRY') {
-      if (ai.maskAnimFrame >= MASK_TO_CRY_FRAMES.length) {
-        ai.maskAnimState = 'CRY';
-        ai.maskAnimFrame = 0;
+  if (ai.wbAnimState === 'IDLE') {
+    if (ai.wbAnimTimer >= IDLE_SPEED) {
+      ai.wbAnimTimer = 0;
+      ai.wbAnimFrame = (ai.wbAnimFrame + 1) % WBALLOON_IDLE_FRAMES;
+    }
+  } else if (ai.wbAnimState === 'TURNING') {
+    if (ai.wbAnimTimer >= TURN_SPEED) {
+      ai.wbAnimTimer = 0;
+      ai.wbAnimFrame++;
+      if (ai.wbAnimFrame >= WBALLOON_TURN_FRAMES) {
+        ai.wbAnimFrame = WBALLOON_TURN_FRAMES - 1;
+        ai.wbAnimState = 'HOLD_NOZZLE';
+        ai.wbShootFrame = 0;
+        ai.wbShootTimer = 0;
       }
-    } else if (ai.maskAnimState === 'CRY') {
-      if (ai.maskAnimFrame >= MASK_CRY_FRAMES.length)
-        ai.maskAnimFrame = 0; // loop
-    } else if (ai.maskAnimState === 'TO_SMILE') {
-      if (ai.maskAnimFrame >= MASK_TO_SMILE_FRAMES.length) {
-        ai.maskAnimState = 'SMILE';
-        ai.maskAnimFrame = 0;
+    }
+  } else if (ai.wbAnimState === 'HOLD_NOZZLE') {
+    // Advance shoot animation independently
+    ai.wbShootTimer++;
+    if (ai.wbShootTimer >= SHOOT_SPEED) {
+      ai.wbShootTimer = 0;
+      ai.wbShootFrame = (ai.wbShootFrame + 1) % WBALLOON_SHOOT_FRAMES;
+    }
+  } else if (ai.wbAnimState === 'RETURNING') {
+    if (ai.wbAnimTimer >= TURN_SPEED) {
+      ai.wbAnimTimer = 0;
+      ai.wbAnimFrame--;
+      if (ai.wbAnimFrame < 0) {
+        ai.wbAnimFrame = 0;
+        ai.wbAnimState = 'IDLE';
       }
     }
   }
 
-  // Pick sprite frame index
-// Pick current and next frame index for cross-fade
-  let frameIndex, nextFrameIndex;
-  const blendT = ai.maskAnimTimer / ANIM_SPEED; // 0→1 over each frame
-
-  function getFrameList(state) {
-    if (state === 'SMILE')    return MASK_SMILE_FRAMES;
-    if (state === 'TO_CRY')   return MASK_TO_CRY_FRAMES;
-    if (state === 'CRY')      return MASK_CRY_FRAMES;
-    if (state === 'TO_SMILE') return MASK_TO_SMILE_FRAMES;
-    return MASK_SMILE_FRAMES;
-  }
-
-  const currentList = getFrameList(ai.maskAnimState);
-  frameIndex = currentList[ai.maskAnimFrame] ?? currentList[0];
-
-  // Next frame — wrap or peek into next state
-  const nextFramePos = ai.maskAnimFrame + 1;
-  if (nextFramePos < currentList.length) {
-    nextFrameIndex = currentList[nextFramePos];
-  } else {
-    // Peek at first frame of next state
-    if      (ai.maskAnimState === 'SMILE')    nextFrameIndex = MASK_TO_CRY_FRAMES[0];
-    else if (ai.maskAnimState === 'TO_CRY')   nextFrameIndex = MASK_CRY_FRAMES[0];
-    else if (ai.maskAnimState === 'CRY')      nextFrameIndex = MASK_TO_SMILE_FRAMES[0];
-    else if (ai.maskAnimState === 'TO_SMILE') nextFrameIndex = MASK_SMILE_FRAMES[0];
-    else nextFrameIndex = frameIndex;
-  }
-
-
-
- 
-
- const baseAlpha = frozen ? 0.7 : 1;
+  // ── Orient angle: always smoothly track player ──
   const orientAngle = (typeof ai.maskOrient === 'number') ? ai.maskOrient : 0;
+  // orientAngle from BT_MASK already smoothly tracks player — use it directly
+  // Add PI/2 because sprite knot points UP (90° offset from right=0)
+  const drawAngle = orientAngle + Math.PI / 2;
 
+  const DRAW_SIZE = 56;
 
+  // ── Draw the balloon ──
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(orientAngle);
-  drawMaskFrame(frameIndex, 0, 0, baseAlpha);
-  ctx.restore();
+  ctx.rotate(drawAngle);
+  if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
+  else { ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 14; }
 
- 
-  if (frozen) {
-    ctx.save();
-    ctx.globalAlpha = 0.4;
-    ctx.fillStyle = '#aaccff';
-    ctx.beginPath();
-    ctx.ellipse(x, y, 24, 24, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+  if (ai.wbAnimState === 'IDLE' || ai.wbAnimState === 'TURNING' || ai.wbAnimState === 'RETURNING') {
+    // Decide which sheet + frame index to use
+    let sheet, frameIdx, cols, fw, fh, drawW, drawH;
+
+    if (ai.wbAnimState === 'IDLE') {
+      sheet = waterBalloonIdleSheet;
+      frameIdx = ai.wbAnimFrame;
+      cols = WBALLOON_IDLE_COLS;
+      fw = WBALLOON_IDLE_FRAME_W; fh = WBALLOON_IDLE_FRAME_H;
+      drawW = DRAW_SIZE; drawH = DRAW_SIZE;
+    } else {
+      // TURNING or RETURNING — use turn sheet
+      sheet = waterBalloonTurnSheet;
+      frameIdx = ai.wbAnimFrame;
+      cols = WBALLOON_TURN_COLS;
+      fw = WBALLOON_TURN_FRAME_W; fh = WBALLOON_TURN_FRAME_H;
+      drawW = DRAW_SIZE; drawH = DRAW_SIZE * 1.1; // nozzle frames are taller
+    }
+
+    if (sheet && sheet.complete && sheet.naturalWidth > 0) {
+      const col = frameIdx % cols;
+      const row = Math.floor(frameIdx / cols);
+      ctx.drawImage(sheet, col * fw, row * fh, fw, fh, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      // Fallback
+      ctx.fillStyle = frozen ? '#88ccff' : '#4488ff';
+      ctx.beginPath(); ctx.ellipse(0, 4, 14, 18, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+  } else if (ai.wbAnimState === 'HOLD_NOZZLE') {
+    // Draw turn sheet last frame underneath, shoot sheet on top
+    if (waterBalloonTurnSheet.complete && waterBalloonTurnSheet.naturalWidth > 0) {
+      const lastCol = (WBALLOON_TURN_FRAMES - 1) % WBALLOON_TURN_COLS;
+      const lastRow = Math.floor((WBALLOON_TURN_FRAMES - 1) / WBALLOON_TURN_COLS);
+      ctx.drawImage(
+        waterBalloonTurnSheet,
+        lastCol * WBALLOON_TURN_FRAME_W, lastRow * WBALLOON_TURN_FRAME_H,
+        WBALLOON_TURN_FRAME_W, WBALLOON_TURN_FRAME_H,
+        -DRAW_SIZE / 2, -DRAW_SIZE * 0.55, DRAW_SIZE, DRAW_SIZE * 1.1
+      );
+    }
+    // Shoot anim overlay
+    if (waterBalloonShootSheet.complete && waterBalloonShootSheet.naturalWidth > 0) {
+      const sc = ai.wbShootFrame % WBALLOON_SHOOT_COLS;
+      const sr = Math.floor(ai.wbShootFrame / WBALLOON_SHOOT_COLS);
+      ctx.drawImage(
+        waterBalloonShootSheet,
+        sc * WBALLOON_SHOOT_FRAME_W, sr * WBALLOON_SHOOT_FRAME_H,
+        WBALLOON_SHOOT_FRAME_W, WBALLOON_SHOOT_FRAME_H,
+        -DRAW_SIZE / 2, -DRAW_SIZE * 0.55, DRAW_SIZE, DRAW_SIZE * 1.1
+      );
+    }
   }
 
-  
+  ctx.restore();
 
-  // Health bar
+  // ── HP bar (unrotated) ──
   const bw = 50;
   ctx.fillStyle = '#330000';
-  ctx.fillRect(x - bw/2, y - 36, bw, 5);
-  ctx.fillStyle = ai.confused ? '#00ffff' : (ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#4488ff');
-  ctx.fillRect(x - bw/2, y - 36, bw * (ehp.hp / ehp.maxHp), 5);
+  ctx.fillRect(x - bw / 2, y - 40, bw, 5);
+  ctx.fillStyle = ai.confused ? '#00ffff' : (ehp.hp < ehp.maxHp / 2 ? '#ff6666' : '#4488ff');
+  ctx.fillRect(x - bw / 2, y - 40, bw * (ehp.hp / ehp.maxHp), 5);
 }
 
 function drawGiftBox(epos, ehp, ai, frozen) {
