@@ -191,7 +191,7 @@ function drawMaskFrame(frameIndex, x, y, alpha = 1) {
   if (!maskSheetImg.complete || maskSheetImg.naturalWidth === 0) return;
   const col = frameIndex % MASK_COLS;
   const row = Math.floor(frameIndex / MASK_COLS);
-  const DRAW_SIZE = 40;  // slightly larger since sheet has more detail
+  const DRAW_SIZE = 60;  // slightly larger since sheet has more detail
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.drawImage(
