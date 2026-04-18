@@ -480,85 +480,146 @@ const BT_UTENSIL = new BTSelector(
   })
 );
 
-// ── Floor 1: Mask ──
-const BT_MASK = new BTSelector(
+const BT_WATERBALLOON = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
     const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
     const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
-    // Smoothly rotate orient angle toward player
-const adx = pp.x - pos.x, ady = pp.y - pos.y;
-const targetAngle = Math.atan2(ady, adx) - Math.PI / 2;
-if (ai.orientAngle === undefined) ai.orientAngle = 0;
-let angleDelta = targetAngle - ai.orientAngle;
-while (angleDelta >  Math.PI) angleDelta -= Math.PI * 2;
-while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
-ai.orientAngle += angleDelta * 0.02;
-    ai.maskOrient = ai.orientAngle;
-    
+    // ── Init ──
+    if (ai.wbState        === undefined) ai.wbState        = 'ROAM';
+    if (ai.wbShootCount   === undefined) ai.wbShootCount   = 0;
+    if (ai.wbShootTimer   === undefined) ai.wbShootTimer   = 180 + Math.random()*120;
+    if (ai.wbAnimFrame    === undefined) ai.wbAnimFrame    = 0;
+    if (ai.wbAnimTick     === undefined) ai.wbAnimTick     = 0;
+    if (ai.wbTurnFrame    === undefined) ai.wbTurnFrame    = 0;
+    if (ai.wbTurnTick     === undefined) ai.wbTurnTick     = 0;
+    if (ai.wbShootFrame   === undefined) ai.wbShootFrame   = 0;
+    if (ai.wbShootTick    === undefined) ai.wbShootTick    = 0;
+    if (ai.wbFiredShots   === undefined) ai.wbFiredShots   = 0;
+    if (ai.orientAngle    === undefined) ai.orientAngle    = 0;
+
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
 
-    ai.maskState = ai.maskState || 'SMILE';
-    ai.maskTimer = (ai.maskTimer ?? 180) - 1;
-ai.shootCooldown = (ai.shootCooldown||180) - (1 / (ai.clownCooldownMult || 1));
-    
-    if (ai.maskState === 'SMILE') {
-      vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*0.18;
-      vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*0.18;
+    // Always track orientation toward player smoothly
+    const targetAngle = Math.atan2(dy, dx) - Math.PI/2;
+    let ad = targetAngle - ai.orientAngle;
+    while (ad >  Math.PI) ad -= Math.PI*2;
+    while (ad < -Math.PI) ad += Math.PI*2;
+    ai.orientAngle += ad * 0.04;
+    ai.balloonOrient = ai.orientAngle;
+
+    // ── State machine ──
+    if (ai.wbState === 'ROAM') {
+      // Move toward player but keep slight distance
+      const PREFERRED = 160;
+      const err = dist - PREFERRED;
+      vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*(err > 0 ? 0.18 : 0.05);
+      vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*(err > 0 ? 0.18 : 0.05);
       const spd = Math.hypot(vel.vx, vel.vy);
       if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
-      if (ai.maskTimer <= 0) {
-        ai.maskState = 'CRY';
-        ai.maskTimer = 140;
-        ai.cryBurst = 5;
-        ai.cryBurstTimer = 0;
-        vel.vx *= 0.3; vel.vy *= 0.3;
+
+      // Soft wall repulsion
+      const M = 40;
+      if (pos.x < M)          vel.vx += (M - pos.x)*0.15;
+      if (pos.x > worldW - M) vel.vx -= (pos.x-(worldW-M))*0.15;
+      if (pos.y < M)          vel.vy += (M - pos.y)*0.15;
+      if (pos.y > worldH - M) vel.vy -= (pos.y-(worldH-M))*0.15;
+
+      // Advance idle anim
+      ai.wbAnimTick++;
+      if (ai.wbAnimTick >= 8) { ai.wbAnimTick = 0; ai.wbAnimFrame = (ai.wbAnimFrame+1) % 8; }
+
+      // Shoot countdown
+      ai.wbShootTimer -= (1/(ai.clownCooldownMult||1));
+      if (ai.wbShootTimer <= 0) {
+        // Stop and begin turn
+        vel.vx *= 0.1; vel.vy *= 0.1;
+        ai.wbState = 'TURNING';
+        ai.wbTurnFrame = 0;
+        ai.wbTurnTick = 0;
+        ai.wbFiredShots = 0;
+        ai.wbShootFrame = 0;
+        ai.wbShootTick = 0;
       }
-   } else {
-      // flee from player while crying — cap flee speed same as chase
-      const fleeDx = -(dx / dist), fleeDy = -(dy / dist);
-      vel.vx = (vel.vx || 0) * 0.88 + fleeDx * phy.speed * 0.18;
-      vel.vy = (vel.vy || 0) * 0.88 + fleeDy * phy.speed * 0.18;
-      const fspd = Math.hypot(vel.vx, vel.vy);
-      if (fspd > phy.speed) { vel.vx = vel.vx / fspd * phy.speed; vel.vy = vel.vy / fspd * phy.speed; }
-      // Soft wall repulsion — push back toward arena center before clamping
-      const margin = 40;
-      if (pos.x < margin)          vel.vx += (margin - pos.x)        * 0.15;
-      if (pos.x > worldW - margin) vel.vx -= (pos.x - (worldW - margin)) * 0.15;
-      if (pos.y < margin)          vel.vy += (margin - pos.y)        * 0.15;
-      if (pos.y > worldH - margin) vel.vy -= (pos.y - (worldH - margin)) * 0.15;
-      ai.cryBurstTimer = (ai.cryBurstTimer||0) - 1;
-      if (ai.cryBurstTimer <= 0 && ai.cryBurst > 0) {
-        ai.cryBurst--;
-        ai.cryBurstTimer = 22;
-const aim = Math.atan2(dy, dx);
-const orient = ai.maskOrient || 0;
-// gravity direction rotated to match mask facing
-const gravAngle = ai.orientAngle || 0;
-const gx = Math.sin(gravAngle) * 0.045;
-const gy = Math.cos(gravAngle) * 0.045;
-for (const sa of [-0.28, 0, 0.28]) {
-  const a = aim + sa;
-  gs.enemyBullets.push({
-    x: pos.x, y: pos.y,
-    vx: Math.cos(a) * 1.1,
-    vy: Math.sin(a) * 1.1,
-    life: 160, maxLife: 160,
-    color: '#44aaff',
-    isTear: true,
-    gravX: gx,
-    gravY: gy,
-  });
-}
-        spawnParticles(pos.x, pos.y, '#44aaff', 5);
+
+    } else if (ai.wbState === 'TURNING') {
+      vel.vx *= 0.85; vel.vy *= 0.85;
+      // Fast orient snap to player during turn
+      ai.orientAngle += ad * 0.15;
+      ai.balloonOrient = ai.orientAngle;
+
+      ai.wbTurnTick++;
+      if (ai.wbTurnTick >= 6) {
+        ai.wbTurnTick = 0;
+        ai.wbTurnFrame++;
+        if (ai.wbTurnFrame >= 4) {
+          ai.wbTurnFrame = 3; // hold last turn frame
+          ai.wbState = 'SHOOTING';
+          ai.wbShootFrame = 0;
+          ai.wbShootTick = 0;
+        }
       }
-      if (ai.maskTimer <= 0) {
-        ai.maskState = 'SMILE';
-        ai.maskTimer = 150 + Math.random()*60;
+
+    } else if (ai.wbState === 'SHOOTING') {
+      vel.vx *= 0.88; vel.vy *= 0.88;
+
+      ai.wbShootTick++;
+      const SHOOT_SPD = 5; // ticks per frame
+      if (ai.wbShootTick >= SHOOT_SPD) {
+        ai.wbShootTick = 0;
+        ai.wbShootFrame++;
+        if (ai.wbShootFrame >= 8) ai.wbShootFrame = 7; // clamp at last
+
+        // Fire on frame 5 (0-indexed, ~6th frame — nozzle fully extended)
+        if (ai.wbShootFrame === 5 && ai.wbFiredShots < 3) {
+          ai.wbFiredShots++;
+          const aim = Math.atan2(dy, dx);
+          const BULLET_SPD = 3.8;
+          gs.enemyBullets.push({
+            x: pos.x + Math.sin(ai.orientAngle + Math.PI/2) * 24,
+            y: pos.y - Math.cos(ai.orientAngle + Math.PI/2) * 24,
+            vx: Math.cos(aim)*BULLET_SPD,
+            vy: Math.sin(aim)*BULLET_SPD,
+            life: 160, maxLife: 160,
+            color: '#44aaff',
+            isTear: true,
+            gravX: Math.sin(ai.orientAngle)*0.045,
+            gravY: Math.cos(ai.orientAngle)*0.045,
+          });
+          spawnParticles(pos.x, pos.y, '#44aaff', 5);
+
+          if (ai.wbFiredShots < 3) {
+            // Reset shoot anim for next shot
+            ai.wbShootFrame = 0;
+            ai.wbShootTick = 0;
+          }
+        }
+
+        // After 3 shots, reverse turn back to roam
+        if (ai.wbFiredShots >= 3 && ai.wbShootFrame >= 7) {
+          ai.wbState = 'UNTURN';
+          ai.wbTurnFrame = 3;
+          ai.wbTurnTick = 0;
+        }
+      }
+
+    } else if (ai.wbState === 'UNTURN') {
+      vel.vx *= 0.88; vel.vy *= 0.88;
+      ai.wbTurnTick++;
+      if (ai.wbTurnTick >= 6) {
+        ai.wbTurnTick = 0;
+        ai.wbTurnFrame--;
+        if (ai.wbTurnFrame < 0) {
+          ai.wbTurnFrame = 0;
+          ai.wbState = 'ROAM';
+          ai.wbAnimFrame = 0;
+          ai.wbShootTimer = 180 + Math.random()*120;
+        }
       }
     }
+
     return BT.RUNNING;
   })
 );
@@ -1773,7 +1834,7 @@ if (enemies.length === 0) {
 // ================================================================
 const ENEMY_BTS = {
   utensil:        BT_UTENSIL,
-  mask:           BT_MASK,
+  waterballoon:           BT_WATERBALLOON,
   giftBox:        BT_GIFTBOX,
   partyHat:       BT_PARTYHAT,
   cakeBoss: BT_CAKEBOSS,
