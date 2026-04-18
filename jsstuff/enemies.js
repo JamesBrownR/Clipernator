@@ -592,28 +592,47 @@ ai.wbShootTimer -= hatMult / (ai.clownCooldownMult || 1);
         if (ai.wbShootFrame >= 8) ai.wbShootFrame = 7; // clamp at last
 
         // Fire on frame 5 (0-indexed, ~6th frame — nozzle fully extended)
-        if (ai.wbShootFrame === 5 && ai.wbFiredShots < 3) {
+      if (ai.wbShootFrame === 5 && ai.wbFiredShots < 3) {
           ai.wbFiredShots++;
           const aim = Math.atan2(dy, dx);
         
-       const hasHat = ai.hatrider && ECS.has(ai.hatrider, 'pos');
-const BULLET_SPD = hasHat ? 5.4 : 3.8;
-const bulletColor = hasHat ? '#ff2244' : '#44aaff';
-gs.enemyBullets.push({
-  x: pos.x + Math.cos(aim) * 26,
-  y: pos.y + Math.sin(aim) * 26,
-  vx: Math.cos(aim) * BULLET_SPD,
-  vy: Math.sin(aim) * BULLET_SPD,
-  life: 160, maxLife: 160,
-  color: bulletColor,
-  isTear: true,
-  homing: hasHat,
-  homingStrength: hasHat ? 0.07 : 0,
-  rmDmgMult: hasHat ? 3 : 1,   // <-- add this line
-  gravX: Math.sin(ai.orientAngle) * 0.045,
-  gravY: Math.cos(ai.orientAngle) * 0.045,
-});
-          spawnParticles(pos.x, pos.y, '#44aaff', 5);
+          const hasHat = ai.hatrider && ECS.has(ai.hatrider, 'pos');
+          if (hasHat) {
+            // Hat-buffed: fire 4 homing red tears in a spread
+            const spreads = [-0.35, -0.12, 0.12, 0.35];
+            for (const sa of spreads) {
+              const a = aim + sa;
+              gs.enemyBullets.push({
+                x: pos.x + Math.cos(aim) * 26,
+                y: pos.y + Math.sin(aim) * 26,
+                vx: Math.cos(a) * 5.4,
+                vy: Math.sin(a) * 5.4,
+                life: 160, maxLife: 160,
+                color: '#ff2244',
+                isTear: true,
+                homing: true,
+                homingStrength: 0.07,
+                rmDmgMult: 3,
+              });
+            }
+            spawnParticles(pos.x, pos.y, '#ff2244', 10);
+          } else {
+            gs.enemyBullets.push({
+              x: pos.x + Math.cos(aim) * 26,
+              y: pos.y + Math.sin(aim) * 26,
+              vx: Math.cos(aim) * 3.8,
+              vy: Math.sin(aim) * 3.8,
+              life: 160, maxLife: 160,
+              color: '#44aaff',
+              isTear: true,
+              homing: false,
+              homingStrength: 0,
+              rmDmgMult: 1,
+              gravX: Math.sin(ai.orientAngle) * 0.045,
+              gravY: Math.cos(ai.orientAngle) * 0.045,
+            });
+            spawnParticles(pos.x, pos.y, '#44aaff', 5);
+          }
 
           if (ai.wbFiredShots < 3) {
             // Reset shoot anim for next shot
@@ -1041,9 +1060,12 @@ if (ai.hatState === 'RIDING') {
     // The balloon sprite's "top" (nozzle) is at angle bOrient - PI/2 in world space
     // We want the hat on the nozzle side (opposite the knot)
     const RIDE_DIST = 28;
-    const baseAngle = bOrient + Math.PI / 2; // knot = bottom of sprite = base
-    pos.x = hpos.x + Math.cos(baseAngle) * RIDE_DIST;
-    pos.y = hpos.y + Math.sin(baseAngle) * RIDE_DIST;
+    // drawWaterBalloon rotates the canvas by (orientAngle + PI/2).
+    // The knot is at the bottom (+Y) of the unrotated sprite, so in world space
+    // the knot sits at angle: (bOrient + PI/2) + PI/2  =  bOrient + PI
+    const knotAngle = bOrient + Math.PI;
+    pos.x = hpos.x + Math.cos(knotAngle) * RIDE_DIST;
+    pos.y = hpos.y + Math.sin(knotAngle) * RIDE_DIST;
     vel.vx = 0; vel.vy = 0;
     // Keep hat animation ticking
     ai.hatAnimTimer++;
