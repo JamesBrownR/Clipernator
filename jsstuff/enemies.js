@@ -529,7 +529,7 @@ if (ai.wbState === 'ROAM') {
       ai._wanderTimer--;
       if (ai._wanderTimer <= 0) {
         ai._wanderAngle = Math.random() * Math.PI * 2;
-        ai._wanderTimer = 80 + Math.floor(Math.random() * 80);
+        ai._wanderTimer = 40 + Math.floor(Math.random() * 50);
       }
       vel.vx = (vel.vx||0)*0.92 + Math.cos(ai._wanderAngle)*phy.speed*0.10;
       vel.vy = (vel.vy||0)*0.92 + Math.sin(ai._wanderAngle)*phy.speed*0.10;
@@ -537,7 +537,7 @@ if (ai.wbState === 'ROAM') {
       if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
 
       // Soft wall repulsion
-      const M = 70;
+      const M = 110;
       if (pos.x < M)          vel.vx += (M - pos.x)*0.15;
       if (pos.x > worldW - M) vel.vx -= (pos.x-(worldW-M))*0.15;
       if (pos.y < M)          vel.vy += (M - pos.y)*0.15;
@@ -609,6 +609,7 @@ gs.enemyBullets.push({
   isTear: true,
   homing: hasHat,
   homingStrength: hasHat ? 0.07 : 0,
+  rmDmgMult: hasHat ? 3 : 1,   // <-- add this line
   gravX: Math.sin(ai.orientAngle) * 0.045,
   gravY: Math.cos(ai.orientAngle) * 0.045,
 });
@@ -1039,10 +1040,10 @@ if (ai.hatState === 'RIDING') {
     const bOrient = (hai && typeof hai.balloonOrient === 'number') ? hai.balloonOrient : 0;
     // The balloon sprite's "top" (nozzle) is at angle bOrient - PI/2 in world space
     // We want the hat on the nozzle side (opposite the knot)
-    const RIDE_DIST = 30;
-    const nozzleAngle = bOrient - Math.PI / 2; // sprite top = nozzle
-    pos.x = hpos.x + Math.cos(nozzleAngle) * RIDE_DIST;
-    pos.y = hpos.y + Math.sin(nozzleAngle) * RIDE_DIST;
+    const RIDE_DIST = 28;
+    const baseAngle = bOrient + Math.PI / 2; // knot = bottom of sprite = base
+    pos.x = hpos.x + Math.cos(baseAngle) * RIDE_DIST;
+    pos.y = hpos.y + Math.sin(baseAngle) * RIDE_DIST;
     vel.vx = 0; vel.vy = 0;
     // Keep hat animation ticking
     ai.hatAnimTimer++;
