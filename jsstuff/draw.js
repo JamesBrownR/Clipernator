@@ -189,62 +189,62 @@ function drawSpoonFrame(frameIndex, x, y, angle) {
 
 function drawWaterBalloon(epos, ehp, ai, frozen) {
   const { x, y } = epos;
+  const SHEET_COLS = 3;
+  const SHEET_ROWS = 3;
+  const FRAME_W = Math.floor(waterBalloonIdleSheet.naturalWidth / SHEET_COLS);
+  const FRAME_H = Math.floor(waterBalloonIdleSheet.naturalHeight / SHEET_ROWS);
   const DRAW_SIZE = 64;
   const state = ai.wbState || 'ROAM';
-  // orientAngle points FROM enemy TOWARD player (atan2 result).
-  // The sprite has the knot at the TOP (12 o'clock).
-  // We want the knot to point AWAY from the player (opposite of aim direction),
-  // so rotate by orientAngle + Math.PI/2 — wait, let's think:
-  //   orientAngle = atan2(player.y - enemy.y, player.x - enemy.x) (set in BT)
-  //   sprite "up" = -π/2 in canvas coords
-  //   We want sprite "up" to point toward player → rotate = orientAngle + π/2... 
-  // Actually the BT sets ai.balloonOrient = ai.orientAngle which tracks toward player.
-  // Sprite knot (top) should face AWAY from player (enemy shoots from knot side).
-  // So: rotation = orientAngle + Math.PI/2  →  knot points perpendicular. That's wrong too.
-  // Correct: we want the BOTTOM of the sprite facing the player.
-  // sprite "down" = +π/2. We want that to equal orientAngle.
-  // So: ctx.rotate(orientAngle - Math.PI/2)
   const orientAngle = (typeof ai.balloonOrient === 'number') ? ai.balloonOrient : 0;
+  const hasHat = ai.hatrider && ECS.has(ai.hatrider, 'pos');
 
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(orientAngle + Math.PI / 2);
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
-  else { ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 14; }
+  else { ctx.shadowColor = hasHat ? '#ff4444' : '#44aaff'; ctx.shadowBlur = 14; }
 
   if (state === 'ROAM') {
     if (waterBalloonIdleSheet.complete && waterBalloonIdleSheet.naturalWidth > 0) {
-      const frame = ai.wbAnimFrame || 0;
-      const col = frame % 3;
-      const row = Math.floor(frame / 3);
+      const frame = (ai.wbAnimFrame || 0) % 8;
+      const col = frame % SHEET_COLS;
+      const row = Math.floor(frame / SHEET_COLS);
       ctx.drawImage(waterBalloonIdleSheet,
-        col*1024, row*1024, 1024, 1024,
+        col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H,
         -DRAW_SIZE/2, -DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE);
-    } else {
-      ctx.fillStyle = '#4488ff';
-      ctx.beginPath(); ctx.ellipse(0, 4, 20, 26, 0, 0, Math.PI*2); ctx.fill();
     }
-
   } else if (state === 'TURNING' || state === 'UNTURN') {
     if (waterBalloonTurnSheet.complete && waterBalloonTurnSheet.naturalWidth > 0) {
+      const TW = Math.floor(waterBalloonTurnSheet.naturalWidth / 2);
+      const TH = Math.floor(waterBalloonTurnSheet.naturalHeight / 2);
       const frame = Math.max(0, Math.min(3, ai.wbTurnFrame || 0));
       const col = frame % 2;
       const row = Math.floor(frame / 2);
       ctx.drawImage(waterBalloonTurnSheet,
-        col*1024, row*1024, 1024, 1024,
+        col * TW, row * TH, TW, TH,
         -DRAW_SIZE/2, -DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE);
     }
-
   } else if (state === 'SHOOTING') {
-    // Show ONLY the shoot sheet (no turn sheet underneath)
     if (waterBalloonShootSheet.complete && waterBalloonShootSheet.naturalWidth > 0) {
+      const SW = Math.floor(waterBalloonShootSheet.naturalWidth / 3);
+      const SH = Math.floor(waterBalloonShootSheet.naturalHeight / 3);
       const frame = Math.max(0, Math.min(7, ai.wbShootFrame || 0));
       const col = frame % 3;
       const row = Math.floor(frame / 3);
       ctx.drawImage(waterBalloonShootSheet,
-        col*1024, row*1024, 1024, 1024,
+        col * SW, row * SH, SW, SH,
         -DRAW_SIZE/2, -DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE);
     }
+  }
+
+  // Red tint overlay when hat-buffed
+  if (hasHat && !frozen) {
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath(); ctx.ellipse(0, 0, DRAW_SIZE/2, DRAW_SIZE/2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
   }
 
   ctx.restore();
@@ -253,7 +253,7 @@ function drawWaterBalloon(epos, ehp, ai, frozen) {
   const bw = 50;
   ctx.fillStyle = '#330000';
   ctx.fillRect(x - bw/2, y - 44, bw, 5);
-  ctx.fillStyle = ai.confused ? '#00ffff' : (ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#4488ff');
+  ctx.fillStyle = ai.confused ? '#00ffff' : (hasHat ? '#ff2244' : (ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#4488ff'));
   ctx.fillRect(x - bw/2, y - 44, bw * (ehp.hp/ehp.maxHp), 5);
 }
 
@@ -262,97 +262,71 @@ function drawPartyHat(epos, ehp, ai, frozen) {
   const state = ai.hatState || 'IDLE';
   const frame = ai.hatAnimFrame || 0;
 
-  // Pick sheet + layout based on state
+  // When riding, draw at the balloon's position (already handled by RIDING setting pos.x/y)
+  // Just treat RIDING as IDLE for animation purposes
+  const drawState = (state === 'RIDING') ? 'IDLE' : state;
+
   let sheet = null;
   let cols = 4, rows = 3, totalFrames = 12;
   let drawW = 52, drawH = 52;
-  let frameIdx = frame;
   let angle = 0;
 
- if (state === 'IDLE') {
+  if (drawState === 'IDLE') {
     sheet = partyHatIdleSheet;
-    cols = 4; rows = 3; totalFrames = 12;  // was cols=4, rows=3, totalFrames=12
+    cols = 4; rows = 3; totalFrames = 12;
     drawW = 52; drawH = 52;
-  } else if (state === 'TELEGRAPH') {
+  } else if (drawState === 'TELEGRAPH') {
     sheet = partyHatTransitionSheet;
     cols = 2; rows = 2; totalFrames = 4;
     drawW = 56; drawH = 56;
-  } else if (state === 'DIVE') {
-    // Use single dive image for the dart shape, with speed-line rotation
-    const vel = ECS.get(
-      ECS.query('enemy', 'pos').find(id => ECS.get(id, 'pos') === epos) ?? -1,
-      'vel'
-    );
-    // Fallback: just use diveSheet cycling
+  } else if (drawState === 'DIVE') {
     sheet = partyHatDiveSheet;
     cols = 2; rows = 2; totalFrames = 4;
     drawW = 44; drawH = 66;
-    // Rotate to face movement direction using vel stored on entity
-    // We approximate using hatDiveTarget vs current pos
     if (ai.hatDiveTarget) {
       angle = Math.atan2(ai.hatDiveTarget.y - epos.y, ai.hatDiveTarget.x - epos.x) - Math.PI / 2;
     }
-  } else if (state === 'RECOVER') {
+  } else if (drawState === 'RECOVER') {
     sheet = partyHatRecoverSheet;
     cols = 2; rows = 2; totalFrames = 4;
-    drawW = 60; drawH = 44; // squashed wide shape
+    drawW = 60; drawH = 44;
   }
 
-  frameIdx = Math.min(frame, totalFrames - 1);
+  const frameIdx = Math.min(frame, totalFrames - 1);
 
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
   else {
-    ctx.shadowColor = state === 'DIVE' ? '#ff2200' : '#ffdd00';
-    ctx.shadowBlur  = state === 'DIVE' ? 22 : 14 + Math.sin(Date.now() / 80) * 4;
+    ctx.shadowColor = drawState === 'DIVE' ? '#ff2200' : '#ffdd00';
+    ctx.shadowBlur  = drawState === 'DIVE' ? 22 : 14 + Math.sin(Date.now() / 80) * 4;
   }
 
   if (sheet && sheet.complete && sheet.naturalWidth > 0) {
-    // Remove black background pixels by checking if image is dark
-    // (already handled by the black-removal pattern used elsewhere in config.js)
     const frameW = Math.floor(sheet.naturalWidth  / cols);
     const frameH = Math.floor(sheet.naturalHeight / rows);
     const col = frameIdx % cols;
     const row = Math.floor(frameIdx / cols);
-
-    ctx.drawImage(
-      sheet,
-      col * frameW, row * frameH, frameW, frameH,
-      -drawW / 2, -drawH / 2, drawW, drawH
-    );
-
-    // Overlay single dive image on top during DIVE for the elongated dart look
-    if (state === 'DIVE' && partyHatDiveImg.complete && partyHatDiveImg.naturalWidth > 0) {
+    ctx.drawImage(sheet, col * frameW, row * frameH, frameW, frameH,
+      -drawW / 2, -drawH / 2, drawW, drawH);
+    if (drawState === 'DIVE' && partyHatDiveImg.complete && partyHatDiveImg.naturalWidth > 0) {
       ctx.globalAlpha = 0.85;
       ctx.drawImage(partyHatDiveImg, -22, -44, 44, 88);
     }
-  } else {
-    // Fallback shape
-    ctx.fillStyle = frozen ? '#88ccff' : (state === 'DIVE' ? '#ff4400' : '#ff6699');
-    ctx.beginPath();
-    if (state === 'DIVE') {
-      ctx.ellipse(0, 0, 10, 28, 0, 0, Math.PI * 2);
-    } else if (state === 'RECOVER') {
-      ctx.ellipse(0, 0, 22, 8, 0, 0, Math.PI * 2);
-    } else {
-      ctx.moveTo(0, -22); ctx.lineTo(-14, 12); ctx.lineTo(14, 12); ctx.closePath();
-    }
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(0, -24, 5, 0, Math.PI * 2); ctx.fill();
   }
+  // NO fallback shape — removed
 
   ctx.restore();
 
-  // HP bar
-  const bw = 36;
-  ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 44, bw, 5);
-  ctx.fillStyle = ehp.hp < ehp.maxHp / 2 ? '#ff6666' : '#cc0000';
-  ctx.fillRect(x - bw/2, y - 44, bw * (ehp.hp / ehp.maxHp), 5);
+  // HP bar — only show when not riding
+  if (state !== 'RIDING') {
+    const bw = 36;
+    ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 44, bw, 5);
+    ctx.fillStyle = ehp.hp < ehp.maxHp / 2 ? '#ff6666' : '#cc0000';
+    ctx.fillRect(x - bw/2, y - 44, bw * (ehp.hp / ehp.maxHp), 5);
+  }
 
-  // Telegraph warning ring
   if (state === 'TELEGRAPH') {
     const prog = 1 - (ai.hatTimer / 32);
     ctx.save();
