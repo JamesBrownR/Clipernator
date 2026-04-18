@@ -186,13 +186,13 @@ const waterBalloonShootSheet = new Image();
 waterBalloonShootSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonShootSheet.png';
 
 const waterBalloonIdleSheetRed = new Image();
-waterBalloonIdleSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonIdleSheetRed.png';
+waterBalloonIdleSheetRed.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonIdleSheetRed.png';
 
 const waterBalloonTurnSheetRed = new Image();
-waterBalloonTurnSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonTurnSheetRed.png';
+waterBalloonTurnSheetRed.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonTurnSheetRed.png';
 
 const waterBalloonShootSheetRed = new Image();
-waterBalloonShootSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonShootSheetRed.png';
+waterBalloonShootSheetRed.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonShootSheetRed.png';
 
 
 const maskSheetImg = new Image();
