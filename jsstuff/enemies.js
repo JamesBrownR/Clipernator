@@ -43,8 +43,10 @@ const BT_UTENSIL = new BTSelector(
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
 
     // ── Body drifts toward player ──
-    vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * phy.speed * 0.28;
-    vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * phy.speed * 0.28;
+  const UTENSIL_STOP_DIST = 110;
+const driftMult = dist > UTENSIL_STOP_DIST ? 0.28 : (dist > 60 ? 0.04 : -0.12);
+vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * phy.speed * driftMult;
+vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * phy.speed * driftMult;
     const spd = Math.hypot(vel.vx, vel.vy);
     if (spd > phy.speed) { vel.vx = vel.vx / spd * phy.speed; vel.vy = vel.vy / spd * phy.speed; }
 
@@ -483,6 +485,11 @@ const BT_UTENSIL = new BTSelector(
 const BT_WATERBALLOON = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
+
+    // ── Apply hat-rider buffs ──
+const hatrider = ai.hatrider && ECS.has(ai.hatrider, 'pos');
+if (!hatrider && ai.hatrider) ai.hatrider = null; // rider died, clear flag
+    
     const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
     const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
@@ -512,12 +519,23 @@ const targetAngle = Math.atan2(dy, dx);    let ad = targetAngle - ai.orientAngle
     // ── State machine ──
     if (ai.wbState === 'ROAM') {
       // Move toward player but keep slight distance
-      const PREFERRED = 160;
-      const err = dist - PREFERRED;
-      vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*(err > 0 ? 0.18 : 0.05);
-      vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*(err > 0 ? 0.18 : 0.05);
-      const spd = Math.hypot(vel.vx, vel.vy);
-      if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
+      const PREFERRED = 180;
+const FLEE_DIST  = 120; // actively flee if player gets this close
+const err = dist - PREFERRED;
+let dirMult;
+if (dist < FLEE_DIST) {
+  dirMult = -0.35; // flee hard
+} else if (dist < PREFERRED) {
+  dirMult = -0.10; // soft push away — don't let it drift in
+} else {
+  dirMult = 0; // at or beyond preferred distance — don't chase at all, just strafe
+}
+// Strafe perpendicular to player when at range
+const perpX = -dy / dist, perpY = dx / dist;
+vel.vx = (vel.vx||0)*0.88 + (dx/dist)*phy.speed*dirMult + perpX*phy.speed*0.08;
+vel.vy = (vel.vy||0)*0.88 + (dy/dist)*phy.speed*dirMult + perpY*phy.speed*0.08;
+const spd = Math.hypot(vel.vx, vel.vy);
+if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
 
       // Soft wall repulsion
       const M = 40;
@@ -531,7 +549,8 @@ const targetAngle = Math.atan2(dy, dx);    let ad = targetAngle - ai.orientAngle
       if (ai.wbAnimTick >= 8) { ai.wbAnimTick = 0; ai.wbAnimFrame = (ai.wbAnimFrame+1) % 8; }
 
       // Shoot countdown
-      ai.wbShootTimer -= (1/(ai.clownCooldownMult||1));
+const hatMult = (ai.hatrider && ECS.has(ai.hatrider, 'pos')) ? 2 : 1;
+ai.wbShootTimer -= hatMult / (ai.clownCooldownMult || 1);
       if (ai.wbShootTimer <= 0) {
         // Stop and begin turn
         vel.vx *= 0.1; vel.vy *= 0.1;
@@ -575,17 +594,22 @@ const targetAngle = Math.atan2(dy, dx);    let ad = targetAngle - ai.orientAngle
         if (ai.wbShootFrame === 5 && ai.wbFiredShots < 3) {
           ai.wbFiredShots++;
           const aim = Math.atan2(dy, dx);
-          const BULLET_SPD = 3.8;
-        gs.enemyBullets.push({
-  x: pos.x + Math.cos(aim) * 26,   // spawn 26px toward player
+        
+       const hasHat = ai.hatrider && ECS.has(ai.hatrider, 'pos');
+const BULLET_SPD = hasHat ? 5.4 : 3.8;
+const bulletColor = hasHat ? '#ff2244' : '#44aaff';
+gs.enemyBullets.push({
+  x: pos.x + Math.cos(aim) * 26,
   y: pos.y + Math.sin(aim) * 26,
-  vx: Math.cos(aim)*BULLET_SPD,
-  vy: Math.sin(aim)*BULLET_SPD,
+  vx: Math.cos(aim) * BULLET_SPD,
+  vy: Math.sin(aim) * BULLET_SPD,
   life: 160, maxLife: 160,
-  color: '#44aaff',
+  color: bulletColor,
   isTear: true,
-  gravX: Math.sin(ai.orientAngle)*0.045,
-  gravY: Math.cos(ai.orientAngle)*0.045,
+  homing: hasHat,
+  homingStrength: hasHat ? 0.07 : 0,
+  gravX: Math.sin(ai.orientAngle) * 0.045,
+  gravY: Math.cos(ai.orientAngle) * 0.045,
 });
           spawnParticles(pos.x, pos.y, '#44aaff', 5);
 
@@ -986,112 +1010,144 @@ const BT_PARTYHAT = new BTSelector(
     if (!pp || !pos || !vel) return BT.FAILURE;
 
     // ── Init state ──
-    if (ai.hatState      === undefined) ai.hatState      = 'IDLE';
-    if (ai.hatTimer      === undefined) ai.hatTimer      = 60 + Math.floor(Math.random() * 40);
-    if (ai.hatAnimFrame  === undefined) ai.hatAnimFrame  = 0;
-    if (ai.hatAnimTimer  === undefined) ai.hatAnimTimer  = 0;
-    if (ai.hatDiveTarget === undefined) ai.hatDiveTarget = null;
+if (ai.hatState      === undefined) ai.hatState      = 'IDLE';
+if (ai.hatTimer      === undefined) ai.hatTimer      = 60 + Math.floor(Math.random() * 40);
+if (ai.hatAnimFrame  === undefined) ai.hatAnimFrame  = 0;
+if (ai.hatAnimTimer  === undefined) ai.hatAnimTimer  = 0;
+if (ai.hatDiveTarget === undefined) ai.hatDiveTarget = null;
+if (ai.ridingId      === undefined) ai.ridingId      = null;
 
-    const dx = pp.x - pos.x, dy = pp.y - pos.y;
-    const dist = Math.hypot(dx, dy) || 1;
+const dx = pp.x - pos.x, dy = pp.y - pos.y;
+const dist = Math.hypot(dx, dy) || 1;
+const baseSpeed = (1.2 + gs.wave * 0.12) * ENEMY_DEFS.partyHat.speedMult;
 
-    const baseSpeed = (1.2 + gs.wave * 0.12) * ENEMY_DEFS.partyHat.speedMult;
+ai.hatAnimTimer++;
 
-    // ── Advance anim timer ──
-    ai.hatAnimTimer++;
+// ── RIDING: hat is on a balloon's head ──
+if (ai.hatState === 'RIDING') {
+  // Validate host still alive
+  if (!ECS.has(ai.ridingId, 'pos')) {
+    ai.ridingId = null;
+    ai.hatState = 'IDLE';
+    ai.hatTimer = 40;
+  } else {
+    const hpos = ECS.get(ai.ridingId, 'pos');
+    pos.x = hpos.x;
+    pos.y = hpos.y - 36; // sit on top of balloon
+    vel.vx = 0; vel.vy = 0;
+  }
+  return BT.RUNNING;
+}
 
-    if (ai.hatState === 'IDLE') {
-      // Slow drift toward player
-      vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * baseSpeed * 0.14;
-      vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * baseSpeed * 0.14;
-      const spd = Math.hypot(vel.vx, vel.vy);
-      if (spd > baseSpeed * 0.5) { vel.vx = vel.vx / spd * baseSpeed * 0.5; vel.vy = vel.vy / spd * baseSpeed * 0.5; }
-
-      // Cycle idle frames: 12 frames, ~8 ticks each
-      if (ai.hatAnimTimer >= 8) { ai.hatAnimTimer = 0; ai.hatAnimFrame = (ai.hatAnimFrame + 1) % 12; }
-
-      ai.hatTimer--;
-      if (ai.hatTimer <= 0 && dist < 380) {
-        ai.hatState = 'TELEGRAPH';
-        ai.hatTimer = 32;
-        ai.hatAnimFrame = 0;
-        ai.hatAnimTimer = 0;
-        vel.vx *= 0.2; vel.vy *= 0.2;
-        spawnParticles(pos.x, pos.y, '#ffdd00', 6);
-      }
-
-    } else if (ai.hatState === 'TELEGRAPH') {
-      vel.vx *= 0.85; vel.vy *= 0.85;
-
-      // 4 transition frames spread across telegraph duration (~8 ticks each)
-      if (ai.hatAnimTimer >= 8) { ai.hatAnimTimer = 0; ai.hatAnimFrame = Math.min(3, ai.hatAnimFrame + 1); }
-      if (ai.hatTimer % 6 === 0) spawnParticles(pos.x, pos.y, '#ff4400', 4);
-
-      ai.hatTimer--;
-      if (ai.hatTimer <= 0) {
-        // Lock target to player's current position
-        ai.hatDiveTarget = { x: pp.x, y: pp.y };
-        ai.hatState = 'DIVE';
-        ai.hatTimer = 42;
-        ai.hatAnimFrame = 0;
-        ai.hatAnimTimer = 0;
-        const tdx = ai.hatDiveTarget.x - pos.x, tdy = ai.hatDiveTarget.y - pos.y;
-        const td = Math.hypot(tdx, tdy) || 1;
-        const diveSpd = baseSpeed * 4.5;
-        vel.vx = (tdx / td) * diveSpd;
-        vel.vy = (tdy / td) * diveSpd;
-        spawnParticles(pos.x, pos.y, '#ff2200', 12);
-      }
-
-    } else if (ai.hatState === 'DIVE') {
-      // Hold velocity — just let it fly
-      // Animate: single dive frame held, or cycle dive sheet (4 frames, fast)
-      if (ai.hatAnimTimer >= 4) { ai.hatAnimTimer = 0; ai.hatAnimFrame = (ai.hatAnimFrame + 1) % 4; }
-
-      ai.hatTimer--;
-      const hitWall = pos.x < CFG.WALL_PAD || pos.x > worldW - CFG.WALL_PAD ||
-                      pos.y < CFG.WALL_PAD || pos.y > worldH - CFG.WALL_PAD;
-      const hitPlayer = dist < 24 && gs.invincible <= 0;
-      const reachedTarget = ai.hatDiveTarget &&
-        Math.hypot(pos.x - ai.hatDiveTarget.x, pos.y - ai.hatDiveTarget.y) < 20;
-
-      if (hitPlayer || hitWall || reachedTarget || ai.hatTimer <= 0) {
-        if (hitPlayer && gs.invincible <= 0) {
-          gs.health -= 18; gs.invincible = CFG.INVINCIBLE_FRAMES;
-          gs.shakeX = 14; gs.shakeY = 14; gs.flawlessThisWave = false;
-          triggerSFPHit(); updateHUD();
-          spawnParticles(pos.x, pos.y, '#ffdd00', 16);
-          if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
-        }
-        ai.hatState = 'RECOVER';
-        ai.hatTimer = 50;
-        ai.hatAnimFrame = 0;
-        ai.hatAnimTimer = 0;
-        vel.vx *= 0.15; vel.vy *= 0.15;
-        spawnParticles(pos.x, pos.y, '#ffdd00', 14);
-        gs.shakeX = 8; gs.shakeY = 8;
-      }
-
-    } else if (ai.hatState === 'RECOVER') {
-      vel.vx *= 0.88; vel.vy *= 0.88;
-
-      // 4 recover frames, ~12 ticks each
-      if (ai.hatAnimTimer >= 12) { ai.hatAnimTimer = 0; ai.hatAnimFrame = Math.min(3, ai.hatAnimFrame + 1); }
-
-      ai.hatTimer--;
-      if (ai.hatTimer <= 0) {
-        ai.hatState = 'IDLE';
-        ai.hatTimer = 55 + Math.floor(Math.random() * 35);
-        ai.hatAnimFrame = 0;
-        ai.hatAnimTimer = 0;
-      }
+// ── Check for nearby balloons to ride (only when IDLE) ──
+if (ai.hatState === 'IDLE' || ai.hatState === 'RECOVER') {
+  for (const eid of ECS.query('enemy', 'pos', 'ai')) {
+    if (eid === id) continue;
+    if (ECS.get(eid, 'enemy').type !== 'waterballoon') continue;
+    const eai2 = ECS.get(eid, 'ai');
+    if (eai2.hatrider) continue; // already has a hat
+    const epos2 = ECS.get(eid, 'pos');
+    if (Math.hypot(epos2.x - pos.x, epos2.y - pos.y) < 44) {
+      // Mount!
+      eai2.hatrider = id;
+      ai.ridingId = eid;
+      ai.hatState = 'RIDING';
+      vel.vx = 0; vel.vy = 0;
+      spawnParticles(pos.x, pos.y, '#ffdd00', 10);
+      showMsg('HAT RIDES THE BALLOON!');
+      return BT.RUNNING;
     }
+  }
+}
 
-    // Wall clamp (non-dive states)
-    if (ai.hatState !== 'DIVE') {
-      pos.x = Math.max(CFG.WALL_PAD, Math.min(worldW - CFG.WALL_PAD, pos.x));
-      pos.y = Math.max(CFG.WALL_PAD, Math.min(worldH - CFG.WALL_PAD, pos.y));
+// ── Seek nearest balloon if one exists ──
+let nearestBalloon = null, nearestBalloonDist = 999999;
+for (const eid of ECS.query('enemy', 'pos', 'ai')) {
+  if (eid === id) continue;
+  if (ECS.get(eid, 'enemy').type !== 'waterballoon') continue;
+  if (ECS.get(eid, 'ai').hatrider) continue;
+  const epos2 = ECS.get(eid, 'pos');
+  const d = Math.hypot(epos2.x - pos.x, epos2.y - pos.y);
+  if (d < nearestBalloonDist) { nearestBalloonDist = d; nearestBalloon = epos2; }
+}
+
+if (ai.hatState === 'IDLE') {
+  if (nearestBalloon) {
+    // Chase the balloon
+    const bdx = nearestBalloon.x - pos.x, bdy = nearestBalloon.y - pos.y;
+    const bd = Math.hypot(bdx, bdy) || 1;
+    vel.vx = (vel.vx || 0) * 0.88 + (bdx / bd) * baseSpeed * 0.22;
+    vel.vy = (vel.vy || 0) * 0.88 + (bdy / bd) * baseSpeed * 0.22;
+    const spd = Math.hypot(vel.vx, vel.vy);
+    if (spd > baseSpeed) { vel.vx = vel.vx/spd*baseSpeed; vel.vy = vel.vy/spd*baseSpeed; }
+    if (ai.hatAnimTimer >= 8) { ai.hatAnimTimer = 0; ai.hatAnimFrame = (ai.hatAnimFrame + 1) % 12; }
+  } else {
+    // No balloon — chase player, can dive
+    vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * baseSpeed * 0.14;
+    vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * baseSpeed * 0.14;
+    const spd = Math.hypot(vel.vx, vel.vy);
+    if (spd > baseSpeed * 0.5) { vel.vx = vel.vx/spd*baseSpeed*0.5; vel.vy = vel.vy/spd*baseSpeed*0.5; }
+    if (ai.hatAnimTimer >= 8) { ai.hatAnimTimer = 0; ai.hatAnimFrame = (ai.hatAnimFrame + 1) % 12; }
+    ai.hatTimer--;
+    if (ai.hatTimer <= 0 && dist < 380) {
+      ai.hatState = 'TELEGRAPH';
+      ai.hatTimer = 32;
+      ai.hatAnimFrame = 0; ai.hatAnimTimer = 0;
+      vel.vx *= 0.2; vel.vy *= 0.2;
+      spawnParticles(pos.x, pos.y, '#ffdd00', 6);
     }
+  }
+} else if (ai.hatState === 'TELEGRAPH') {
+  vel.vx *= 0.85; vel.vy *= 0.85;
+  if (ai.hatAnimTimer >= 8) { ai.hatAnimTimer = 0; ai.hatAnimFrame = Math.min(3, ai.hatAnimFrame + 1); }
+  if (ai.hatTimer % 6 === 0) spawnParticles(pos.x, pos.y, '#ff4400', 4);
+  ai.hatTimer--;
+  if (ai.hatTimer <= 0) {
+    ai.hatDiveTarget = { x: pp.x, y: pp.y };
+    ai.hatState = 'DIVE';
+    ai.hatTimer = 42; ai.hatAnimFrame = 0; ai.hatAnimTimer = 0;
+    const tdx = ai.hatDiveTarget.x - pos.x, tdy = ai.hatDiveTarget.y - pos.y;
+    const td = Math.hypot(tdx, tdy) || 1;
+    vel.vx = (tdx / td) * baseSpeed * 4.5;
+    vel.vy = (tdy / td) * baseSpeed * 4.5;
+    spawnParticles(pos.x, pos.y, '#ff2200', 12);
+  }
+} else if (ai.hatState === 'DIVE') {
+  if (ai.hatAnimTimer >= 4) { ai.hatAnimTimer = 0; ai.hatAnimFrame = (ai.hatAnimFrame + 1) % 4; }
+  ai.hatTimer--;
+  const hitWall = pos.x < CFG.WALL_PAD || pos.x > worldW - CFG.WALL_PAD ||
+                  pos.y < CFG.WALL_PAD || pos.y > worldH - CFG.WALL_PAD;
+  const hitPlayer = dist < 24 && gs.invincible <= 0;
+  const reachedTarget = ai.hatDiveTarget &&
+    Math.hypot(pos.x - ai.hatDiveTarget.x, pos.y - ai.hatDiveTarget.y) < 20;
+  if (hitPlayer || hitWall || reachedTarget || ai.hatTimer <= 0) {
+    if (hitPlayer && gs.invincible <= 0) {
+      gs.health -= 18; gs.invincible = CFG.INVINCIBLE_FRAMES;
+      gs.shakeX = 14; gs.shakeY = 14; gs.flawlessThisWave = false;
+      triggerSFPHit(); updateHUD();
+      spawnParticles(pos.x, pos.y, '#ffdd00', 16);
+      if (gs.health <= 0) { gameOver(); return BT.FAILURE; }
+    }
+    ai.hatState = 'RECOVER'; ai.hatTimer = 50;
+    ai.hatAnimFrame = 0; ai.hatAnimTimer = 0;
+    vel.vx *= 0.15; vel.vy *= 0.15;
+    spawnParticles(pos.x, pos.y, '#ffdd00', 14);
+    gs.shakeX = 8; gs.shakeY = 8;
+  }
+} else if (ai.hatState === 'RECOVER') {
+  vel.vx *= 0.88; vel.vy *= 0.88;
+  if (ai.hatAnimTimer >= 12) { ai.hatAnimTimer = 0; ai.hatAnimFrame = Math.min(3, ai.hatAnimFrame + 1); }
+  ai.hatTimer--;
+  if (ai.hatTimer <= 0) {
+    ai.hatState = 'IDLE'; ai.hatTimer = 55 + Math.floor(Math.random() * 35);
+    ai.hatAnimFrame = 0; ai.hatAnimTimer = 0;
+  }
+}
+
+if (ai.hatState !== 'DIVE' && ai.hatState !== 'RIDING') {
+  pos.x = Math.max(CFG.WALL_PAD, Math.min(worldW - CFG.WALL_PAD, pos.x));
+  pos.y = Math.max(CFG.WALL_PAD, Math.min(worldH - CFG.WALL_PAD, pos.y));
+}
 
     return BT.RUNNING;
   })
