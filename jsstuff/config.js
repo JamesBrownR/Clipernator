@@ -94,8 +94,14 @@ normalBulletImg.src = '/Clipernator/sprites/bullets/normalbullet.png';
 const dudBulletImg = new Image();
 dudBulletImg.src = '/Clipernator/sprites/bullets/dudbullet.png'; // pill image
 
-const tearBulletImg = new Image();
-tearBulletImg.src = '/Clipernator/sprites/bullets/tearBullet.png'; // water balloon image
+const TearBulletImg = new Image();
+TearBulletImg.src = '/Clipernator/sprites/bullets/TearBullet.png'; // water balloon image
+
+const PurpleTearBulletImg = new Image();
+PurpleTearBulletImg.src = '/Clipernator/sprites/bullets/PurpleTearBullet.png';
+
+const RedTearBulletImg = new Image();
+RedTearBulletImg.src = '/Clipernator/sprites/bullets/RedTearBullet.png';
 
 const arcBallImg = new Image();
 arcBulletImg = arcBallImg; // alias
@@ -178,6 +184,15 @@ waterBalloonTurnSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBall
 
 const waterBalloonShootSheet = new Image();
 waterBalloonShootSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonShootSheet.png';
+
+const waterBalloonIdleSheetRed = new Image();
+waterBalloonIdleSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonIdleSheetRed.png';
+
+const waterBalloonTurnSheetRed = new Image();
+waterBalloonTurnSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonTurnSheetRed.png';
+
+const waterBalloonShootSheetRed = new Image();
+waterBalloonShootSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonShootSheetRed.png';
 
 
 const maskSheetImg = new Image();
