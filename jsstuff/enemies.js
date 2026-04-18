@@ -1852,7 +1852,7 @@ miniClown: BT_MINI_CLOWN,
 // ================================================================
 const ENEMY_DEFS = {
   utensil:        { hpMult: 1.0, speedMult: 0.9,  size: 28, color: '#cccccc' },
-  mask:           { hpMult: 1.1, speedMult: 1.05, size: 28, color: '#44aaff' },
+  waterballoon:           { hpMult: 1.1, speedMult: 1.05, size: 28, color: '#44aaff' },
   giftBox:        { hpMult: 2.2, speedMult: 0.5,  size: 34, color: '#ffaa00' },
   partyHat:       { hpMult: 0.8, speedMult: 1.4,  size: 26, color: '#ffdd00' },
   cakeBoss: { hpMult: 1, speedMult: 0.35, size: 44, color: '#ff69b4' },
