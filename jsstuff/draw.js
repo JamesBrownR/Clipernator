@@ -212,16 +212,15 @@ function drawMask(epos, ehp, ai, frozen) {
   if (ai.wbShootFrame  === undefined) ai.wbShootFrame  = 0;
   if (ai.wbShootTimer  === undefined) ai.wbShootTimer  = 0;
 
-  const IDLE_SPEED  = 8;  // ticks per frame
+  const IDLE_SPEED  = 8;
   const TURN_SPEED  = 6;
   const SHOOT_SPEED = 4;
 
-  // ── Sync anim state to behavior state ──
   const behaviorState = ai.maskState || 'SMILE';
 
   if (behaviorState === 'SMILE' && ai.wbAnimState === 'HOLD_NOZZLE') {
     ai.wbAnimState = 'RETURNING';
-    ai.wbAnimFrame = WBALLOON_TURN_FRAMES - 1; // play turn backwards
+    ai.wbAnimFrame = WBALLOON_TURN_FRAMES - 1;
     ai.wbAnimTimer = 0;
   } else if (behaviorState === 'CRY' && ai.wbAnimState === 'IDLE') {
     ai.wbAnimState = 'TURNING';
@@ -229,7 +228,6 @@ function drawMask(epos, ehp, ai, frozen) {
     ai.wbAnimTimer = 0;
   }
 
-  // ── Advance animation ──
   ai.wbAnimTimer++;
 
   if (ai.wbAnimState === 'IDLE') {
@@ -249,7 +247,6 @@ function drawMask(epos, ehp, ai, frozen) {
       }
     }
   } else if (ai.wbAnimState === 'HOLD_NOZZLE') {
-    // Advance shoot animation independently
     ai.wbShootTimer++;
     if (ai.wbShootTimer >= SHOOT_SPEED) {
       ai.wbShootTimer = 0;
@@ -266,15 +263,11 @@ function drawMask(epos, ehp, ai, frozen) {
     }
   }
 
-  // ── Orient angle: always smoothly track player ──
   const orientAngle = (typeof ai.maskOrient === 'number') ? ai.maskOrient : 0;
-  // orientAngle from BT_MASK already smoothly tracks player — use it directly
-  // Add PI/2 because sprite knot points UP (90° offset from right=0)
   const drawAngle = orientAngle + Math.PI / 2;
 
-  const DRAW_SIZE = 56;
+  const DRAW_SIZE = 40; // ← reduced from 56 to match enemy hitbox size
 
-  // ── Draw the balloon ──
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(drawAngle);
@@ -282,62 +275,70 @@ function drawMask(epos, ehp, ai, frozen) {
   else { ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 14; }
 
   if (ai.wbAnimState === 'IDLE' || ai.wbAnimState === 'TURNING' || ai.wbAnimState === 'RETURNING') {
-    // Decide which sheet + frame index to use
-    let sheet, frameIdx, cols, fw, fh, drawW, drawH;
+    let sheet, frameIdx, cols, fw, fh;
 
     if (ai.wbAnimState === 'IDLE') {
-      sheet = waterBalloonIdleSheet;
+      sheet    = waterBalloonIdleSheet;
       frameIdx = ai.wbAnimFrame;
-      cols = WBALLOON_IDLE_COLS;
-      fw = WBALLOON_IDLE_FRAME_W; fh = WBALLOON_IDLE_FRAME_H;
-      drawW = DRAW_SIZE; drawH = DRAW_SIZE;
+      cols     = WBALLOON_IDLE_COLS;
+      // Compute actual frame size from the loaded image
+      fw = sheet.complete && sheet.naturalWidth > 0
+        ? Math.floor(sheet.naturalWidth  / cols) : WBALLOON_IDLE_FRAME_W;
+      fh = sheet.complete && sheet.naturalHeight > 0
+        ? Math.floor(sheet.naturalHeight / Math.ceil(WBALLOON_IDLE_FRAMES / cols)) : WBALLOON_IDLE_FRAME_H;
     } else {
-      // TURNING or RETURNING — use turn sheet
-      sheet = waterBalloonTurnSheet;
+      sheet    = waterBalloonTurnSheet;
       frameIdx = ai.wbAnimFrame;
-      cols = WBALLOON_TURN_COLS;
-      fw = WBALLOON_TURN_FRAME_W; fh = WBALLOON_TURN_FRAME_H;
-      drawW = DRAW_SIZE; drawH = DRAW_SIZE * 1.1; // nozzle frames are taller
+      cols     = WBALLOON_TURN_COLS;
+      fw = sheet.complete && sheet.naturalWidth > 0
+        ? Math.floor(sheet.naturalWidth  / cols) : WBALLOON_TURN_FRAME_W;
+      fh = sheet.complete && sheet.naturalHeight > 0
+        ? Math.floor(sheet.naturalHeight / Math.ceil(WBALLOON_TURN_FRAMES / cols)) : WBALLOON_TURN_FRAME_H;
     }
 
     if (sheet && sheet.complete && sheet.naturalWidth > 0) {
       const col = frameIdx % cols;
       const row = Math.floor(frameIdx / cols);
-      ctx.drawImage(sheet, col * fw, row * fh, fw, fh, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.drawImage(sheet,
+        col * fw, row * fh, fw, fh,
+        -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
+      );
     } else {
-      // Fallback
       ctx.fillStyle = frozen ? '#88ccff' : '#4488ff';
       ctx.beginPath(); ctx.ellipse(0, 4, 14, 18, 0, 0, Math.PI * 2); ctx.fill();
     }
 
   } else if (ai.wbAnimState === 'HOLD_NOZZLE') {
-    // Draw turn sheet last frame underneath, shoot sheet on top
+    // Turn sheet last frame
     if (waterBalloonTurnSheet.complete && waterBalloonTurnSheet.naturalWidth > 0) {
-      const lastCol = (WBALLOON_TURN_FRAMES - 1) % WBALLOON_TURN_COLS;
-      const lastRow = Math.floor((WBALLOON_TURN_FRAMES - 1) / WBALLOON_TURN_COLS);
-      ctx.drawImage(
-        waterBalloonTurnSheet,
-        lastCol * WBALLOON_TURN_FRAME_W, lastRow * WBALLOON_TURN_FRAME_H,
-        WBALLOON_TURN_FRAME_W, WBALLOON_TURN_FRAME_H,
-        -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE,
+      const turnCols = WBALLOON_TURN_COLS;
+      const fw2 = Math.floor(waterBalloonTurnSheet.naturalWidth  / turnCols);
+      const fh2 = Math.floor(waterBalloonTurnSheet.naturalHeight / Math.ceil(WBALLOON_TURN_FRAMES / turnCols));
+      const lastFrame = WBALLOON_TURN_FRAMES - 1;
+      const lastCol = lastFrame % turnCols;
+      const lastRow = Math.floor(lastFrame / turnCols);
+      ctx.drawImage(waterBalloonTurnSheet,
+        lastCol * fw2, lastRow * fh2, fw2, fh2,
+        -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
       );
     }
     // Shoot anim overlay
     if (waterBalloonShootSheet.complete && waterBalloonShootSheet.naturalWidth > 0) {
-      const sc = ai.wbShootFrame % WBALLOON_SHOOT_COLS;
-      const sr = Math.floor(ai.wbShootFrame / WBALLOON_SHOOT_COLS);
-      ctx.drawImage(
-        waterBalloonShootSheet,
-        sc * WBALLOON_SHOOT_FRAME_W, sr * WBALLOON_SHOOT_FRAME_H,
-        WBALLOON_SHOOT_FRAME_W, WBALLOON_SHOOT_FRAME_H,
-        -DRAW_SIZE / 2, -DRAW_SIZE * 0.55, DRAW_SIZE, DRAW_SIZE * 1.1
+      const sCols = WBALLOON_SHOOT_COLS;
+      const sfw = Math.floor(waterBalloonShootSheet.naturalWidth  / sCols);
+      const sfh = Math.floor(waterBalloonShootSheet.naturalHeight / Math.ceil(WBALLOON_SHOOT_FRAMES / sCols));
+      const sc = ai.wbShootFrame % sCols;
+      const sr = Math.floor(ai.wbShootFrame / sCols);
+      ctx.drawImage(waterBalloonShootSheet,
+        sc * sfw, sr * sfh, sfw, sfh,
+        -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
       );
     }
   }
 
   ctx.restore();
 
-  // ── HP bar (unrotated) ──
+  // HP bar (unrotated)
   const bw = 50;
   ctx.fillStyle = '#330000';
   ctx.fillRect(x - bw / 2, y - 40, bw, 5);
