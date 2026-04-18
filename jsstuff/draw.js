@@ -319,7 +319,7 @@ function drawMask(epos, ehp, ai, frozen) {
         waterBalloonTurnSheet,
         lastCol * WBALLOON_TURN_FRAME_W, lastRow * WBALLOON_TURN_FRAME_H,
         WBALLOON_TURN_FRAME_W, WBALLOON_TURN_FRAME_H,
-        -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE
+        -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE,
       );
     }
     // Shoot anim overlay
