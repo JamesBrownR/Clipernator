@@ -202,15 +202,15 @@ const WBALLOON_SHOOT_FRAME_H = 364;
 const maskSheetImg = new Image();
 maskSheetImg.src = '/Clipernator/sprites/enemies/Mask/MaskSheet.png';
 
-const MASK_FRAME_W = 204;
-const MASK_FRAME_H = 204;
-const MASK_COLS = 5;  // changed from 4 to 5
-
-// Updated frame mappings for 5-col, 5-row sheet (25 frames)
-const MASK_SMILE_FRAMES    = [0, 1, 2, 3, 4];   // row 0: happy loop
-const MASK_TO_CRY_FRAMES   = [5, 6, 7, 8, 9];   // row 1: smile → sad transition
-const MASK_CRY_FRAMES      = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]; // rows 2-3: crying loop
-const MASK_TO_SMILE_FRAMES = [20, 21, 22, 23];   // row 4: return to neutral
+// Water balloon sprite sheets (mask enemy)
+// All sheets: 1024×1024 per frame
+const WB_IDLE_COLS   = 3;  WB_IDLE_FW   = 1024; // 3072-wide sheet
+const WB_IDLE_FRAMES = 8;
+const WB_TURN_COLS   = 2;  WB_TURN_FW   = 1024; // 2048-wide sheet
+const WB_TURN_FRAMES = 4;
+const WB_SHOOT_COLS  = 3;  WB_SHOOT_FW  = 1024; // 3072-wide sheet
+const WB_SHOOT_FRAMES = 8;
+const WB_FRAME_H = 1024; // same for all sheets
 
 // ================================================================
 // KEYBINDS
