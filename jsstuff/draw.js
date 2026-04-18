@@ -204,48 +204,45 @@ function drawWaterBalloon(epos, ehp, ai, frozen) {
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
   else { ctx.shadowColor = hasHat ? '#ff4444' : '#44aaff'; ctx.shadowBlur = 14; }
 
+ const idleSheet  = hasHat ? waterBalloonIdleSheetRed  : waterBalloonIdleSheet;
+  const turnSheet  = hasHat ? waterBalloonTurnSheetRed  : waterBalloonTurnSheet;
+  const shootSheet = hasHat ? waterBalloonShootSheetRed : waterBalloonShootSheet;
+
   if (state === 'ROAM') {
-    if (waterBalloonIdleSheet.complete && waterBalloonIdleSheet.naturalWidth > 0) {
+    if (idleSheet.complete && idleSheet.naturalWidth > 0) {
       const frame = (ai.wbAnimFrame || 0) % 8;
       const col = frame % SHEET_COLS;
       const row = Math.floor(frame / SHEET_COLS);
-      ctx.drawImage(waterBalloonIdleSheet,
+      ctx.drawImage(idleSheet,
         col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H,
         -DRAW_SIZE/2, -DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE);
     }
   } else if (state === 'TURNING' || state === 'UNTURN') {
-    if (waterBalloonTurnSheet.complete && waterBalloonTurnSheet.naturalWidth > 0) {
-      const TW = Math.floor(waterBalloonTurnSheet.naturalWidth / 2);
-      const TH = Math.floor(waterBalloonTurnSheet.naturalHeight / 2);
+    if (turnSheet.complete && turnSheet.naturalWidth > 0) {
+      const TW = Math.floor(turnSheet.naturalWidth / 2);
+      const TH = Math.floor(turnSheet.naturalHeight / 2);
       const frame = Math.max(0, Math.min(3, ai.wbTurnFrame || 0));
       const col = frame % 2;
       const row = Math.floor(frame / 2);
-      ctx.drawImage(waterBalloonTurnSheet,
+      ctx.drawImage(turnSheet,
         col * TW, row * TH, TW, TH,
         -DRAW_SIZE/2, -DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE);
     }
   } else if (state === 'SHOOTING') {
-    if (waterBalloonShootSheet.complete && waterBalloonShootSheet.naturalWidth > 0) {
-      const SW = Math.floor(waterBalloonShootSheet.naturalWidth / 3);
-      const SH = Math.floor(waterBalloonShootSheet.naturalHeight / 3);
+    if (shootSheet.complete && shootSheet.naturalWidth > 0) {
+      const SW = Math.floor(shootSheet.naturalWidth / 3);
+      const SH = Math.floor(shootSheet.naturalHeight / 3);
       const frame = Math.max(0, Math.min(7, ai.wbShootFrame || 0));
       const col = frame % 3;
       const row = Math.floor(frame / 3);
-      ctx.drawImage(waterBalloonShootSheet,
+      ctx.drawImage(shootSheet,
         col * SW, row * SH, SW, SH,
         -DRAW_SIZE/2, -DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE);
     }
   }
+  // (no red tint overlay)
 
-  // Red tint overlay when hat-buffed
-  if (hasHat && !frozen) {
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = '#ff4444';
-    ctx.beginPath(); ctx.ellipse(0, 0, DRAW_SIZE/2, DRAW_SIZE/2, 0, 0, Math.PI*2); ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1;
-  }
+  
 
   ctx.restore();
 
