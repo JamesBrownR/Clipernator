@@ -208,7 +208,7 @@ function drawWaterBalloon(epos, ehp, ai, frozen) {
 
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(orientAngle - Math.PI / 2); // bottom of sprite faces player
+  ctx.rotate(orientAngle + Math.PI / 2);
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
   else { ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 14; }
 
