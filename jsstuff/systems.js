@@ -764,7 +764,7 @@ function sysAI() {
 
    if (ai2 && ai2.juggled && !ai2.thrownByFork) {
       const type=ECS.get(id,'enemy').type;
-      if (type==='mask') {
+      if (type==='waterballoon') {
         const pos2=ECS.get(id,'pos'),pp2=playerPos(gs);
         if (pp2) {
           ai2.shootCooldown=(ai2.shootCooldown||120)-1;
@@ -1661,10 +1661,10 @@ function spawnEnemy() {
       type = 'cannonball';
     }
   } else if (gs.wave>=6){
-    if(roll<0.30)type='mask';else if(roll<0.52)type='giftBox';else if(roll<0.72)type='partyHat';
+    if(roll<0.30)type='waterballoon';else if(roll<0.52)type='giftBox';else if(roll<0.72)type='partyHat';
   } else if (gs.wave>=5){
-    if(roll<0.32)type='mask';else if(roll<0.58)type='partyHat';
-  } else if (gs.wave>=4){ if(roll<0.35)type='mask'; }
+    if(roll<0.32)type='waterballoon';else if(roll<0.58)type='partyHat';
+  } else if (gs.wave>=4){ if(roll<0.35)type='waterballoon'; }
 
   const def=ENEMY_DEFS[type],baseHp=1+Math.floor(gs.wave/2),id=ECS.createEntity();
   const subtypes=['fork','knife','spoon'];
@@ -1672,7 +1672,7 @@ function spawnEnemy() {
   ECS.add(id,'pos',{x,y,angle:0}); ECS.add(id,'vel',{vx:0,vy:0});
   ECS.add(id,'hp',{hp:Math.ceil(baseHp*def.hpMult),maxHp:Math.ceil(baseHp*def.hpMult),hitFlash:0});
   ECS.add(id,'physics',{speed:(1.2+Math.random()*0.6+gs.wave*0.12)*def.speedMult});
-ECS.add(id,'ai',{shootCooldown:120,ambushTimer:0,diveTimer:0,dashHit:false,maskOrient:type==='mask'?Math.floor(Math.random()*4):0});  spawnParticles(x, y, '#ff4400', 10);
+ECS.add(id,'ai',{shootCooldown:120,ambushTimer:0,diveTimer:0,dashHit:false,balloonOrient:type==='waterballoon'?Math.floor(Math.random()*4):0});  spawnParticles(x, y, '#ff4400', 10);
 }
 
 function spawnBoss() {
@@ -1826,7 +1826,7 @@ if (gs.floor === 2 && gs.wave === CFG.BOSS2_WAVE) {
   bossPhase: 'IDLE', phaseTimer: 100,
   spiralAngle: 0, volleyCount: 0, volleyTimer: 0,
   shootCooldown: 120, ambushTimer: 0, diveTimer: 0, dashHit: false,
-  maskOrient: Math.floor(Math.random() * 4)
+  balloonOrient: Math.floor(Math.random() * 4)
 });
 
       
