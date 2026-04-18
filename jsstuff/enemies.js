@@ -577,17 +577,17 @@ const BT_WATERBALLOON = new BTSelector(
           ai.wbFiredShots++;
           const aim = Math.atan2(dy, dx);
           const BULLET_SPD = 3.8;
-          gs.enemyBullets.push({
-            x: pos.x + Math.sin(ai.orientAngle + Math.PI/2) * 24,
-            y: pos.y - Math.cos(ai.orientAngle + Math.PI/2) * 24,
-            vx: Math.cos(aim)*BULLET_SPD,
-            vy: Math.sin(aim)*BULLET_SPD,
-            life: 160, maxLife: 160,
-            color: '#44aaff',
-            isTear: true,
-            gravX: Math.sin(ai.orientAngle)*0.045,
-            gravY: Math.cos(ai.orientAngle)*0.045,
-          });
+        gs.enemyBullets.push({
+  x: pos.x + Math.cos(aim) * 26,   // spawn 26px toward player
+  y: pos.y + Math.sin(aim) * 26,
+  vx: Math.cos(aim)*BULLET_SPD,
+  vy: Math.sin(aim)*BULLET_SPD,
+  life: 160, maxLife: 160,
+  color: '#44aaff',
+  isTear: true,
+  gravX: Math.sin(ai.orientAngle)*0.045,
+  gravY: Math.cos(ai.orientAngle)*0.045,
+});
           spawnParticles(pos.x, pos.y, '#44aaff', 5);
 
           if (ai.wbFiredShots < 3) {
