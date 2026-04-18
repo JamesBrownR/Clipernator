@@ -189,20 +189,30 @@ function drawSpoonFrame(frameIndex, x, y, angle) {
 
 function drawWaterBalloon(epos, ehp, ai, frozen) {
   const { x, y } = epos;
-  const DRAW_SIZE = 64; // larger so balloon is clearly visible
+  const DRAW_SIZE = 64;
   const state = ai.wbState || 'ROAM';
+  // orientAngle points FROM enemy TOWARD player (atan2 result).
+  // The sprite has the knot at the TOP (12 o'clock).
+  // We want the knot to point AWAY from the player (opposite of aim direction),
+  // so rotate by orientAngle + Math.PI/2 — wait, let's think:
+  //   orientAngle = atan2(player.y - enemy.y, player.x - enemy.x) (set in BT)
+  //   sprite "up" = -π/2 in canvas coords
+  //   We want sprite "up" to point toward player → rotate = orientAngle + π/2... 
+  // Actually the BT sets ai.balloonOrient = ai.orientAngle which tracks toward player.
+  // Sprite knot (top) should face AWAY from player (enemy shoots from knot side).
+  // So: rotation = orientAngle + Math.PI/2  →  knot points perpendicular. That's wrong too.
+  // Correct: we want the BOTTOM of the sprite facing the player.
+  // sprite "down" = +π/2. We want that to equal orientAngle.
+  // So: ctx.rotate(orientAngle - Math.PI/2)
   const orientAngle = (typeof ai.balloonOrient === 'number') ? ai.balloonOrient : 0;
 
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(orientAngle + Math.PI/2); // sprite is knot-up, rotate to face player
+  ctx.rotate(orientAngle - Math.PI / 2); // bottom of sprite faces player
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
   else { ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 14; }
 
-  const FH = 1024; // all sheets share 1024px frame height
-
   if (state === 'ROAM') {
-    // Idle sheet: 3 cols, 8 frames
     if (waterBalloonIdleSheet.complete && waterBalloonIdleSheet.naturalWidth > 0) {
       const frame = ai.wbAnimFrame || 0;
       const col = frame % 3;
@@ -226,13 +236,7 @@ function drawWaterBalloon(epos, ehp, ai, frozen) {
     }
 
   } else if (state === 'SHOOTING') {
-    // Hold last turn frame as base
-    if (waterBalloonTurnSheet.complete && waterBalloonTurnSheet.naturalWidth > 0) {
-      ctx.drawImage(waterBalloonTurnSheet,
-        1*1024, 1*1024, 1024, 1024, // frame 3 (col1, row1)
-        -DRAW_SIZE/2, -DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE);
-    }
-    // Shoot anim overlay
+    // Show ONLY the shoot sheet (no turn sheet underneath)
     if (waterBalloonShootSheet.complete && waterBalloonShootSheet.naturalWidth > 0) {
       const frame = Math.max(0, Math.min(7, ai.wbShootFrame || 0));
       const col = frame % 3;
@@ -251,92 +255,6 @@ function drawWaterBalloon(epos, ehp, ai, frozen) {
   ctx.fillRect(x - bw/2, y - 44, bw, 5);
   ctx.fillStyle = ai.confused ? '#00ffff' : (ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#4488ff');
   ctx.fillRect(x - bw/2, y - 44, bw * (ehp.hp/ehp.maxHp), 5);
-}
-
-function drawGiftBox(epos, ehp, ai, frozen) {
-  const { x, y } = epos;
-  const windup = ai.windupTimer || 0;
-  const windupRatio = Math.min(1, windup / 120);
-  const heldByPlayer = ai.heldByPlayer || false;
-
-  const shakeAmt = windupRatio * 5;
-  const sx = x + (Math.random() - 0.5) * shakeAmt;
-  const sy = y + (Math.random() - 0.5) * shakeAmt;
-
-  ctx.save();
-  ctx.translate(sx, sy);
-  if (frozen) ctx.globalAlpha = 0.65;
-
-  const r = Math.round(255);
-  const g = Math.round(102 - windupRatio * 102);
-  const b = Math.round(153 - windupRatio * 153);
-  const boxColor = frozen ? '#77aaff' : `rgb(${r},${g},${b})`;
-
-  ctx.shadowColor = frozen ? '#88ccff' : (windupRatio > 0.6 ? '#ff2200' : '#ffaa00');
-  ctx.shadowBlur = 16 + windupRatio * 20;
-
-  ctx.fillStyle = boxColor;
-  ctx.fillRect(-17, -17, 34, 34);
-
-  ctx.fillStyle = '#ffee00';
-  ctx.fillRect(-18, -6, 36, 8);
-  ctx.fillRect(-6, -18, 8, 36);
-
-  ctx.fillStyle = '#ff0000';
-  ctx.beginPath();
-  ctx.moveTo(0, -18);
-  ctx.lineTo(-8, -28);
-  ctx.lineTo(8, -28);
-  ctx.closePath();
-  ctx.fill();
-
-  if (windupRatio > 0 && !frozen) {
-    const ticks = Math.floor(windupRatio * 8);
-    ctx.strokeStyle = '#ff2200';
-    ctx.lineWidth = 2;
-    ctx.shadowColor = '#ff4400';
-    ctx.shadowBlur = 8;
-    for (let i = 0; i < ticks; i++) {
-      const ta = (i / 8) * Math.PI * 2 - Math.PI / 2;
-      const r1 = 22, r2 = 28;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(ta) * r1, Math.sin(ta) * r1);
-      ctx.lineTo(Math.cos(ta) * r2, Math.sin(ta) * r2);
-      ctx.stroke();
-    }
-    if (windupRatio > 0.75) {
-      ctx.font = `bold ${8 + windupRatio * 4}px "Press Start 2P"`;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = '#ff0000';
-      ctx.shadowBlur = 14;
-      ctx.fillText('!', 0, 6);
-    }
-  }
-
-  if (heldByPlayer) {
-    ctx.strokeStyle = '#ffdd00';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath();
-    ctx.arc(0, 0, 26, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  ctx.restore();
-
-  const bw = 40;
-  ctx.fillStyle = '#330000'; ctx.fillRect(x - bw/2, y - 40, bw, 5);
-  ctx.fillStyle = ehp.hp < ehp.maxHp/2 ? '#ff6666' : '#cc0000';
-  ctx.fillRect(x - bw/2, y - 40, bw * (ehp.hp / ehp.maxHp), 5);
-
-  if (windupRatio > 0 && !frozen) {
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(x - bw/2, y - 32, bw, 4);
-    ctx.fillStyle = `rgb(${Math.round(255)},${Math.round(100 * (1 - windupRatio))},0)`;
-    ctx.fillRect(x - bw/2, y - 32, bw * windupRatio, 4);
-  }
 }
 
 function drawPartyHat(epos, ehp, ai, frozen) {
@@ -1267,10 +1185,9 @@ if (eb.isTear) {
   ctx.save();
   ctx.translate(eb.x, eb.y);
   ctx.rotate(tearAngle);
-  const tw = 40, th = 26;  // wider proportions to match image
+  const tw = 28, th = 18;
   if (tearBulletImg.complete && tearBulletImg.naturalWidth > 0) {
-    // Offset so balloon (right side of image) is at the front of travel
-    ctx.drawImage(tearBulletImg, -tw * 0.35, -th/2, tw, th);
+    ctx.drawImage(tearBulletImg, -tw * 0.25, -th/2, tw, th);
   } else {
     ctx.fillStyle = '#44aaff'; ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 10;
     ctx.beginPath();
