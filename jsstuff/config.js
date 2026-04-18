@@ -171,13 +171,13 @@ const partyHatRecoverSheet = new Image();
 partyHatRecoverSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatRecoverSheet.png';
 
 const waterBalloonIdleSheet = new Image();
-waterBalloonIdleSheet.src = '/Clipernator/sprites/enemies/Mask/WaterBalloonIdleSheet.png';
+waterBalloonIdleSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonIdleSheet.png';
 
 const waterBalloonTurnSheet = new Image();
-waterBalloonTurnSheet.src = '/Clipernator/sprites/enemies/Mask/WaterBalloonTurnSheet.png';
+waterBalloonTurnSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonTurnSheet.png';
 
 const waterBalloonShootSheet = new Image();
-waterBalloonShootSheet.src = '/Clipernator/sprites/enemies/Mask/WaterBalloonShootSheet.png';
+waterBalloonShootSheet.src = '/Clipernator/sprites/enemies/WaterBalloon/WaterBalloonShootSheet.png';
 
 // Frame layout constants
 const WBALLOON_IDLE_FRAMES  = 8;
