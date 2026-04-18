@@ -1160,8 +1160,8 @@ if (eb.isTear) {
   ctx.translate(eb.x, eb.y);
   ctx.rotate(tearAngle);
   const tw = 28, th = 18;
-  if (tearBulletImg.complete && tearBulletImg.naturalWidth > 0) {
-    ctx.drawImage(tearBulletImg, -tw * 0.25, -th/2, tw, th);
+  if (TearBulletImg.complete && TearBulletImg.naturalWidth > 0) {
+    ctx.drawImage(TearBulletImg, -tw * 0.25, -th/2, tw, th);
   } else {
     ctx.fillStyle = '#44aaff'; ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 10;
     ctx.beginPath();
