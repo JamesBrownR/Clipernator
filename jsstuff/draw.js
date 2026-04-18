@@ -1163,8 +1163,9 @@ function draw() {
   ctx.clearRect(0,0,CFG.W,CFG.H);
   ctx.save();
   ctx.scale(renderScale, renderScale);
-  ctx.translate(Math.round(gs.shakeX*.4), Math.round(gs.shakeY*.4));
-
+const clampedShakeX = Math.max(-12, Math.min(12, gs.shakeX));
+const clampedShakeY = Math.max(-12, Math.min(12, gs.shakeY));
+ctx.translate(Math.round(clampedShakeX*.4), Math.round(clampedShakeY*.4));
   // Background + grid
   if (gs.floor === 2) {
     ctx.fillStyle = 'rgba(25,8,0,1)';
