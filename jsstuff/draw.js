@@ -191,7 +191,7 @@ function drawMaskFrame(frameIndex, x, y, alpha = 1) {
   if (!maskSheetImg.complete || maskSheetImg.naturalWidth === 0) return;
   const col = frameIndex % MASK_COLS;
   const row = Math.floor(frameIndex / MASK_COLS);
-  const DRAW_SIZE = 56;  // slightly larger since sheet has more detail
+  const DRAW_SIZE = 40;  // slightly larger since sheet has more detail
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.drawImage(
@@ -319,7 +319,7 @@ function drawMask(epos, ehp, ai, frozen) {
         waterBalloonTurnSheet,
         lastCol * WBALLOON_TURN_FRAME_W, lastRow * WBALLOON_TURN_FRAME_H,
         WBALLOON_TURN_FRAME_W, WBALLOON_TURN_FRAME_H,
-        -DRAW_SIZE / 2, -DRAW_SIZE * 0.55, DRAW_SIZE, DRAW_SIZE * 1.1
+        -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE
       );
     }
     // Shoot anim overlay
