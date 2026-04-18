@@ -170,6 +170,35 @@ partyHatDiveImg.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatDive.png';
 const partyHatRecoverSheet = new Image();
 partyHatRecoverSheet.src = '/Clipernator/sprites/enemies/PartyHat/PartyHatRecoverSheet.png';
 
+const waterBalloonIdleSheet = new Image();
+waterBalloonIdleSheet.src = '/Clipernator/sprites/enemies/Mask/WaterBalloonIdleSheet.png';
+
+const waterBalloonTurnSheet = new Image();
+waterBalloonTurnSheet.src = '/Clipernator/sprites/enemies/Mask/WaterBalloonTurnSheet.png';
+
+const waterBalloonShootSheet = new Image();
+waterBalloonShootSheet.src = '/Clipernator/sprites/enemies/Mask/WaterBalloonShootSheet.png';
+
+// Frame layout constants
+const WBALLOON_IDLE_FRAMES  = 8;
+const WBALLOON_TURN_FRAMES  = 4;
+const WBALLOON_SHOOT_FRAMES = 8;
+
+// Idle sheet: 3 cols, rows of 3-3-2
+const WBALLOON_IDLE_COLS = 3;
+const WBALLOON_IDLE_FRAME_W = 364; // 1092/3
+const WBALLOON_IDLE_FRAME_H = 364;
+
+// Turn sheet: 2 cols, 2 rows
+const WBALLOON_TURN_COLS = 2;
+const WBALLOON_TURN_FRAME_W = 546; // 1092/2
+const WBALLOON_TURN_FRAME_H = 546;
+
+// Shoot sheet: 3 cols, irregular — treat as 3 cols
+const WBALLOON_SHOOT_COLS = 3;
+const WBALLOON_SHOOT_FRAME_W = 364;
+const WBALLOON_SHOOT_FRAME_H = 364;
+
 const maskSheetImg = new Image();
 maskSheetImg.src = '/Clipernator/sprites/enemies/Mask/MaskSheet.png';
 
