@@ -503,8 +503,7 @@ const BT_WATERBALLOON = new BTSelector(
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx,dy)||1;
 
     // Always track orientation toward player smoothly
-    const targetAngle = Math.atan2(dy, dx) - Math.PI/2;
-    let ad = targetAngle - ai.orientAngle;
+const targetAngle = Math.atan2(dy, dx);    let ad = targetAngle - ai.orientAngle;
     while (ad >  Math.PI) ad -= Math.PI*2;
     while (ad < -Math.PI) ad += Math.PI*2;
     ai.orientAngle += ad * 0.04;
