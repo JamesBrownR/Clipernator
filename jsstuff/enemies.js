@@ -486,14 +486,17 @@ const BT_WATERBALLOON = new BTSelector(
   new BTAction((id, gs) => {
     if (gs.frozen) return BT.RUNNING;
 
-    // ── Apply hat-rider buffs ──
+   
+    
+    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
+    const ai = ECS.get(id,'ai'), pp = playerPos(gs);
+
+     // ── Apply hat-rider buffs ──
 const hatrider = ai.hatrider && ECS.has(ai.hatrider, 'pos');
 if (!hatrider && ai.hatrider) ai.hatrider = null; // rider died, clear flag
 
     ai.rmDmgMult = (ai.hatrider && ECS.has(ai.hatrider, 'pos')) ? 2 : 1;
     
-    const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
-    const ai = ECS.get(id,'ai'), pp = playerPos(gs);
     if (!pp || !pos || !vel) return BT.FAILURE;
 
     // ── Init ──
