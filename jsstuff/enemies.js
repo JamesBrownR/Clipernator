@@ -489,6 +489,8 @@ const BT_WATERBALLOON = new BTSelector(
     // ── Apply hat-rider buffs ──
 const hatrider = ai.hatrider && ECS.has(ai.hatrider, 'pos');
 if (!hatrider && ai.hatrider) ai.hatrider = null; // rider died, clear flag
+
+    ai.rmDmgMult = (ai.hatrider && ECS.has(ai.hatrider, 'pos')) ? 2 : 1;
     
     const pos = ECS.get(id,'pos'), vel = ECS.get(id,'vel'), phy = ECS.get(id,'physics');
     const ai = ECS.get(id,'ai'), pp = playerPos(gs);
