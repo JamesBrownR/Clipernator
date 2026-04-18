@@ -554,7 +554,7 @@ if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed;
       if (ai.wbAnimTick >= 8) { ai.wbAnimTick = 0; ai.wbAnimFrame = (ai.wbAnimFrame+1) % 8; }
 
       // Shoot countdown
-const hatMult = (ai.hatrider && ECS.has(ai.hatrider, 'pos')) ? 2 : 1;
+const hatMult = (ai.hatrider && ECS.has(ai.hatrider, 'pos')) ? 4 : 1;
 ai.wbShootTimer -= hatMult / (ai.clownCooldownMult || 1);
       if (ai.wbShootTimer <= 0) {
         // Stop and begin turn
