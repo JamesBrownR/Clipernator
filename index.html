@@ -89,6 +89,8 @@ body::before { display: none; }
   padding: 1px 0 0 1px;
 }
 
+  
+
 /* Canvas area — sunken inset */
 canvas {
   display: block;
@@ -337,17 +339,18 @@ canvas {
 </head>
 <body>
 <div id="wrapper">
- <div id="hud">
+<div id="hud">
   <span id="hud-title">📎 CLIPBLAST.EXE</span>
-  <span>HP: <span id="health-val" ...>...</span> <span id="health-num">100</span></span>
-  <span>AMMO: <span id="ammo-val">8/8</span></span>
-  <span>WAVE: <span id="wave-val">1</span></span>
-  <span>SCORE: <span id="score-val">0</span></span>
   <div id="hud-controls">
     <button id="hud-min">_</button>
     <button id="hud-max">□</button>
     <button id="hud-close">✕</button>
   </div>
+</div>
+  <div id="toolbar" style="background:#c0c0c0; padding:3px 6px; border-bottom:1px solid #808080; display:flex; gap:8px; align-items:center; width:700px; height:28px;">
+  <span style="border:1px solid; border-color:#808080 #fff #fff #808080; padding:2px 8px; font-family:Fixedsys; font-size:11px;">HP: <span id="health-num">100</span></span>
+  <!-- repeat for ammo, wave, score -->
+  <button id="startBtn" class="win2k-btn" style="margin-left:auto;">▶ PLAY</button>
 </div>
   <canvas id="c" width="700" height="460"></canvas>
  <div id="bottom-bar">
