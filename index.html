@@ -535,97 +535,62 @@ canvas {
 <script src="jsstuff/systems.js"></script>
 <script src="jsstuff/game.js"></script>
 
-  <script>
+ <script>
 (function() {
-  let isMaximized = false;
   const wrapper = document.getElementById('wrapper');
-  const canvas  = document.getElementById('c');
   const maxBtn  = document.getElementById('hud-max');
-
-  // Store original wrapper size
-  const ORIG_W = 700;
-  const ORIG_H = 460;
+  let isMaximized = false;
 
   function applyMaximize() {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // Scale to fit viewport while keeping aspect ratio
-    const scaleX = vw / ORIG_W;
-    const scaleY = vh / vh; // full height
-    const scale  = Math.min(vw / ORIG_W, vh / ORIG_H);
+    // Get the natural size of the wrapper
+    const wrapperW = wrapper.offsetWidth;
+    const wrapperH = wrapper.offsetHeight;
+
+    const scale = Math.min(vw / wrapperW, vh / wrapperH);
 
     wrapper.style.position   = 'fixed';
-    wrapper.style.top        = '0';
-    wrapper.style.left       = '0';
-    wrapper.style.width      = vw + 'px';
-    wrapper.style.height     = vh + 'px';
+    wrapper.style.top        = '50%';
+    wrapper.style.left       = '50%';
+    wrapper.style.transform  = `translate(-50%, -50%) scale(${scale})`;
+    wrapper.style.transformOrigin = 'center center';
     wrapper.style.zIndex     = '9999';
     wrapper.style.margin     = '0';
-    wrapper.style.border     = '2px solid';
-    wrapper.style.borderColor = '#ffffff #404040 #404040 #ffffff';
 
-    // Scale the canvas to fill the window
-    const hudH      = document.getElementById('hud').offsetHeight;
-    const menubarH  = document.getElementById('menubar').offsetHeight;
-    const availH    = vh - hudH - menubarH - 16; // 16px for margins/borders
-    const availW    = vw - 12;
-
-    const fitScale  = Math.min(availW / ORIG_W, availH / ORIG_H);
-
-    canvas.style.width   = Math.floor(ORIG_W * fitScale) + 'px';
-    canvas.style.height  = Math.floor(ORIG_H * fitScale) + 'px';
-    canvas.style.margin  = 'auto';
-    canvas.style.display = 'block';
-
-    // Update renderScale so the game logic stays correct
-    renderScale = fitScale * (ORIG_W / worldW);
-
-    maxBtn.textContent = '❐'; // restore icon
+    maxBtn.textContent = '2'; // restore icon (Marlett restore)
     isMaximized = true;
   }
 
   function applyRestore() {
-    wrapper.style.position   = '';
-    wrapper.style.top        = '';
-    wrapper.style.left       = '';
-    wrapper.style.width      = '';
-    wrapper.style.height     = '';
-    wrapper.style.zIndex     = '';
-    wrapper.style.margin     = '';
-    wrapper.style.border     = '';
-    wrapper.style.borderColor = '';
+    wrapper.style.position      = '';
+    wrapper.style.top           = '';
+    wrapper.style.left          = '';
+    wrapper.style.transform     = '';
+    wrapper.style.transformOrigin = '';
+    wrapper.style.zIndex        = '';
+    wrapper.style.margin        = '';
 
-    canvas.style.width   = '';
-    canvas.style.height  = '';
-    canvas.style.margin  = '';
-    canvas.style.display = '';
-
-    // Restore renderScale
-    renderScale = CFG.W / worldW;
-
-    maxBtn.textContent = '◻'; // maximize icon
+    maxBtn.textContent = '1'; // maximize icon (Marlett)
     isMaximized = false;
   }
 
   maxBtn.addEventListener('click', function() {
-    if (isMaximized) {
-      applyRestore();
-    } else {
-      applyMaximize();
-    }
+    if (isMaximized) applyRestore();
+    else             applyMaximize();
   });
 
-  // Re-apply on window resize if maximized
   window.addEventListener('resize', function() {
     if (isMaximized) applyMaximize();
   });
 })();
-    document.getElementById('hud-min').addEventListener('click', function() {
-  const canvas = document.getElementById('c');
+
+document.getElementById('hud-min').addEventListener('click', function() {
+  const canvas  = document.getElementById('c');
   const menubar = document.getElementById('menubar');
   const isHidden = canvas.style.display === 'none';
-  canvas.style.display = isHidden ? '' : 'none';
+  canvas.style.display  = isHidden ? '' : 'none';
   menubar.style.display = isHidden ? '' : 'none';
   const overlays = ['overlay','item-choice','floor-transition','pause-menu','msg','keybind-screen'];
   overlays.forEach(id => {
