@@ -43,8 +43,8 @@ const BT_UTENSIL = new BTSelector(
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
 
     // ── Body drifts toward player ──
-  const UTENSIL_STOP_DIST = 110;
-const driftMult = dist > UTENSIL_STOP_DIST ? 0.28 : (dist > 60 ? 0.04 : -0.12);
+  const UTENSIL_STOP_DIST = 160;
+const driftMult = dist > UTENSIL_STOP_DIST ? 0.28 : (dist > 100 ? 0.04 : -0.18);
 vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * phy.speed * driftMult;
 vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * phy.speed * driftMult;
     const spd = Math.hypot(vel.vx, vel.vy);
@@ -1060,7 +1060,7 @@ if (ai.hatState === 'RIDING') {
     const bOrient = (hai && typeof hai.balloonOrient === 'number') ? hai.balloonOrient : 0;
     // The balloon sprite's "top" (nozzle) is at angle bOrient - PI/2 in world space
     // We want the hat on the nozzle side (opposite the knot)
-    const RIDE_DIST = 28;
+    const RIDE_DIST = 45;
     // drawWaterBalloon rotates the canvas by (orientAngle + PI/2).
     // The knot is at the bottom (+Y) of the unrotated sprite, so in world space
     // the knot sits at angle: (bOrient + PI/2) + PI/2  =  bOrient + PI
