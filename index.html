@@ -132,30 +132,7 @@ canvas {
   margin: 4px;
 }
 
-/* Status bar */
-#bottom-bar {
-  background: #c0c0c0;
-  border-top: 1px solid #808080;
-  padding: 2px 8px;
-  width: 700px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 22px;
-  gap: 4px;
-}
 
-/* Status bar panels (sunken) */
-#bottom-bar span {
-  font-family: 'Fixedsys', monospace;
-  font-size: 11px;
-  color: #000;
-  background: #c0c0c0;
-  border: 1px solid;
-  border-color: #808080 #ffffff #ffffff #808080;
-  padding: 1px 6px;
-  flex: 1;
-}
   #overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -417,13 +394,7 @@ canvas {
   </span>
 </div>
   <canvas id="c" width="700" height="460"></canvas>
- <div id="bottom-bar">
-  <span>HP: <span id="health-num">100</span></span>
-  <span>AMMO: <span id="ammo-val">8/8</span></span>
-  <span>WAVE: <span id="wave-val">1</span></span>
-  <span>SCORE: <span id="score-val">0</span></span>
-  <span id="bottom-hint" style="flex:3">WASD:MOVE | MOUSE:AIM | CLICK:SHOOT</span>
-</div>
+ 
   </div>
   <div id="item-choice">
     <h2>WAVE CLEAR!<br>CHOOSE AN ITEM</h2>
