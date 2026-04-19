@@ -571,7 +571,7 @@ canvas {
         <!-- Buttons -->
         <div style="display:flex; gap:6px; justify-content:flex-end;">
           <button id="pause-keybind-btn" class="w2k-btn" onclick="openKeybindScreen()">Keybinds</button>
-          <button class="w2k-btn" style="font-weight:bold;" onclick="togglePause()">Resume</button>
+          <button class="w2k-btn" onclick="togglePause()">Resume</button>
           <button class="w2k-btn" onclick="(()=>{document.getElementById('pause-menu').style.display='none'; isPaused=false; gameRunning=false; document.getElementById('overlay').style.display='flex';})()">Quit</button>
         </div>
         <div style="font-size:10px; color:#666; font-family:'MS Sans Serif',Arial,sans-serif; text-align:center;">Press <b>P</b> to resume &nbsp;·&nbsp; Press <b>ESC</b> to quit to title</div>
