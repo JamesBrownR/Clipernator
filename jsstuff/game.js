@@ -88,7 +88,6 @@ function initGameState() {
     pendingChoice: false,
     heldGiftBox: null,
     forkGrabbed: false,
-   
 
     // Item flags
     bouncyHouse: false,
@@ -126,7 +125,6 @@ function initGameState() {
 
     // Boss
     bossId: null, bossActive: false,
-    
 
     // Floor tracking
     floor: 1,
@@ -146,7 +144,6 @@ function initGameState() {
     cursedSpinTimer: 0,
     drivingCar: null,
     drivingCarTimer: 0,
-   
   };
 
   const pId = ECS.createEntity();
@@ -163,7 +160,6 @@ function updateHUD() {
   document.getElementById('score-val').textContent = gs.score;
   document.getElementById('health-bar').style.width =
     Math.max(0, (gs.health / gs.maxHealth) * 100) + '%';
-  // Turn bar red when low
   document.getElementById('health-bar').style.background =
     gs.health < gs.maxHealth * 0.3 ? '#cc0000' : '#00aa00';
   document.getElementById('health-num').textContent = Math.max(0, gs.health);
@@ -220,37 +216,37 @@ function togglePause() {
 
 function renderPauseMenu() {
   const statsEl = document.getElementById('pause-stat-lines');
-  const dmg = gs.hasQuadCake ? 4 : gs.hasTripleCake ? 3 : gs.hasDoubleCake ? 2 : 1;
-const dmgLabel = gs.hasQuadCake ? '4.00x (50% dud)' : gs.hasTripleCake ? '3.00x (45% dud)' :
-                 gs.hasDoubleCake ? '2.00x (40% dud)' : '1.00x';
- const speedMult = gs.speedBoostTimer > 0 ? (gs.speedBoostMult || CFG.SPEED_BOOST_MULT) : 
-                    gs.hasTightropeBoots ? 1.25 : 1;
-  const speedVal = speedMult.toFixed(2) + 'x';
+  const dmgLabel = gs.hasQuadCake ? '4x (50% dud)' : gs.hasTripleCake ? '3x (45% dud)' :
+                   gs.hasDoubleCake ? '2x (40% dud)' : '1x';
+  const speedMult = gs.speedBoostTimer > 0 ? (gs.speedBoostMult || CFG.SPEED_BOOST_MULT) :
+                    gs.hasTightropeBoots ? 3.00 : 1;
+  const speedVal  = speedMult.toFixed(2) + 'x';
   const bulletsPerShot = CFG.BULLET_COUNT + (gs.hasCursedCandles ? gs.candlesLit * 2 : 0);
 
-  let statLines = [
-    `HP .............. ${Math.max(0, gs.health)} / ${gs.maxHealth}`,
-    `WAVE ............ ${gs.wave}`,
-    `SCORE ........... ${gs.score}`,
-    `DAMAGE .......... ${dmgLabel}`,
-   `SPEED ...... ${speedVal}`,   
-   `CLIP SIZE ....... ${gs.maxAmmo}`,
-    `BULLETS/SHOT .... ${bulletsPerShot}`,
+  let lines = [
+    `HP .............. ${Math.max(0,gs.health)} / ${gs.maxHealth}`,
+    `Wave ............ ${gs.wave}`,
+    `Score ........... ${gs.score}`,
+    `Damage .......... ${dmgLabel}`,
+    `Speed ........... ${speedVal}`,
+    `Clip Size ....... ${gs.maxAmmo}`,
+    `Bullets/Shot .... ${bulletsPerShot}`,
   ];
-  if (gs.hasCursedCandles)  statLines.push(`CANDLES ......... ${gs.candlesLit}/5 LIT`);
-  if (gs.hasFlawlessBaking) statLines.push(`FLAWLESS WAVE ... ${gs.flawlessThisWave ? 'YES ✓' : 'NO ✗'}`);
-  if (gs.hasDash)           statLines.push(`DASH CHARGES .... ${gs.dashCharges}/${gs.dashMaxCharges}`);
-  if (gs.hasShakeFizzlePop) statLines.push(`SFP METER ....... ${gs.sfpFull ? 'FULL! ⚡' : Math.round((gs.sfpMeter / gs.sfpMax) * 100) + '%'}`);
-  statsEl.innerHTML = statLines.join('<br>');
+  if (gs.hasCursedCandles)  lines.push(`Candles ......... ${gs.candlesLit}/5 lit`);
+  if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 'YES ✓' : 'NO ✗'}`);
+  if (gs.hasDash)           lines.push(`Dash Charges .... ${gs.dashCharges}/${gs.dashMaxCharges}`);
+  if (gs.hasShakeFizzlePop) lines.push(`SFP Meter ....... ${gs.sfpFull ? 'FULL ⚡' : Math.round((gs.sfpMeter/gs.sfpMax)*100)+'%'}`);
 
+  statsEl.textContent = lines.join('\n');
+
+  // Items — Win2k icon squares with tooltip
   const container = document.getElementById('pause-items');
   container.innerHTML = '';
 
   if (gs.unlockedItems.length === 0) {
-    const empty = document.createElement('div');
-    empty.style.color = '#555';
-    empty.style.fontSize = '8px';
-    empty.textContent = '(No items unlocked yet)';
+    const empty = document.createElement('span');
+    empty.style.cssText = 'font-size:10px; color:#666; font-family:"Microsoft Sans Serif","MS Sans Serif",Arial,sans-serif;';
+    empty.textContent = '(No items yet)';
     container.appendChild(empty);
   } else {
     gs.unlockedItems.forEach(id => {
@@ -260,55 +256,16 @@ const dmgLabel = gs.hasQuadCake ? '4.00x (50% dud)' : gs.hasTripleCake ? '3.00x 
       if (!def) return;
 
       const card = document.createElement('div');
-      card.style.cssText = `
-        position:relative; width:54px; height:54px;
-        border:1px solid #00cc44; background:#001a10;
-        display:flex; align-items:center; justify-content:center;
-        font-size:22px; cursor:default;
-        box-shadow:0 0 8px rgba(0,255,100,0.2);
-      `;
-      if (id === 'doubledCake')    { card.style.borderColor='#4488ff';  card.style.background='#001133'; }
-      else if (id === 'tripleCake') { card.style.borderColor='#cc44ff'; card.style.background='#220022'; }
-      else if (id === 'quadCake')   { card.style.borderColor='#ff3333'; card.style.background='#220000'; }
-      else if (id === 'cursedCandles') { card.style.borderColor='#ff8800'; card.style.background='#1a0a00'; }
-
+      card.className = 'pause-item-card';
       card.textContent = def.icon;
 
-      // Tooltip on hover
       const tip = document.createElement('div');
-      tip.style.cssText = `
-        display:none; position:absolute; bottom:calc(100% + 6px); left:50%;
-        transform:translateX(-50%);
-        background:#001a10; border:1px solid #00cc44;
-        padding:8px 10px; white-space:nowrap; z-index:99;
-        font-family:'Press Start 2P',monospace; font-size:6px;
-        color:var(--green); line-height:1.9; text-align:left;
-        box-shadow:0 0 12px rgba(0,255,100,0.3);
-        pointer-events:none;
-      `;
-      tip.innerHTML = `<span style="color:var(--yellow)">${def.label.replace(/\n/g,' ')}</span><br>${def.desc.replace(/\n/g,'<br>')}`;
+      tip.className = 'tip';
+      tip.textContent = def.label.replace(/\n/g,' ');
       card.appendChild(tip);
-      card.addEventListener('mouseenter', () => { tip.style.display = 'block'; });
-      card.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
 
       container.appendChild(card);
     });
-  }
-
-  // Keybind button
-  let kbBtn = document.getElementById('pause-keybind-btn');
-  if (!kbBtn) {
-    kbBtn = document.createElement('button');
-    kbBtn.id = 'pause-keybind-btn';
-    kbBtn.style.cssText = `
-      font-family:'Press Start 2P',monospace; font-size:8px;
-      color:#000; background:var(--green); border:none;
-      padding:10px 22px; cursor:pointer;
-      box-shadow:3px 3px 0 var(--green2); margin-top:14px; letter-spacing:1px;
-    `;
-    kbBtn.textContent = 'KEYBINDS';
-    kbBtn.addEventListener('click', openKeybindScreen);
-    document.getElementById('pause-menu').appendChild(kbBtn);
   }
 }
 
@@ -337,23 +294,23 @@ function renderKeybindRows() {
 
   for (const action of Object.keys(KEYBIND_DEFAULTS)) {
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:24px;';
+    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:12px; font-family:"Microsoft Sans Serif","MS Sans Serif",Arial,sans-serif;';
 
     const label = document.createElement('span');
-    label.style.cssText = 'font-size:7px; color:var(--green); letter-spacing:1px;';
+    label.style.cssText = 'font-size:11px; color:#000; min-width:150px;';
     label.textContent = KEYBIND_LABELS[action];
 
     const btn = document.createElement('button');
     btn.id = `kb-btn-${action}`;
     btn.style.cssText = `
-      font-family:'Press Start 2P',monospace; font-size:7px;
-      color:var(--yellow); background:#002200; border:1px solid var(--gray);
-      padding:5px 12px; cursor:pointer; min-width:80px; text-align:center;
-      letter-spacing:1px; transition:border-color 0.15s, color 0.15s;
+      font-family:'Microsoft Sans Serif','MS Sans Serif',Arial,sans-serif;
+      font-size:11px; color:#000; background:#d4d0c8;
+      border-top:2px solid #fff; border-left:2px solid #fff;
+      border-right:2px solid #404040; border-bottom:2px solid #404040;
+      padding:2px 10px; cursor:pointer; min-width:80px; text-align:center;
     `;
     btn.textContent = formatKey(KEYBINDS[action]);
     btn.dataset.action = action;
-
     btn.addEventListener('click', () => startKeybindListen(action));
 
     row.appendChild(label);
@@ -366,11 +323,10 @@ function startKeybindListen(action) {
   cancelKeybindListen();
   _listeningAction = action;
 
-  // Highlight the button being remapped
   const btn = document.getElementById(`kb-btn-${action}`);
   if (btn) {
-    btn.style.color = '#ff4400';
-    btn.style.borderColor = '#ff4400';
+    btn.style.background = '#000080';
+    btn.style.color = '#fff';
     btn.textContent = '...';
   }
 
@@ -380,28 +336,20 @@ function startKeybindListen(action) {
   _keybindKeyHandler = (e) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (e.key === 'Escape') {
-      cancelKeybindListen();
-      return;
-    }
+    if (e.key === 'Escape') { cancelKeybindListen(); return; }
 
     const newKey = e.key;
-
-    // If another action already uses this key, swap them
     for (const other of Object.keys(KEYBINDS)) {
       if (other !== action && KEYBINDS[other] === newKey) {
-        KEYBINDS[other] = KEYBINDS[action]; // swap
+        KEYBINDS[other] = KEYBINDS[action];
         const otherBtn = document.getElementById(`kb-btn-${other}`);
         if (otherBtn) otherBtn.textContent = formatKey(KEYBINDS[other]);
       }
     }
-
     KEYBINDS[action] = newKey;
     saveKeybinds();
-
     cancelKeybindListen();
-    renderKeybindRows(); // full re-render to reflect all changes cleanly
+    renderKeybindRows();
   };
 
   document.addEventListener('keydown', _keybindKeyHandler, { capture: true });
@@ -418,7 +366,6 @@ function cancelKeybindListen() {
 }
 
 document.getElementById('keybind-back-btn').addEventListener('click', closeKeybindScreen);
-
 document.getElementById('keybind-reset-btn').addEventListener('click', () => {
   for (const k of Object.keys(KEYBIND_DEFAULTS)) KEYBINDS[k] = KEYBIND_DEFAULTS[k];
   saveKeybinds();
@@ -498,10 +445,7 @@ canvas.addEventListener('contextmenu', e => {
   tryPickUpGiftBox();
 });
 
-
-
 document.addEventListener('keydown', e => {
-  // Keybind screen intercepts its own keys via capture listener — don't handle here
   if (document.getElementById('keybind-screen').style.display === 'flex') return;
 
   if (e.key === KEYBINDS.pause) {
@@ -526,8 +470,7 @@ document.addEventListener('keydown', e => {
   if (e.key === KEYBINDS.reload)     { startReload(); }
   if (e.key === KEYBINDS.prizeWheel) { spinPrizeWheel(); e.preventDefault(); }
   if (e.key === KEYBINDS.dash)       { tryDash(); e.preventDefault(); }
- // In the keydown handler, after the dash line:
-if (e.key === KEYBINDS.glowstick) { swingGlowsticks(); e.preventDefault(); }
+  if (e.key === KEYBINDS.glowstick)  { swingGlowsticks(); e.preventDefault(); }
 });
 
 document.addEventListener('keyup', e => { keys[e.key] = false; });
@@ -555,7 +498,82 @@ document.getElementById('floor-btn').addEventListener('click', () => {
   loop();
 });
 
-// Animate circus border on floor 2
-setInterval(() => { 
-  if (typeof gs !== 'undefined' && gs && gs.floor === 2 && gameRunning) updateHUD(); 
+// ================================================================
+// ITEM CHOICE (uses Win2k card style from index.html CSS)
+// ================================================================
+function offerItemChoice() {
+  gs.pendingChoice = true; gameRunning = false; cancelAnimationFrame(animId); draw();
+  const choiceEl = document.getElementById('item-choice');
+  const cardsEl  = document.getElementById('item-cards');
+  cardsEl.innerHTML = '';
+
+  const floorPool = gs.floor === 2 ? FLOOR2_ITEM_IDS : ALL_ITEM_IDS;
+  let floorAvailable = floorPool.filter(id => {
+    if (id==='doubledCake' && (gs.hasTripleCake||gs.hasQuadCake)) return false;
+    if (id==='tripleCake'  && (!gs.hasDoubleCake||(gs.hasTripleCake||gs.hasQuadCake))) return false;
+    if (id==='quadCake'    && (!gs.hasTripleCake||gs.hasQuadCake)) return false;
+    return !gs.unlockedItems.includes(id);
+  });
+  const upgradePool = [];
+  if (gs.hasClownish && !gs.hasClownishUpgrade)   upgradePool.push('clownishUpgrade');
+  if (gs.hasPopcornBucket && !gs.hasPopcornUpgrade) upgradePool.push('popcornUpgrade');
+  floorAvailable = [...floorAvailable, ...upgradePool];
+  const generalAvailable = GENERAL_ITEM_IDS.filter(id => !gs.unlockedItems.includes(id));
+
+  let offered = [], fi = 0, gi = 0;
+  const shuffledFloor   = shuffle(floorAvailable);
+  const shuffledGeneral = shuffle(generalAvailable);
+  const slotCount = gs.floor === 2 ? 4 : 3;
+
+  for (let slot = 0; slot < slotCount; slot++) {
+    const useGeneral = generalAvailable.length > 0 && gi < shuffledGeneral.length && Math.random() < 0.20;
+    if (useGeneral)                       offered.push(shuffledGeneral[gi++]);
+    else if (fi < shuffledFloor.length)   offered.push(shuffledFloor[fi++]);
+    else if (gi < shuffledGeneral.length) offered.push(shuffledGeneral[gi++]);
+  }
+  offered = [...new Set(offered)].slice(0, slotCount);
+
+  for (const id of offered) {
+    const def     = ITEM_DEFS[id];
+    const isOwned = gs.unlockedItems.includes(id);
+    const card    = document.createElement('div');
+    card.className = `item-card${isOwned ? ' already-owned' : ''}`;
+
+    card.innerHTML = `
+      <div class="ic-icon">${def.icon}</div>
+      <div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div>
+      <div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned ? '<br><i>(owned)</i>' : ''}</div>
+    `;
+
+    if (!isOwned) {
+      card.addEventListener('click', () => {
+        gs.unlockedItems.push(id);
+        def.effect(gs);
+        choiceEl.style.display = 'none';
+        gs.pendingChoice = false;
+        gameRunning = true;
+        trySpawnFieldItems();
+        updateHUD();
+        loop();
+      });
+    }
+    cardsEl.appendChild(card);
+  }
+
+  choiceEl.style.display = 'flex';
+  const skipBtn  = document.getElementById('skip-btn');
+  const allOwned = offered.length === 0 || offered.every(id => gs.unlockedItems.includes(id));
+  skipBtn.style.display = allOwned ? 'block' : 'none';
+  skipBtn.onclick = () => {
+    choiceEl.style.display = 'none';
+    gs.pendingChoice = false;
+    gameRunning = true;
+    trySpawnFieldItems();
+    updateHUD();
+    loop();
+  };
+}
+
+setInterval(() => {
+  if (typeof gs !== 'undefined' && gs && gs.floor === 2 && gameRunning) updateHUD();
 }, 300);
