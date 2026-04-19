@@ -346,28 +346,21 @@ ctx.rotate(angle);
 
 function drawGiftBox(epos, ehp, ai, frozen) {
   const { x, y } = epos;
-  const COLS = 4, ROWS = 4, TOTAL_FRAMES = 16;
   const DRAW_SIZE = 64;
 
-  const frameW = giftBoxIdleSheet.naturalWidth  / COLS;
-  const frameH = giftBoxIdleSheet.naturalHeight / ROWS;
-
-  // Advance animation: ~8 ticks per frame
-  if (ai._gbAnimTick === undefined) { ai._gbAnimTick = 0; ai._gbAnimFrame = 0; }
-  ai._gbAnimTick++;
-  if (ai._gbAnimTick >= 8) { ai._gbAnimTick = 0; ai._gbAnimFrame = (ai._gbAnimFrame + 1) % TOTAL_FRAMES; }
-
-  const frame = ai._gbAnimFrame;
-  const col = frame % COLS;
-  const row = Math.floor(frame / COLS);
-
-  // Windup pulse
   const windupRatio = Math.min(1, (ai.windupTimer || 0) / 120);
-  const pulse = 1 + Math.sin(Date.now() / 80) * 0.07 * windupRatio;
+  const usingWindup = windupRatio > 0 || (ai.thrown);
+
+  // Shaking: increases with windup progress
+  const shakeAmt = windupRatio * 7;
+  const sx = usingWindup ? (Math.random() - 0.5) * shakeAmt : 0;
+  const sy = usingWindup ? (Math.random() - 0.5) * shakeAmt : 0;
+
+  const drawX = x + sx;
+  const drawY = y + sy;
 
   ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(pulse, pulse);
+  ctx.translate(drawX, drawY);
 
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
   else {
@@ -375,9 +368,33 @@ function drawGiftBox(epos, ehp, ai, frozen) {
     ctx.shadowBlur = 10 + windupRatio * 18;
   }
 
-  if (giftBoxIdleSheet.complete && giftBoxIdleSheet.naturalWidth > 0) {
+  const WINDUP_FRAMES = 8;
+  const WINDUP_COLS = 3;
+
+  if (usingWindup && giftBoxWindUpSheet.complete && giftBoxWindUpSheet.naturalWidth > 0) {
+    // Map windupRatio (0→1) to frame index (0→7), forward or reverse
+    const frameIndex = Math.round(windupRatio * (WINDUP_FRAMES - 1));
+    const frameW = Math.floor(giftBoxWindUpSheet.naturalWidth / WINDUP_COLS);
+    const frameH = Math.floor(giftBoxWindUpSheet.naturalHeight / Math.ceil(WINDUP_FRAMES / WINDUP_COLS));
+    const col = frameIndex % WINDUP_COLS;
+    const row = Math.floor(frameIndex / WINDUP_COLS);
     ctx.drawImage(
-      giftBoxIdleSheet,
+      giftBoxWindUpSheet,
+      col * frameW, row * frameH, frameW, frameH,
+      -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
+    );
+  } else if (giftBoxIdleSheet.complete && giftBoxIdleSheet.naturalWidth > 0) {
+    // Use idle sheet when not winding up
+    const COLS = 4, ROWS = 4, TOTAL_FRAMES = 16;
+    const frameW = giftBoxIdleSheet.naturalWidth / COLS;
+    const frameH = giftBoxIdleSheet.naturalHeight / ROWS;
+    if (ai._gbAnimTick === undefined) { ai._gbAnimTick = 0; ai._gbAnimFrame = 0; }
+    ai._gbAnimTick++;
+    if (ai._gbAnimTick >= 8) { ai._gbAnimTick = 0; ai._gbAnimFrame = (ai._gbAnimFrame + 1) % TOTAL_FRAMES; }
+    const frame = ai._gbAnimFrame;
+    const col = frame % COLS;
+    const row = Math.floor(frame / COLS);
+    ctx.drawImage(giftBoxIdleSheet,
       col * frameW, row * frameH, frameW, frameH,
       -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
     );
