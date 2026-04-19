@@ -296,7 +296,7 @@ function drawPartyHat(epos, ehp, ai, frozen) {
     // knotAngle in world space = bOrient + PI (rear of balloon)
     // Hat's bottom should point toward the knot, so rotate sprite to face that direction
     const knotAngle = bOrient + Math.PI;
-    angle = knotAngle - Math.PI / 2; // +PI/2 because hat sprite points "up" by default
+    angle = knotAngle + Math.PI / 2; // +PI/2 because hat sprite points "up" by default
   }
 }
 
