@@ -6,9 +6,16 @@
 <style>  
 
   @font-face {
+  font-family: 'MS Sans Serif';
+  src: url('fonts/micross.ttf') format('truetype');
+}
+
+  @font-face {
   font-family: 'Fixedsys';
   src: url('fonts/FSEX300.ttf') format('truetype');
 }
+
+  
   
   :root {
     --bg: #0a0a0f;
@@ -357,38 +364,36 @@ canvas {
     <button id="hud-close" id="hud-close" title="Close">&#x2715;</button>
   </div>
 </div>
- <div id="menubar" style="
+<!-- REPLACE the menubar div with this: -->
+<div id="menubar" style="
   background:#c0c0c0; 
   border-bottom:1px solid #808080; 
-  padding:1px 2px; 
+  padding:1px 4px; 
   width:700px; 
   height:19px;
   display:flex; 
   align-items:center; 
-  gap:0;
-  font-family:Fixedsys,sans-serif; 
+  gap:8px;
+  font-family:'Microsoft Sans Serif','MS Sans Serif',Arial,sans-serif;
   font-size:11px;
 ">
-  <span class="menu-item">File</span>
-  <span class="menu-item">Edit</span>
-  <span class="menu-item">View</span>
-  <span class="menu-item">Favorites</span>
-  <span class="menu-item">Tools</span>
-  <span class="menu-item">Help</span>
+  <span style="color:#000;">HP:</span>
+  <div style="display:inline-flex; align-items:center; gap:3px;">
+    <div style="width:80px; height:10px; border:1px solid; border-color:#808080 #fff #fff #808080; background:#c0c0c0; position:relative; overflow:hidden;">
+      <div id="health-bar" style="height:100%; width:100%; background:#00aa00; transition:width 0.1s;"></div>
+    </div>
+    <span id="health-num" style="color:#000; font-size:10px;">100</span>
+  </div>
+  <span style="color:#808080;">|</span>
+  <span style="color:#000;">Ammo: <span id="ammo-val">8/8</span></span>
+  <span style="color:#808080;">|</span>
+  <span style="color:#000;">Wave: <span id="wave-val">1</span></span>
+  <span style="color:#808080;">|</span>
+  <span style="color:#000;">Score: <span id="score-val">0</span></span>
+  <span id="ticket-hud" style="display:none; color:#000;">| 🎟️ <span id="ticket-val">0</span></span>
 </div>
 
-<div id="toolbar" style="
-  background:#c0c0c0; 
-  border-bottom:1px solid #808080; 
-  padding:2px 4px; 
-  width:700px;
-  height:26px;
-  display:flex; 
-  align-items:center; 
-  gap:4px;
-  font-family:Fixedsys,sans-serif;
-  font-size:11px;
-">
+
   <span style="border:1px solid; border-color:#808080 #fff #fff #808080; padding:1px 6px; background:white; font-size:11px; flex:1">
     HP: <span id="health-num">100</span> &nbsp;|&nbsp; AMMO: <span id="ammo-val">8/8</span> &nbsp;|&nbsp; WAVE: <span id="wave-val">1</span> &nbsp;|&nbsp; SCORE: <span id="score-val">0</span>
   </span>
