@@ -208,6 +208,9 @@ const WB_SHOOT_COLS  = 3;  WB_SHOOT_FW  = 1024; // 3072-wide sheet
 const WB_SHOOT_FRAMES = 8;
 const WB_FRAME_H = 1024; // same for all sheets
 
+const giftBoxIdleSheet = new Image();
+giftBoxIdleSheet.src = '/Clipernator/sprites/enemies/GiftBox/GiftBoxIdleSheet.webp';
+
 // ================================================================
 // KEYBINDS
 // ================================================================
