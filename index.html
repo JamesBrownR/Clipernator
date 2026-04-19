@@ -465,16 +465,50 @@ canvas {
   <canvas id="c" width="700" height="460"></canvas>
 
   <!-- Start / Game Over overlay -->
-  <div id="overlay" style="display:flex; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); flex-direction:column; align-items:center; justify-content:center; z-index:50;">
-    <h1 style="font-size:22px; color:var(--green); text-shadow:0 0 20px var(--green), 0 0 40px var(--green2); margin-bottom:10px; text-align:center; line-height:1.6; animation:flicker 3s infinite;">CLIPBLAST<br>PARTY HUNTER</h1>
-    <div class="sub" style="font-size:8px; color:var(--yellow); text-shadow:0 0 8px var(--yellow); margin-bottom:24px; text-align:center; line-height:2.2;">A PAPERCLIP. A SHOTGUN.<br>AN ETERNAL CRAVING FOR BIRTHDAY PARTIES.</div>
-    <div class="controls" style="font-size:7px; color:var(--green2); line-height:2.4; text-align:left; margin-bottom:24px; border:1px solid var(--gray); padding:12px 20px; text-shadow:0 0 4px var(--green2);">
-      WASD — MOVE &nbsp;&nbsp; MOUSE — AIM &nbsp;&nbsp; CLICK — SHOOT<br>
-      R — RELOAD &nbsp;&nbsp; SHIFT — DASH &nbsp;&nbsp; F / RIGHT-CLICK — GLOWSTICK<br>
-      P — PAUSE
+ <div id="overlay" style="display:flex; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,128,0.18); flex-direction:column; align-items:center; justify-content:center; z-index:50; background:#008080;">
+  <div style="background:#d4d0c8; border-top:2px solid #fff; border-left:2px solid #fff; border-right:2px solid #404040; border-bottom:2px solid #404040; box-shadow:1px 1px 0 #000, 2px 2px 14px rgba(0,0,0,0.5); width:420px; font-family:'Microsoft Sans Serif','MS Sans Serif',Arial,sans-serif; font-size:11px;">
+    <!-- Titlebar -->
+    <div style="background:linear-gradient(to right,#0a246a,#3a6ea8); padding:2px 4px; height:18px; display:flex; align-items:center; justify-content:space-between; user-select:none;">
+      <span style="color:#fff; font-size:11px; font-weight:bold; font-family:'Microsoft Sans Serif',Arial,sans-serif; display:flex; align-items:center; gap:4px;">
+        <img src="sprites/Clippy.png" style="width:14px; height:14px; image-rendering:pixelated;" onerror="this.style.display='none'">
+        CLIPBLAST.EXE
+      </span>
+      <div style="display:flex; gap:2px;">
+        <button style="font-family:'Marlett',Arial,sans-serif; font-size:9px; width:16px; height:14px; background:#d4d0c8; border-top:1px solid #fff; border-left:1px solid #fff; border-right:1px solid #404040; border-bottom:1px solid #404040; cursor:default; color:#000; padding:0; line-height:14px;">0</button>
+        <button style="font-family:'Marlett',Arial,sans-serif; font-size:9px; width:16px; height:14px; background:#d4d0c8; border-top:1px solid #fff; border-left:1px solid #fff; border-right:1px solid #404040; border-bottom:1px solid #404040; cursor:default; color:#000; padding:0; line-height:14px;">1</button>
+        <button style="font-family:'Marlett',Arial,sans-serif; font-size:9px; width:16px; height:14px; background:#d4d0c8; border-top:1px solid #fff; border-left:1px solid #fff; border-right:1px solid #404040; border-bottom:1px solid #404040; cursor:default; color:#000; padding:0; line-height:14px;">r</button>
+      </div>
     </div>
-    <button id="startBtn" class="start-btn">PLAY GAME</button>
+    <!-- Body -->
+    <div style="padding:16px 18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start;">
+      <!-- Icon + title row -->
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-size:36px; line-height:1;">📎</span>
+        <div>
+          <div style="font-size:14px; font-weight:bold; color:#000; font-family:'Microsoft Sans Serif','MS Sans Serif',Arial,sans-serif;">CLIPBLAST: Party Hunter</div>
+          <div style="font-size:11px; color:#444; margin-top:2px; font-family:'Microsoft Sans Serif','MS Sans Serif',Arial,sans-serif;">A paperclip. A shotgun. An eternal craving for birthday parties.</div>
+        </div>
+      </div>
+      <!-- Separator -->
+      <div style="height:1px; background:#808080; border-bottom:1px solid #fff; width:100%;"></div>
+      <!-- Controls -->
+      <fieldset style="border:1px solid #808080; padding:4px 10px 8px 10px; margin:0; width:100%;">
+        <legend style="font-size:11px; color:#000; padding:0 4px; font-family:'Microsoft Sans Serif',Arial,sans-serif;">Controls</legend>
+        <div style="font-family:'Microsoft Sans Serif','MS Sans Serif',Arial,sans-serif; font-size:11px; color:#000; line-height:1.8;">
+          <b>WASD</b> — Move &nbsp;&nbsp;&nbsp; <b>Mouse</b> — Aim &nbsp;&nbsp;&nbsp; <b>Click</b> — Shoot<br>
+          <b>R</b> — Reload &nbsp;&nbsp;&nbsp; <b>Shift</b> — Dash &nbsp;&nbsp;&nbsp; <b>F / Right-click</b> — Glowstick<br>
+          <b>P</b> — Pause
+        </div>
+      </fieldset>
+      <!-- Separator -->
+      <div style="height:1px; background:#808080; border-bottom:1px solid #fff; width:100%;"></div>
+      <!-- Button row -->
+      <div style="display:flex; justify-content:flex-end; width:100%; gap:6px;">
+        <button id="startBtn" class="w2k-btn" style="font-weight:bold; min-width:90px; padding:4px 18px;">Play Game</button>
+      </div>
+    </div>
   </div>
+</div>
 
   <!-- ── Item Choice — Win2k dialog ── -->
   <div id="item-choice">
@@ -514,16 +548,22 @@ canvas {
     <div style="background:#d4d0c8; border-top:2px solid #fff; border-left:2px solid #fff; border-right:2px solid #404040; border-bottom:2px solid #404040; box-shadow:1px 1px 0 #000, 2px 2px 10px rgba(0,0,0,0.55); width:440px; font-family:'Microsoft Sans Serif','MS Sans Serif',Arial,sans-serif; font-size:11px;">
       <!-- Titlebar -->
       <div style="background:linear-gradient(to right,#0a246a,#3a6ea8); padding:2px 4px; height:18px; display:flex; align-items:center; justify-content:space-between; user-select:none;">
-        <span style="color:#fff; font-size:11px; font-weight:bold; font-family:'Microsoft Sans Serif',Arial,sans-serif;">⏸ Game Paused</span>
-        <button onclick="togglePause()" style="font-family:'Marlett',Arial,sans-serif; font-size:9px; width:16px; height:14px; background:#d4d0c8; border-top:1px solid #fff; border-left:1px solid #fff; border-right:1px solid #404040; border-bottom:1px solid #404040; cursor:pointer; color:#000; padding:0; line-height:14px;">&#x72;</button>
-      </div>
+  <span style="color:#fff; font-size:11px; font-weight:bold; font-family:'Microsoft Sans Serif',Arial,sans-serif; display:flex; align-items:center; gap:4px;">
+    <span style="background:#ffaa00; color:#000; font-size:9px; font-weight:bold; width:14px; height:14px; display:inline-flex; align-items:center; justify-content:center; border-top:1px solid #fff; border-left:1px solid #fff; border-right:1px solid #804000; border-bottom:1px solid #804000;">II</span>
+    Game Paused
+  </span>
+  <div style="display:flex; gap:2px;">
+    <button onclick="togglePause()" title="Minimize" style="font-family:'Marlett',Arial,sans-serif; font-size:9px; width:16px; height:14px; background:#d4d0c8; border-top:1px solid #fff; border-left:1px solid #fff; border-right:1px solid #404040; border-bottom:1px solid #404040; cursor:pointer; color:#000; padding:0; line-height:14px;">0</button>
+    <button title="Maximize" style="font-family:'Marlett',Arial,sans-serif; font-size:9px; width:16px; height:14px; background:#d4d0c8; border-top:1px solid #fff; border-left:1px solid #fff; border-right:1px solid #404040; border-bottom:1px solid #404040; cursor:pointer; color:#000; padding:0; line-height:14px;">1</button>
+    <button onclick="togglePause()" title="Close" style="font-family:'Marlett',Arial,sans-serif; font-size:9px; width:16px; height:14px; background:#d4d0c8; border-top:1px solid #fff; border-left:1px solid #fff; border-right:1px solid #404040; border-bottom:1px solid #404040; cursor:pointer; color:#000; padding:0; line-height:14px;">r</button>
+  </div>
+</div>
       <!-- Body -->
       <div style="padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
         <!-- Stats fieldset -->
         <fieldset style="border:1px solid #808080; padding:4px 10px 8px 10px; margin:0;">
           <legend style="font-size:11px; color:#000; padding:0 4px; font-family:'Microsoft Sans Serif',Arial,sans-serif;">Player Stats</legend>
-          <div id="pause-stat-lines" style="font-family:'Fixedsys','Courier New',monospace; font-size:12px; color:#000; line-height:1.5; white-space:pre;"></div>
-        </fieldset>
+<div id="pause-stat-lines" style="font-family:'Microsoft Sans Serif','MS Sans Serif',Arial,sans-serif; font-size:11px; color:#000; line-height:1.6; white-space:pre;"></div>        </fieldset>
         <!-- Items fieldset -->
         <fieldset style="border:1px solid #808080; padding:4px 10px 8px 10px; margin:0;">
           <legend style="font-size:11px; color:#000; padding:0 4px; font-family:'Microsoft Sans Serif',Arial,sans-serif;">Unlocked Items</legend>
