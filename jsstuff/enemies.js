@@ -596,8 +596,8 @@ ai.wbShootTimer -= hatMult / (ai.clownCooldownMult || 1);
           ai.wbFiredShots++;
           const aim = Math.atan2(dy, dx);
         
-          const hasHatNow = !!(ai.hatrider && ECS.has(ai.hatrider, 'pos'));
-          if (hasHat) {
+        const hasHatNow = !!(ai.hatrider && ECS.has(ai.hatrider, 'pos'));
+          if (hasHatNow) {
             // Hat-buffed: fire 4 homing red tears in a spread
             const spreads = [-0.35, -0.12, 0.12, 0.35];
             for (const sa of spreads) {
@@ -610,9 +610,10 @@ ai.wbShootTimer -= hatMult / (ai.clownCooldownMult || 1);
                 life: 160, maxLife: 160,
                 color: '#ff2244',
                 isTear: true,
+                isRedTear: true,
                 homing: true,
                 homingStrength: 0.07,
-                rmDmgMult: 3,
+                rmDmgMult: 4,
               });
             }
             spawnParticles(pos.x, pos.y, '#ff2244', 10);
