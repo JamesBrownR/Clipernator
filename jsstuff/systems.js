@@ -1427,6 +1427,8 @@ if (Math.abs(gs.shakeY) < 0.1) gs.shakeY = 0;
     }
   }
 
+ 
+
   if (gs.partyFreezeTimer>0) gs.partyFreezeTimer--;
   if (gs.speedBoostTimer>0)  gs.speedBoostTimer--;
   if (gs.confettiSlowTimer>0) gs.confettiSlowTimer--;
@@ -1459,6 +1461,18 @@ if (Math.abs(gs.shakeY) < 0.1) gs.shakeY = 0;
       }
     }
   }
+
+ // Clippy intro sequence
+if (gs.clippyIntroLines && !gs.clippyIntroDone) {
+  gs.clippyIntroTimer++;
+  if (gs.clippyIntroTimer >= 210) { // ~3.5 sec per line
+    gs.clippyIntroTimer = 0;
+    gs.clippyIntroLine = (gs.clippyIntroLine || 0) + 1;
+    if (gs.clippyIntroLine >= gs.clippyIntroLines.length) {
+      gs.clippyIntroDone = true;
+    }
+  }
+}
 
   if (gs.hasShakeFizzlePop&&!gs.sfpFull) {
     gs.sfpMeter=Math.min(gs.sfpMax,gs.sfpMeter+1);
