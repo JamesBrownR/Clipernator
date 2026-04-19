@@ -49,50 +49,77 @@ body::before { display: none; }
 
 /* Titlebar */
 #hud {
-  background: linear-gradient(to right, #000080, #1084d0);
-  border-bottom: 1px solid #000;
-  padding: 2px 4px;
+  background: linear-gradient(to right, #000080 0%, #1084d0 100%);
+  padding: 3px 2px 2px 4px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 700px;
-  height: 18px;
+  height: 21px;
+  gap: 2px;
 }
-
-#hud::before { display: none; } /* remove the pseudo-element text */
 
 #hud-title {
-  font-family: 'Fixedsys', monospace;
+  font-family: 'Tahoma', sans-serif;
   font-size: 11px;
-  color: white;
   font-weight: bold;
+  color: white;
   letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-shadow: 1px 1px 0 #000033;
 }
 
-/* Win2k titlebar buttons */
+#hud-controls {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
 #hud-controls button {
-  font-family: 'Marlett', 'Fixedsys', monospace;
+  font-family: 'Marlett', 'Webdings', sans-serif;
   font-size: 9px;
   width: 16px;
   height: 14px;
   background: #c0c0c0;
   border: 1px solid;
-  border-color: #ffffff #808080 #808080 #ffffff;
+  border-color: #ffffff #404040 #404040 #ffffff;
   cursor: pointer;
   padding: 0;
   color: #000;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
 #hud-controls button:active {
-  border-color: #808080 #ffffff #ffffff #808080;
-  padding: 1px 0 0 1px;
+  border-color: #404040 #ffffff #ffffff #404040;
 }
+
+/* Close button is slightly wider and has a red tint on hover */
+#hud-close {
+  background: #c0c0c0 !important;
+}
+#hud-close:hover { background: #ff4444 !important; color: white !important; }
 
  #toolbar { 
    height: 26px;
   font-family: 'Marlett', 'Fixedsys', monospace;
 font-size: 11px;
  }
+  .menu-item {
+  font-family: Tahoma, sans-serif;
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: #000;
+}
+.menu-item:hover {
+  background: #000080;
+  color: white;
+}
 
 /* Canvas area — sunken inset */
 canvas {
@@ -343,17 +370,52 @@ canvas {
 <body>
 <div id="wrapper">
 <div id="hud">
-  <span id="hud-title">📎 CLIPBLAST.EXE</span>
+  <span id="hud-title">
+    <img src="data:image/gif;base64,R0lGODlhEAAQAIAAAP8AAP///yH5BAAAAAAALAAAAAAQABAAAAIjhI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNcFADs=" width="16" height="16" style="image-rendering:pixelated">
+    CLIPBLAST.EXE
+  </span>
   <div id="hud-controls">
-    <button id="hud-min">_</button>
-    <button id="hud-max">□</button>
-    <button id="hud-close">✕</button>
+    <button id="hud-min" title="Minimize">&#x5F;</button>
+    <button id="hud-max" title="Maximize">&#x25A1;</button>
+    <button id="hud-close" id="hud-close" title="Close">&#x2715;</button>
   </div>
 </div>
-  <div id="toolbar" style="background:#c0c0c0; padding:3px 6px; border-bottom:1px solid #808080; display:flex; gap:8px; align-items:center; width:700px; height:28px;">
-  <span style="border:1px solid; border-color:#808080 #fff #fff #808080; padding:2px 8px; font-family:Fixedsys; font-size:11px;">HP: <span id="health-num">100</span></span>
-  <!-- repeat for ammo, wave, score -->
-  <button id="startBtn" class="win2k-btn" style="margin-left:auto;">▶ PLAY</button>
+ <div id="menubar" style="
+  background:#c0c0c0; 
+  border-bottom:1px solid #808080; 
+  padding:1px 2px; 
+  width:700px; 
+  height:19px;
+  display:flex; 
+  align-items:center; 
+  gap:0;
+  font-family:Tahoma,sans-serif; 
+  font-size:11px;
+">
+  <span class="menu-item">File</span>
+  <span class="menu-item">Edit</span>
+  <span class="menu-item">View</span>
+  <span class="menu-item">Favorites</span>
+  <span class="menu-item">Tools</span>
+  <span class="menu-item">Help</span>
+</div>
+
+<div id="toolbar" style="
+  background:#c0c0c0; 
+  border-bottom:1px solid #808080; 
+  padding:2px 4px; 
+  width:700px;
+  height:26px;
+  display:flex; 
+  align-items:center; 
+  gap:4px;
+  font-family:Tahoma,sans-serif;
+  font-size:11px;
+">
+  <span style="border:1px solid; border-color:#808080 #fff #fff #808080; padding:1px 6px; background:white; font-size:11px; flex:1">
+    HP: <span id="health-num">100</span> &nbsp;|&nbsp; AMMO: <span id="ammo-val">8/8</span> &nbsp;|&nbsp; WAVE: <span id="wave-val">1</span> &nbsp;|&nbsp; SCORE: <span id="score-val">0</span>
+  </span>
+  <button id="startBtn" class="win2k-btn">▶ Play</button>
 </div>
   <canvas id="c" width="700" height="460"></canvas>
  <div id="bottom-bar">
