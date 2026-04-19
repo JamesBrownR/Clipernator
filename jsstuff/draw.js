@@ -288,23 +288,21 @@ function drawPartyHat(epos, ehp, ai, frozen) {
     sheet = partyHatRecoverSheet;
     cols = 2; rows = 2; totalFrames = 4;
     drawW = 60; drawH = 44;
-  } else if (state === 'RIDING') {
-  const hostId = ai.ridingId;
-  if (hostId && ECS.has(hostId, 'ai')) {
-    const hostAi = ECS.get(hostId, 'ai');
-    const bOrient = (typeof hostAi.balloonOrient === 'number') ? hostAi.balloonOrient : 0;
-    // knotAngle in world space = bOrient + PI (rear of balloon)
-    // Hat's bottom should point toward the knot, so rotate sprite to face that direction
-    const knotAngle = bOrient + Math.PI;
-    angle = knotAngle + Math.PI / 2; // +PI/2 because hat sprite points "up" by default
-  }
-}
+  } 
 
   const frameIdx = Math.min(frame, totalFrames - 1);
 
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
+// Calculate riding angle right before rotate
+if (state === 'RIDING' && ai.ridingId && ECS.has(ai.ridingId, 'ai')) {
+  const hostAi = ECS.get(ai.ridingId, 'ai');
+  const bOrient = (typeof hostAi.balloonOrient === 'number') ? hostAi.balloonOrient : 0;
+  const knotAngle = bOrient + Math.PI;
+  angle = knotAngle + Math.PI / 2;
+}
+
+ctx.save();
+ctx.translate(x, y);
+ctx.rotate(angle);
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
   else {
     ctx.shadowColor = drawState === 'DIVE' ? '#ff2200' : '#ffdd00';
