@@ -96,9 +96,7 @@ clippyIntroLines: [
   "R to reload · Shift to dash · P to pause",
   "Good luck... you'll need it.",
 ];
-clippyIntroTimer: 0;
-clippyIntroLine: 0;
-clippyIntroDone: false;
+clippyIntroTimer: 0, clippyIntroLine: 0, clippyIntroDone: false,
 
     // Item flags
     bouncyHouse: false,
