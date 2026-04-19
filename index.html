@@ -42,33 +42,94 @@
     z-index: 100;
   }
   #wrapper {
-    position: relative;
-    border: 3px solid var(--green);
-    box-shadow: 0 0 30px var(--green2), 0 0 60px rgba(0,255,100,0.1), inset 0 0 30px rgba(0,255,100,0.04);
-  }
-  #hud {
-    background: var(--dark);
-    border-bottom: 3px solid var(--green);
-    padding: 8px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 700px;
-  }
-  #hud span { font-size: 7px; color: var(--green); text-shadow: 0 0 8px var(--green); letter-spacing: 1px; }
-  #score-val { color: var(--yellow) !important; text-shadow: 0 0 8px var(--yellow) !important; }
-  #health-val { color: var(--red) !important; text-shadow: 0 0 8px var(--red) !important; }
-  #ammo-val { color: var(--pink) !important; text-shadow: 0 0 8px var(--pink) !important; }
+  position: relative;
+  /* Win2k raised 3D border */
+  border: none;
+  outline: 2px solid #ffffff;
+  box-shadow: 
+    -2px -2px 0 #dfdfdf,
+     2px  2px 0 #404040,
+    -4px -4px 0 #c0c0c0,
+     4px  4px 0 #000000;
+}
+#hud {
+  background: linear-gradient(to bottom, #0a246a, #3a6ea8);
+  border-bottom: 2px solid #000;
+  padding: 3px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 700px;
+  height: 28px;
+  position: relative;
+}
+
+/* Win2k titlebar left side — icon + title */
+#hud::before {
+  content: '📎 CLIPBLAST.EXE';
+  font-family: 'Fixedsys', monospace;
+  font-size: 11px;
+  color: white;
+  font-weight: bold;
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  text-shadow: 1px 1px #00000088;
+}
+
+#score-val { color: #ffffff !important; text-shadow: none !important; }
+#health-val { color: #ffffff !important; text-shadow: none !important; }
+#ammo-val { color: #ffffff !important; text-shadow: none !important; }
+
+#hud span { 
+  font-family: 'Fixedsys', monospace;
+  font-size: 10px; 
+  color: #ffffff; 
+  text-shadow: none;
+  letter-spacing: 0px;
+}
+  #hud-controls { display: flex; gap: 2px; }
+#hud-controls button {
+  font-family: 'Fixedsys', monospace;
+  font-size: 9px;
+  width: 16px; height: 14px;
+  background: #c0c0c0;
+  border: none;
+  box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #ffffff;
+  cursor: pointer;
+  padding: 0;
+  color: #000;
+  line-height: 1;
+}
+#hud-controls button:active {
+  box-shadow: inset 1px 1px 0 #404040, inset -1px -1px 0 #ffffff;
+}
+#hud-title {
+  font-family: 'Fixedsys', monospace;
+  font-size: 11px;
+  color: white;
+  font-weight: bold;
+}
   canvas { display: block; background: var(--bg); image-rendering: pixelated; }
-  #bottom-bar {
-    background: var(--dark);
-    border-top: 3px solid var(--green);
-    padding: 6px 16px;
-    width: 700px;
-    display: flex;
-    justify-content: center;
-  }
-  #bottom-bar span { font-size: 6px; color: var(--gray); text-shadow: 0 0 4px var(--green2); letter-spacing: 1px; }
+ #bottom-bar {
+  background: #c0c0c0;
+  border-top: 2px solid #ffffff;
+  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf;
+  padding: 4px 16px;
+  width: 700px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#bottom-bar span { 
+  font-family: 'Fixedsys', monospace;
+  font-size: 10px; 
+  color: #000000;
+  text-shadow: none;
+  letter-spacing: 0px;
+}
   #overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -283,14 +344,18 @@
 </head>
 <body>
 <div id="wrapper">
-  <div id="hud">
-    <span>SCORE: <span id="score-val">0</span></span>
-    <span>HP: <span id="health-val" style="display:inline-block;vertical-align:middle;width:90px;height:10px;background:#330000;border:1px solid #ff3333;position:relative;box-shadow:0 0 6px #ff3333"><span id="health-bar" style="display:block;height:100%;width:100%;background:#ff3333;transition:width 0.15s;box-shadow:0 0 8px #ff3333"></span></span> <span id="health-num" style="color:#ff3333;text-shadow:0 0 8px #ff3333">100</span></span>
-   
-    <span>AMMO: <span id="ammo-val">8/8</span></span>
-    <span>WAVE: <span id="wave-val" style="color:#ffaa00;text-shadow:0 0 8px #ffaa00">1</span></span>
-    <span id="ticket-hud" style="display:none">🎟️ <span id="ticket-val" style="color:#ffdd00;text-shadow:0 0 8px #ffdd00">0</span>/10</span>
+ <div id="hud">
+  <span id="hud-title">📎 CLIPBLAST.EXE</span>
+  <span>HP: <span id="health-val" ...>...</span> <span id="health-num">100</span></span>
+  <span>AMMO: <span id="ammo-val">8/8</span></span>
+  <span>WAVE: <span id="wave-val">1</span></span>
+  <span>SCORE: <span id="score-val">0</span></span>
+  <div id="hud-controls">
+    <button id="hud-min">_</button>
+    <button id="hud-max">□</button>
+    <button id="hud-close">✕</button>
   </div>
+</div>
   <canvas id="c" width="700" height="460"></canvas>
   <div id="bottom-bar">
     <span id="bottom-hint">WASD:MOVE &nbsp;|&nbsp; MOUSE:AIM &nbsp;|&nbsp; CLICK:SHOOT &nbsp;|&nbsp; R:RELOAD &nbsp;|&nbsp; SHIFT:DASH &nbsp;|&nbsp; COLLECT ITEMS &nbsp;|&nbsp; UNLOCK EVERY 3 WAVES</span>
