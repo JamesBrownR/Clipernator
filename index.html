@@ -54,7 +54,7 @@ body::before { display: none; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 700px;
+  width: auto;
   height: 18px;
   gap: 2px;
 }
@@ -71,6 +71,11 @@ body::before { display: none; }
   text-shadow: 1px 1px 0 #000033;
 }
 
+  #hud-controls {
+    flex-direction: row;
+    display: flex;
+  }
+  
 #hud-controls button {
   font-family: 'Fixedsys', sans-serif;
   font-size: 11px;
