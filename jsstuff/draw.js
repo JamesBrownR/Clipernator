@@ -823,20 +823,23 @@ if (gs.clippyIntroLines && !gs.clippyIntroDone) {
     ctx.roundRect(bx, by, bw, bh, 6);
     ctx.fill();
     ctx.stroke();
-    // Tail pointing down-left toward player
+   // Tail pointing down-left toward player — draw outline then cover seam
     ctx.beginPath();
     ctx.moveTo(bx + 10, by + bh);
-    ctx.lineTo(bx, by + bh + 12);
+    ctx.lineTo(bx, by + bh + 13);
     ctx.lineTo(bx + 22, by + bh);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Fill and cover the top seam
+    ctx.beginPath();
+    ctx.moveTo(bx + 8, by + bh - 1);
+    ctx.lineTo(bx, by + bh + 12);
+    ctx.lineTo(bx + 24, by + bh - 1);
     ctx.fillStyle = '#ffffcc';
     ctx.fill();
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(bx + 10, by + bh - 1);
-    ctx.lineTo(bx, by + bh + 12);
-    ctx.lineTo(bx + 22, by + bh - 1);
-    ctx.stroke();
+    // Solid strip to kill any remaining seam pixel
+    ctx.fillRect(bx + 7, by + bh - 2, 18, 3);
     // Text
     ctx.fillStyle = '#000000';
     ctx.font = '7px "MS Sans Serif", Arial, sans-serif';
