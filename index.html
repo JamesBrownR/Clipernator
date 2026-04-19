@@ -5,6 +5,12 @@
 <title>CLIPERNATOR</title>
 <style> 
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+  @font-face {
+  font-family: 'Fixedsys';
+  src: url('fonts/FSEX300.ttf') format('truetype');
+}
+  
   :root {
     --bg: #0a0a0f;
     --green: #00ff66;
@@ -244,6 +250,35 @@
     text-shadow: 0 0 6px #ff4400;
     letter-spacing: 1px;
   }
+
+  .cs-icon {
+  color: white;
+  font-size: 9px;
+  text-align: center;
+  padding: 4px;
+  width: 64px;
+  text-shadow: 1px 1px 2px #000;
+  cursor: default;
+  font-family: 'Fixedsys', monospace;
+}
+.cs-icon span { display: block; margin-top: 2px; }
+.win2k-btn {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  padding: 4px 16px;
+  cursor: pointer;
+  min-width: 80px;
+}
+.win2k-btn:active {
+  border-color: #808080 #ffffff #ffffff #808080;
+}
+@keyframes cs-blink {
+  0%,100% { opacity:1; } 50% { opacity:0; }
+}
+#cs-bsod-blink { animation: cs-blink 1s infinite; }
 </style>
 </head>
 <body>
@@ -351,8 +386,178 @@
       </button>
     </div>
   </div>
+
+  <div id="cutscene" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:200;font-family:'Fixedsys',monospace;">
+
+  <!-- STAGE 1: Windows 2000 Desktop -->
+  <div id="cs-desktop" style="width:100%;height:100%;background:#3a6ea5;display:flex;flex-direction:column;">
+    <!-- Desktop icons -->
+    <div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;">
+      <div class="cs-icon">🗂️<br><span>My Documents</span></div>
+      <div class="cs-icon">🖥️<br><span>My Computer</span></div>
+      <div class="cs-icon">🗑️<br><span>Recycle Bin</span></div>
+      <div class="cs-icon" id="birthday-exe" style="animation:none;">🎂<br><span>BIRTHDAY.exe</span></div>
+    </div>
+    <!-- Taskbar -->
+    <div style="height:28px;background:#c0c0c0;border-top:2px solid #ffffff;display:flex;align-items:center;padding:0 4px;gap:4px;">
+      <button style="font-family:'Fixedsys',monospace;font-size:11px;background:#c0c0c0;border:2px solid;border-color:#ffffff #808080 #808080 #ffffff;padding:2px 6px;display:flex;align-items:center;gap:4px;">
+        <b>⊞ Start</b>
+      </button>
+      <div style="flex:1"></div>
+      <span style="font-family:'Fixedsys',monospace;font-size:11px;border:1px solid #808080;padding:2px 6px;background:#c0c0c0;">3:45 PM</span>
+    </div>
+  </div>
+
+  <!-- STAGE 2: Glitch flashes -->
+  <div id="cs-glitch" style="display:none;width:100%;height:100%;background:#ff69b4;"></div>
+
+  <!-- STAGE 3: BSOD -->
+  <div id="cs-bsod" style="display:none;width:100%;height:100%;background:#0000aa;color:#aaaaaa;font-family:'Fixedsys',monospace;font-size:12px;line-height:1.6;padding:32px 40px;white-space:pre-wrap;">
+<span style="background:#aaaaaa;color:#0000aa;">*** STOP: 0x000PA4TY (BIRTHDAY.exe,0xC000034,0x00000000,0x00000000)</span>
+<span style="background:#aaaaaa;color:#0000aa;">PARTY_VIRUS_DETECTED</span>
+
+A fatal exception has occurred at 0x00BDAY:0xFF3STY.
+The current application will be terminated.
+
+* BIRTHDAY.exe has infected 847 system processes
+* Confetti.dll is corrupting kernel memory  
+* CakeBoss.sys cannot be terminated
+
+If this is the first time you've seen this error,
+restart your computer. Your files may be at risk.
+
+Check for party-related processes. Remove any
+streamers or balloons from your hard drive.
+Run ANTIPARTY /F to check for cake corruption.
+
+Press any key to attempt system recovery...
+<span id="cs-bsod-blink" style="background:#aaaaaa;color:#0000aa;">█</span>
+  </div>
+
+  <!-- STAGE 4: Clippy -->
+  <div id="cs-clippy" style="display:none;width:100%;height:100%;background:#3a6ea5;align-items:flex-end;justify-content:flex-end;padding:20px;position:relative;">
+    <!-- Win2k style dialog box -->
+    <div style="position:absolute;bottom:60px;right:20px;width:320px;">
+      <!-- Speech bubble -->
+      <div style="background:#ffffcc;border:2px solid #000;border-radius:8px;padding:12px 16px;font-family:'MS Sans Serif',Tahoma,sans-serif;font-size:12px;line-height:1.6;margin-bottom:8px;position:relative;">
+        <div id="cs-clippy-text"></div>
+        <!-- Bubble tail -->
+        <div style="position:absolute;bottom:-12px;right:60px;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:12px solid #000;"></div>
+        <div style="position:absolute;bottom:-10px;right:62px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:10px solid #ffffcc;"></div>
+      </div>
+      <!-- Buttons -->
+      <div id="cs-clippy-buttons" style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="win2k-btn" id="cs-yes-btn">Yes, help me!</button>
+        <button class="win2k-btn" id="cs-no-btn">No thanks</button>
+      </div>
+    </div>
+    <!-- Clippy image -->
+    <img src="sprites/clippy_assistant.png" style="width:130px;position:absolute;bottom:10px;right:30px;filter:drop-shadow(2px 2px 4px rgba(0,0,0,0.4));">
+  </div>
+
+</div>
+  
 </div> <!-- ── Wrapper div end ── -->
 
+  <script>
+(function() {
+  const cutscene = document.getElementById('cutscene');
+  const stages = {
+    desktop: document.getElementById('cs-desktop'),
+    glitch:  document.getElementById('cs-glitch'),
+    bsod:    document.getElementById('cs-bsod'),
+    clippy:  document.getElementById('cs-clippy'),
+  };
+  let skipped = false;
+
+  function skip() {
+    if (skipped) return;
+    skipped = true;
+    cutscene.style.display = 'none';
+  }
+
+  // Skip on any key or click
+  document.addEventListener('keydown', skip, { once: false });
+  cutscene.addEventListener('click', skip);
+
+  function show(stage) {
+    Object.values(stages).forEach(s => s.style.display = 'none');
+    stage.style.display = 'flex';
+  }
+
+  // Stage 1: Desktop for 2 seconds, then BIRTHDAY.exe "runs"
+  show(stages.desktop);
+  setTimeout(() => {
+    if (skipped) return;
+    // Flash the birthday exe icon
+    document.getElementById('birthday-exe').style.background = 'rgba(255,255,255,0.3)';
+  }, 1800);
+
+  // Stage 2: Glitch flashes
+  setTimeout(() => {
+    if (skipped) return;
+    const glitchColors = ['#ff69b4','#ffdd00','#00ff66','#ff4444','#ffffff','#0000aa'];
+    let i = 0;
+    const glitchInterval = setInterval(() => {
+      if (skipped) { clearInterval(glitchInterval); return; }
+      stages.glitch.style.background = glitchColors[i % glitchColors.length];
+      stages.glitch.style.display = 'block';
+      stages.desktop.style.display = i % 2 === 0 ? 'none' : 'flex';
+      i++;
+      if (i >= 8) {
+        clearInterval(glitchInterval);
+        show(stages.bsod);
+      }
+    }, 80);
+  }, 2200);
+
+  // Stage 3: BSOD for 3 seconds
+  setTimeout(() => {
+    if (skipped) return;
+    // Typewriter effect for Clippy text
+    show(stages.clippy);
+    const lines = [
+      "It looks like BIRTHDAY.exe has crashed your system.",
+      "",
+      "Would you like help eliminating the party virus?",
+      "",
+      "Warning: This may involve a shotgun."
+    ];
+    const el = document.getElementById('cs-clippy-text');
+    let lineIdx = 0, charIdx = 0;
+    el.innerHTML = '';
+
+    function typeNext() {
+      if (skipped) return;
+      if (lineIdx >= lines.length) return;
+      const line = lines[lineIdx];
+      if (charIdx < line.length) {
+        el.innerHTML += line[charIdx];
+        charIdx++;
+        setTimeout(typeNext, 28);
+      } else {
+        el.innerHTML += '<br>';
+        lineIdx++; charIdx = 0;
+        setTimeout(typeNext, lineIdx === lines.length ? 0 : 120);
+      }
+    }
+    typeNext();
+
+    document.getElementById('cs-yes-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      skip();
+    });
+    document.getElementById('cs-no-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Clippy guilt trips you
+      document.getElementById('cs-clippy-text').innerHTML = "That\'s okay.<br><br>The birthday virus will only delete<br>your files a little bit.";
+      setTimeout(skip, 1800);
+    });
+
+  }, 5500);
+
+})();
+</script>
 <script src="jsstuff/config.js"></script>
   <script src="jsstuff/bt.js"></script>  
 <script src="jsstuff/enemies.js"></script>
