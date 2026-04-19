@@ -207,11 +207,12 @@ function gameOver() {
   draw();
   const overlay = document.getElementById('overlay');
   overlay.style.display = 'flex';
-  overlay.querySelector('h1').innerHTML = `GAME OVER<br>SCORE: ${gs.score}`;
-  overlay.querySelector('.sub').textContent = `WAVE ${gs.wave} · PRESS PLAY TO RETRY`;
-  overlay.querySelector('h1').style.color = '#ff3333';
-  overlay.querySelector('h1').style.textShadow = '0 0 20px #ff3333';
-  document.getElementById('startBtn').textContent = 'PLAY AGAIN';
+  const h1 = overlay.querySelector('h1');
+  const sub = overlay.querySelector('.sub');
+  const btn = document.getElementById('startBtn');
+  if (h1) { h1.innerHTML = `GAME OVER<br>SCORE: ${gs.score}`; h1.style.color = '#ff3333'; h1.style.textShadow = '0 0 20px #ff3333'; }
+  if (sub) sub.textContent = `WAVE ${gs.wave} · PRESS PLAY TO RETRY`;
+  if (btn) btn.textContent = 'PLAY AGAIN';
 }
 
 function togglePause() {
@@ -452,18 +453,13 @@ function loop(timestamp = 0) {
 function startGame() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('item-choice').style.display = 'none';
-  const overlay = document.getElementById('overlay');
-  overlay.querySelector('h1').innerHTML = 'CLIPBLAST<br>PARTY HUNTER';
-  overlay.querySelector('h1').style.color = 'var(--green)';
-  overlay.querySelector('h1').style.textShadow = '0 0 20px var(--green), 0 0 40px var(--green2)';
-  overlay.querySelector('.sub').innerHTML = 'A PAPERCLIP. A SHOTGUN.<br>AN ETERNAL CRAVING FOR BIRTHDAY PARTIES.';
-  document.getElementById('startBtn').textContent = 'PLAY GAME';
   gameRunning = true;
   isPaused = false;
   muzzleFlash = 0;
   meleeSwingTimer = 0;
   initGameState();
   updateHUD();
+  lastTime = performance.now();
   loop();
 }
 
@@ -577,4 +573,6 @@ document.getElementById('floor-btn').addEventListener('click', () => {
 });
 
 // Animate circus border on floor 2
-setInterval(() => { if (gs && gs.floor === 2) updateHUD(); }, 300);
+setInterval(() => { 
+  if (typeof gs !== 'undefined' && gs && gs.floor === 2 && gameRunning) updateHUD(); 
+}, 300);
