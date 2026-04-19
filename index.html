@@ -491,5 +491,93 @@ canvas {
 <script src="jsstuff/draw.js"></script>
 <script src="jsstuff/systems.js"></script>
 <script src="jsstuff/game.js"></script>
+
+  <script>
+(function() {
+  let isMaximized = false;
+  const wrapper = document.getElementById('wrapper');
+  const canvas  = document.getElementById('c');
+  const maxBtn  = document.getElementById('hud-max');
+
+  // Store original wrapper size
+  const ORIG_W = 700;
+  const ORIG_H = 460;
+
+  function applyMaximize() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Scale to fit viewport while keeping aspect ratio
+    const scaleX = vw / ORIG_W;
+    const scaleY = vh / vh; // full height
+    const scale  = Math.min(vw / ORIG_W, vh / ORIG_H);
+
+    wrapper.style.position   = 'fixed';
+    wrapper.style.top        = '0';
+    wrapper.style.left       = '0';
+    wrapper.style.width      = vw + 'px';
+    wrapper.style.height     = vh + 'px';
+    wrapper.style.zIndex     = '9999';
+    wrapper.style.margin     = '0';
+    wrapper.style.border     = '2px solid';
+    wrapper.style.borderColor = '#ffffff #404040 #404040 #ffffff';
+
+    // Scale the canvas to fill the window
+    const hudH      = document.getElementById('hud').offsetHeight;
+    const menubarH  = document.getElementById('menubar').offsetHeight;
+    const availH    = vh - hudH - menubarH - 16; // 16px for margins/borders
+    const availW    = vw - 12;
+
+    const fitScale  = Math.min(availW / ORIG_W, availH / ORIG_H);
+
+    canvas.style.width   = Math.floor(ORIG_W * fitScale) + 'px';
+    canvas.style.height  = Math.floor(ORIG_H * fitScale) + 'px';
+    canvas.style.margin  = 'auto';
+    canvas.style.display = 'block';
+
+    // Update renderScale so the game logic stays correct
+    renderScale = fitScale * (ORIG_W / worldW);
+
+    maxBtn.textContent = '❐'; // restore icon
+    isMaximized = true;
+  }
+
+  function applyRestore() {
+    wrapper.style.position   = '';
+    wrapper.style.top        = '';
+    wrapper.style.left       = '';
+    wrapper.style.width      = '';
+    wrapper.style.height     = '';
+    wrapper.style.zIndex     = '';
+    wrapper.style.margin     = '';
+    wrapper.style.border     = '';
+    wrapper.style.borderColor = '';
+
+    canvas.style.width   = '';
+    canvas.style.height  = '';
+    canvas.style.margin  = '';
+    canvas.style.display = '';
+
+    // Restore renderScale
+    renderScale = CFG.W / worldW;
+
+    maxBtn.textContent = '◻'; // maximize icon
+    isMaximized = false;
+  }
+
+  maxBtn.addEventListener('click', function() {
+    if (isMaximized) {
+      applyRestore();
+    } else {
+      applyMaximize();
+    }
+  });
+
+  // Re-apply on window resize if maximized
+  window.addEventListener('resize', function() {
+    if (isMaximized) applyMaximize();
+  });
+})();
+</script>
 </body>
 </html>
