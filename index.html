@@ -399,6 +399,16 @@ canvas {
   <canvas id="c" width="700" height="460"></canvas>
  
   </div>
+  <div id="overlay" style="display:flex; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); flex-direction:column; align-items:center; justify-content:center; z-index:50;">
+  <h1 style="font-size:22px; color:var(--green); text-shadow:0 0 20px var(--green), 0 0 40px var(--green2); margin-bottom:10px; text-align:center; line-height:1.6; animation:flicker 3s infinite;">CLIPBLAST<br>PARTY HUNTER</h1>
+  <div class="sub" style="font-size:8px; color:var(--yellow); text-shadow:0 0 8px var(--yellow); margin-bottom:24px; text-align:center; line-height:2.2;">A PAPERCLIP. A SHOTGUN.<br>AN ETERNAL CRAVING FOR BIRTHDAY PARTIES.</div>
+  <div class="controls" style="font-size:7px; color:var(--green2); line-height:2.4; text-align:left; margin-bottom:24px; border:1px solid var(--gray); padding:12px 20px; text-shadow:0 0 4px var(--green2);">
+    WASD — MOVE &nbsp;&nbsp; MOUSE — AIM &nbsp;&nbsp; CLICK — SHOOT<br>
+    R — RELOAD &nbsp;&nbsp; SHIFT — DASH &nbsp;&nbsp; F / RIGHT-CLICK — GLOWSTICK<br>
+    P — PAUSE
+  </div>
+  <button id="startBtn" class="start-btn">PLAY GAME</button>
+</div>
   <div id="item-choice">
     <h2>WAVE CLEAR!<br>CHOOSE AN ITEM</h2>
     <div class="sub2">PERMANENT ITEMS APPLY INSTANTLY · CONSUMABLES APPEAR ON FIELD</div>
@@ -576,6 +586,18 @@ canvas {
     if (isMaximized) applyMaximize();
   });
 })();
+    document.getElementById('hud-min').addEventListener('click', function() {
+  const canvas = document.getElementById('c');
+  const menubar = document.getElementById('menubar');
+  const isHidden = canvas.style.display === 'none';
+  canvas.style.display = isHidden ? '' : 'none';
+  menubar.style.display = isHidden ? '' : 'none';
+  const overlays = ['overlay','item-choice','floor-transition','pause-menu','msg','keybind-screen'];
+  overlays.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.visibility = isHidden ? '' : 'hidden';
+  });
+});
 </script>
 </body>
 </html>
