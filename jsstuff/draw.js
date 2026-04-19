@@ -344,6 +344,69 @@ ctx.rotate(angle);
   }
 }
 
+function drawGiftBox(epos, ehp, ai, frozen) {
+  const { x, y } = epos;
+  const COLS = 4, ROWS = 4, TOTAL_FRAMES = 16;
+  const DRAW_SIZE = 64;
+
+  const frameW = giftBoxIdleSheet.naturalWidth  / COLS;
+  const frameH = giftBoxIdleSheet.naturalHeight / ROWS;
+
+  // Advance animation: ~8 ticks per frame
+  if (ai._gbAnimTick === undefined) { ai._gbAnimTick = 0; ai._gbAnimFrame = 0; }
+  ai._gbAnimTick++;
+  if (ai._gbAnimTick >= 8) { ai._gbAnimTick = 0; ai._gbAnimFrame = (ai._gbAnimFrame + 1) % TOTAL_FRAMES; }
+
+  const frame = ai._gbAnimFrame;
+  const col = frame % COLS;
+  const row = Math.floor(frame / COLS);
+
+  // Windup pulse
+  const windupRatio = Math.min(1, (ai.windupTimer || 0) / 120);
+  const pulse = 1 + Math.sin(Date.now() / 80) * 0.07 * windupRatio;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(pulse, pulse);
+
+  if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
+  else {
+    ctx.shadowColor = windupRatio > 0.5 ? '#ff4400' : '#ffaa00';
+    ctx.shadowBlur = 10 + windupRatio * 18;
+  }
+
+  if (giftBoxIdleSheet.complete && giftBoxIdleSheet.naturalWidth > 0) {
+    ctx.drawImage(
+      giftBoxIdleSheet,
+      col * frameW, row * frameH, frameW, frameH,
+      -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
+    );
+  }
+
+  ctx.restore();
+
+  // HP bar
+  const bw = 40;
+  ctx.fillStyle = '#330000';
+  ctx.fillRect(x - bw / 2, y - 46, bw, 5);
+  ctx.fillStyle = ehp.hp < ehp.maxHp / 2 ? '#ff6666' : '#ffaa00';
+  ctx.fillRect(x - bw / 2, y - 46, bw * (ehp.hp / ehp.maxHp), 5);
+
+  // Windup warning ring
+  if (windupRatio > 0.2) {
+    ctx.save();
+    ctx.globalAlpha = windupRatio * 0.7;
+    ctx.strokeStyle = '#ff4400';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#ff4400';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(x, y, 34 + windupRatio * 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 function drawCakeBoss(epos, ehp, ai, frozen) {
   const { x, y } = epos;
   const t = Date.now() / 300;
