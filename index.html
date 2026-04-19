@@ -527,38 +527,35 @@ canvas {
 </div> <!-- ── Wrapper div end ── -->
 
  
-<script src="jsstuff/config.js"></script>
-  <script src="jsstuff/bt.js"></script>  
-<script src="jsstuff/enemies.js"></script>
-<script src="jsstuff/items.js"></script>
-<script src="jsstuff/draw.js"></script>
-<script src="jsstuff/systems.js"></script>
-<script src="jsstuff/game.js"></script>
-
- <script>
+<script>
 (function() {
   const wrapper = document.getElementById('wrapper');
   const maxBtn  = document.getElementById('hud-max');
+  const canvas  = document.getElementById('c');
   let isMaximized = false;
+  let currentScale = 1;
 
- function applyMaximize() {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const wrapperW = wrapper.scrollWidth;  // use scrollWidth not offsetWidth
-  const wrapperH = wrapper.scrollHeight;
-  const scale = Math.min(vw / wrapperW, vh / wrapperH);
-  wrapper.style.position   = 'fixed';
-  wrapper.style.top        = '50%';
-  wrapper.style.left       = '50%';
-  wrapper.style.transform  = `translate(-50%, -50%) scale(${scale})`;
-  wrapper.style.transformOrigin = 'center center';
-  wrapper.style.zIndex     = '9999';
-  wrapper.style.margin     = '0';
-  maxBtn.textContent = '2';
-  isMaximized = true;
-}
+  function applyMaximize() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Use the actual canvas + chrome dimensions
+    const wrapperW = canvas.offsetWidth + 8 + 4; // 4px margin each side + borders
+    const wrapperH = canvas.offsetHeight + 18 + 22 + 4 + 4; // titlebar + menubar + margins + borders
+    const scale = Math.min(vw / wrapper.offsetWidth, vh / wrapper.offsetHeight);
+    currentScale = scale;
+    wrapper.style.position      = 'fixed';
+    wrapper.style.top           = '50%';
+    wrapper.style.left          = '50%';
+    wrapper.style.transform     = `translate(-50%, -50%) scale(${scale})`;
+    wrapper.style.transformOrigin = 'center center';
+    wrapper.style.zIndex        = '9999';
+    wrapper.style.margin        = '0';
+    maxBtn.textContent = '2';
+    isMaximized = true;
+  }
 
   function applyRestore() {
+    currentScale = 1;
     wrapper.style.position      = '';
     wrapper.style.top           = '';
     wrapper.style.left          = '';
@@ -566,8 +563,7 @@ canvas {
     wrapper.style.transformOrigin = '';
     wrapper.style.zIndex        = '';
     wrapper.style.margin        = '';
-
-    maxBtn.textContent = '1'; // maximize icon (Marlett)
+    maxBtn.textContent = '1';
     isMaximized = false;
   }
 
@@ -579,20 +575,50 @@ canvas {
   window.addEventListener('resize', function() {
     if (isMaximized) applyMaximize();
   });
-})();
 
-document.getElementById('hud-min').addEventListener('click', function() {
-  const canvas  = document.getElementById('c');
-  const menubar = document.getElementById('menubar');
-  const isHidden = canvas.style.display === 'none';
-  canvas.style.display  = isHidden ? '' : 'none';
-  menubar.style.display = isHidden ? '' : 'none';
-  const overlays = ['overlay','item-choice','floor-transition','pause-menu','msg','keybind-screen'];
-  overlays.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.visibility = isHidden ? '' : 'hidden';
+  // ── Fixed mouse handler that accounts for CSS transform ──
+  canvas.addEventListener('mousemove', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    // getBoundingClientRect already accounts for CSS transforms,
+    // so we just divide by the visual size of the canvas
+    mouse.x = (e.clientX - rect.left) / (rect.width  / canvas.width)  / renderScale;
+    mouse.y = (e.clientY - rect.top)  / (rect.height / canvas.height) / renderScale;
   });
-});
+
+  // ── Minimize: collapse wrapper to just titlebar ──
+  let minimized = false;
+  document.getElementById('hud-min').addEventListener('click', function() {
+    minimized = !minimized;
+    const menubar  = document.getElementById('menubar');
+    const canvasEl = document.getElementById('c');
+    const bottombar = document.getElementById('bottom-bar');
+    const overlays = ['overlay','item-choice','floor-transition','pause-menu','msg','keybind-screen'];
+
+    if (minimized) {
+      menubar.style.display   = 'none';
+      canvasEl.style.display  = 'none';
+      bottombar.style.display = 'none';
+      overlays.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    } else {
+      menubar.style.display   = '';
+      canvasEl.style.display  = '';
+      bottombar.style.display = '';
+      // Only restore overlays that should actually be visible
+      // Let the game logic handle overlay visibility
+      overlays.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        // Don't force-show overlays that the game has hidden
+        if (id === 'overlay' && typeof gameRunning !== 'undefined' && gameRunning) return;
+        if (id === 'msg') { el.style.display = ''; return; }
+        // For others, only restore if they were showing before
+      });
+    }
+  });
+})();
 </script>
 </body>
 </html>
