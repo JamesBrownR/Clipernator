@@ -966,9 +966,9 @@ function drawBullet(b) {
 }
 
 function draw() {
-  ctx.clearRect(0,0,CFG.W,CFG.H);
   ctx.save();
-  ctx.scale(renderScale, renderScale);
+ctx.scale(renderScale, renderScale);
+ctx.clearRect(0, 0, worldW, worldH);
 const clampedShakeX = Math.max(-12, Math.min(12, gs.shakeX));
 const clampedShakeY = Math.max(-12, Math.min(12, gs.shakeY));
 ctx.translate(Math.round(clampedShakeX*.4), Math.round(clampedShakeY*.4));
