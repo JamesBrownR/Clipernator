@@ -22,113 +22,106 @@
     --gray: #335533;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #050508;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    font-family: 'Press Start 2P', monospace;
-    overflow: hidden;
-    cursor: crosshair;
-  }
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: repeating-linear-gradient(0deg,rgba(0,255,100,0.025) 0px,rgba(0,255,100,0.025) 1px,transparent 1px,transparent 3px);
-    pointer-events: none;
-    z-index: 100;
-  }
-  #wrapper {
-  position: relative;
-  /* Win2k raised 3D border */
-  border: none;
-  outline: 2px solid #ffffff;
-  box-shadow: 
-    -2px -2px 0 #dfdfdf,
-     2px  2px 0 #404040,
-    -4px -4px 0 #c0c0c0,
-     4px  4px 0 #000000;
+ /* Replace the body background */
+body {
+  background: #008080; /* classic Win2k teal desktop */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Press Start 2P', monospace;
+  overflow: hidden;
+  cursor: crosshair;
 }
+
+/* Remove the scanline overlay */
+body::before { display: none; }
+
+/* Win2k window chrome */
+#wrapper {
+  position: relative;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 2px 2px 0 #000000, -1px -1px 0 #dfdfdf;
+  outline: none;
+}
+
+/* Titlebar */
 #hud {
-  background: linear-gradient(to bottom, #0a246a, #3a6ea8);
-  border-bottom: 2px solid #000;
-  padding: 3px 6px;
+  background: linear-gradient(to right, #000080, #1084d0);
+  border-bottom: 1px solid #000;
+  padding: 2px 4px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 700px;
-  height: 28px;
-  position: relative;
+  height: 22px;
 }
 
-/* Win2k titlebar left side — icon + title */
-#hud::before {
-  content: '📎 CLIPBLAST.EXE';
+#hud::before { display: none; } /* remove the pseudo-element text */
+
+#hud-title {
   font-family: 'Fixedsys', monospace;
   font-size: 11px;
   color: white;
   font-weight: bold;
-  position: absolute;
-  left: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  text-shadow: 1px 1px #00000088;
+  letter-spacing: 0;
 }
 
-#score-val { color: #ffffff !important; text-shadow: none !important; }
-#health-val { color: #ffffff !important; text-shadow: none !important; }
-#ammo-val { color: #ffffff !important; text-shadow: none !important; }
-
-#hud span { 
-  font-family: 'Fixedsys', monospace;
-  font-size: 10px; 
-  color: #ffffff; 
-  text-shadow: none;
-  letter-spacing: 0px;
-}
-  #hud-controls { display: flex; gap: 2px; }
+/* Win2k titlebar buttons */
 #hud-controls button {
-  font-family: 'Fixedsys', monospace;
+  font-family: 'Marlett', 'Fixedsys', monospace;
   font-size: 9px;
-  width: 16px; height: 14px;
+  width: 16px;
+  height: 14px;
   background: #c0c0c0;
-  border: none;
-  box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #ffffff;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
   cursor: pointer;
   padding: 0;
   color: #000;
   line-height: 1;
 }
 #hud-controls button:active {
-  box-shadow: inset 1px 1px 0 #404040, inset -1px -1px 0 #ffffff;
+  border-color: #808080 #ffffff #ffffff #808080;
+  padding: 1px 0 0 1px;
 }
-#hud-title {
-  font-family: 'Fixedsys', monospace;
-  font-size: 11px;
-  color: white;
-  font-weight: bold;
+
+/* Canvas area — sunken inset */
+canvas {
+  display: block;
+  background: var(--bg);
+  image-rendering: pixelated;
+  border: 2px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  margin: 4px;
 }
-  canvas { display: block; background: var(--bg); image-rendering: pixelated; }
- #bottom-bar {
+
+/* Status bar */
+#bottom-bar {
   background: #c0c0c0;
-  border-top: 2px solid #ffffff;
-  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf;
-  padding: 4px 16px;
+  border-top: 1px solid #808080;
+  padding: 2px 8px;
   width: 700px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 22px;
+  gap: 4px;
 }
 
-#bottom-bar span { 
+/* Status bar panels (sunken) */
+#bottom-bar span {
   font-family: 'Fixedsys', monospace;
-  font-size: 10px; 
-  color: #000000;
-  text-shadow: none;
-  letter-spacing: 0px;
+  font-size: 11px;
+  color: #000;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  padding: 1px 6px;
+  flex: 1;
 }
   #overlay {
     position: absolute;
@@ -357,21 +350,13 @@
   </div>
 </div>
   <canvas id="c" width="700" height="460"></canvas>
-  <div id="bottom-bar">
-    <span id="bottom-hint">WASD:MOVE &nbsp;|&nbsp; MOUSE:AIM &nbsp;|&nbsp; CLICK:SHOOT &nbsp;|&nbsp; R:RELOAD &nbsp;|&nbsp; SHIFT:DASH &nbsp;|&nbsp; COLLECT ITEMS &nbsp;|&nbsp; UNLOCK EVERY 3 WAVES</span>
-  </div>
-  <div id="overlay">
-    <h1>CLIPBLAST<br>PARTY HUNTER</h1>
-    <div class="sub">A PAPERCLIP. A SHOTGUN.<br>AN ETERNAL CRAVING FOR BIRTHDAY PARTIES.</div>
-    <div class="controls">
-      WASD / ARROWS ............ MOVE<br>
-      MOUSE .................... AIM<br>
-      LEFT CLICK ............... BLAST<br>
-      R ........................ RELOAD<br>
-      SHIFT .................... DASH (after unlock)<br><br>
-      EVERY 3 WAVES ............ PICK AN ITEM<br>
-      ✂️ SCISSORS .............. THEY HATE YOU
-    </div>
+ <div id="bottom-bar">
+  <span>HP: <span id="health-num">100</span></span>
+  <span>AMMO: <span id="ammo-val">8/8</span></span>
+  <span>WAVE: <span id="wave-val">1</span></span>
+  <span>SCORE: <span id="score-val">0</span></span>
+  <span id="bottom-hint" style="flex:3">WASD:MOVE | MOUSE:AIM | CLICK:SHOOT</span>
+</div>
     <button class="start-btn" id="startBtn">PLAY GAME</button>
   </div>
   <div id="item-choice">
