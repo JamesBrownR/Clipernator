@@ -43,7 +43,7 @@ const BT_UTENSIL = new BTSelector(
     const dx = pp.x - pos.x, dy = pp.y - pos.y, dist = Math.hypot(dx, dy) || 1;
 
     // ── Body drifts toward player ──
-  const UTENSIL_STOP_DIST = 160;
+  const UTENSIL_STOP_DIST = 360;
 const driftMult = dist > UTENSIL_STOP_DIST ? 0.28 : (dist > 100 ? 0.04 : -0.18);
 vel.vx = (vel.vx || 0) * 0.88 + (dx / dist) * phy.speed * driftMult;
 vel.vy = (vel.vy || 0) * 0.88 + (dy / dist) * phy.speed * driftMult;
