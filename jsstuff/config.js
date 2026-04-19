@@ -209,7 +209,7 @@ const WB_SHOOT_FRAMES = 8;
 const WB_FRAME_H = 1024; // same for all sheets
 
 const giftBoxIdleSheet = new Image();
-giftBoxIdleSheet.src = '/Clipernator/sprites/enemies/GiftBox/GiftBoxIdleSheet.webp';
+giftBoxIdleSheet.src = '/Clipernator/sprites/enemies/GiftBox/GiftBoxIdleSheet.png';
 
 // ================================================================
 // KEYBINDS
