@@ -13,15 +13,17 @@
 2. Items can affect the player, enemies, environment, or a combination
 3. Items can have only positive effects, or both positive and negative effects (never only negative)
 4. Items can and should interact with each other
-5. Item names should be loosely related to their effect
+5. Item names should be at least loosely related to their effect
 
 ---
 
 ## Problems, somewhat ordered by importance 
 
 
-* replace all enemies, items, bullets, bosses, UI, etc with cartoon style
-* make floor 1 enemies more interactive and unique. 
+* replace all cake boss, items, bosses, etc with cartoon style
+* replace ui with windows 2000 style
+* unsure which style items should have
+
  
   
 * the cake boss should not mindlessly go to the center all the time. it should just hover around the stage as a idle animation
@@ -31,7 +33,7 @@
 
 - General item pool needs at least 5 more items
 - Clownish is still a bit iffy. wave radius should be expanded slightly. confused enemies should do 3x damage to other enemies (both from contact damage and bullets). confused enemies currently still dont do contact damage. cannonballs that are confused dont charge at enemies and explode. all enemeies when confused should attack other enenmies
-- mask enemies should shoot projectiles from slightly outside themselves, their bullets should not spawn on their hitbox
+- Water Balloon enemies should shoot projectiles from slightly outside themselves, their bullets should not spawn on their hitbox
 - reflected cannon balls should not stop the charge until they hit something. current if you are at one side of that stage and reflect a cannonball to another, it stops before it explodes on a wall
 - cannon ball charge speed should be reduced by 20%
 - Clownish upgrade is placeholder
