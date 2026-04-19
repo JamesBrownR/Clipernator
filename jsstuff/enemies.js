@@ -596,7 +596,7 @@ ai.wbShootTimer -= hatMult / (ai.clownCooldownMult || 1);
           ai.wbFiredShots++;
           const aim = Math.atan2(dy, dx);
         
-          const hasHat = ai.hatrider && ECS.has(ai.hatrider, 'pos');
+          const hasHatNow = !!(ai.hatrider && ECS.has(ai.hatrider, 'pos'));
           if (hasHat) {
             // Hat-buffed: fire 4 homing red tears in a spread
             const spreads = [-0.35, -0.12, 0.12, 0.35];
