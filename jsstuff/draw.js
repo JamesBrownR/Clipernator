@@ -806,6 +806,57 @@ function drawPlayer() {
   const ppos = ECS.get(gs.playerId, 'pos');
   let {x, y} = ppos;
 
+ // Clippy intro speech bubble on player
+if (gs.clippyIntroLines && !gs.clippyIntroDone) {
+  const line = gs.clippyIntroLines[gs.clippyIntroLine || 0];
+  if (line) {
+    const bx = ppos.x + 18;
+    const by = ppos.y - 90;
+    const bw = 200;
+    const bh = 42;
+    ctx.save();
+    // Bubble background
+    ctx.fillStyle = '#ffffcc';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 6);
+    ctx.fill();
+    ctx.stroke();
+    // Tail pointing down-left toward player
+    ctx.beginPath();
+    ctx.moveTo(bx + 10, by + bh);
+    ctx.lineTo(bx, by + bh + 12);
+    ctx.lineTo(bx + 22, by + bh);
+    ctx.fillStyle = '#ffffcc';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bx + 10, by + bh - 1);
+    ctx.lineTo(bx, by + bh + 12);
+    ctx.lineTo(bx + 22, by + bh - 1);
+    ctx.stroke();
+    // Text
+    ctx.fillStyle = '#000000';
+    ctx.font = '7px "MS Sans Serif", Arial, sans-serif';
+    ctx.textAlign = 'left';
+    // Word-wrap across 2 lines max
+    const words = line.split(' ');
+    let l1 = '', l2 = '';
+    let measuring = '';
+    for (const w of words) {
+      const test = measuring ? measuring + ' ' + w : w;
+      if (ctx.measureText(test).width < bw - 16) { measuring = test; }
+      else { l1 = measuring; measuring = w; }
+    }
+    if (!l1) { l1 = measuring; measuring = ''; } else { l2 = measuring; }
+    ctx.fillText(l1, bx + 8, by + 16);
+    if (l2) ctx.fillText(l2, bx + 8, by + 30);
+    ctx.restore();
+  }
+}
+
   if (gs.hasShakeFizzlePop && !gs.sfpFull) {
     const ratio = gs.sfpMeter / gs.sfpMax;
     const shake = ratio * 5;
@@ -845,6 +896,8 @@ const BODY_H = 48; // square since image is 959x959
 
     const bob = Math.sin(playerBobTimer) * 2.5;
 const movingLeft = Math.cos(playerMoveAngle) < 0;
+
+   
     
 ctx.save();
 ctx.translate(x, y + bob);
@@ -1374,6 +1427,55 @@ if (isCritMass) {
     ctx.fillRect(ppos.x-26,ppos.y+26,52*prog,8); ctx.shadowBlur=0;
   }
 
+ // Clippy intro speech bubble on player
+if (gs.clippyIntroLines && !gs.clippyIntroDone) {
+  const line = gs.clippyIntroLines[gs.clippyIntroLine || 0];
+  if (line) {
+    const bx = ppos.x + 18;
+    const by = ppos.y - 90;
+    const bw = 200;
+    const bh = 42;
+    ctx.save();
+    // Bubble background
+    ctx.fillStyle = '#ffffcc';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 6);
+    ctx.fill();
+    ctx.stroke();
+    // Tail pointing down-left toward player
+    ctx.beginPath();
+    ctx.moveTo(bx + 10, by + bh);
+    ctx.lineTo(bx, by + bh + 12);
+    ctx.lineTo(bx + 22, by + bh);
+    ctx.fillStyle = '#ffffcc';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bx + 10, by + bh - 1);
+    ctx.lineTo(bx, by + bh + 12);
+    ctx.lineTo(bx + 22, by + bh - 1);
+    ctx.stroke();
+    // Text
+    ctx.fillStyle = '#000000';
+    ctx.font = '7px "MS Sans Serif", Arial, sans-serif';
+    ctx.textAlign = 'left';
+    // Word-wrap across 2 lines max
+    const words = line.split(' ');
+    let l1 = '', l2 = '';
+    let measuring = '';
+    for (const w of words) {
+      const test = measuring ? measuring + ' ' + w : w;
+      if (ctx.measureText(test).width < bw - 16) { measuring = test; }
+      else { l1 = measuring; measuring = w; }
+    }
+    if (!l1) { l1 = measuring; measuring = ''; } else { l2 = measuring; }
+    ctx.fillText(l1, bx + 8, by + 16);
+    if (l2) ctx.fillText(l2, bx + 8, by + 30);
+    ctx.restore();
+  }
   // SFP meter
   if (gs.hasShakeFizzlePop) {
     const ppos2 = ECS.get(gs.playerId, 'pos');
