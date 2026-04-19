@@ -90,15 +90,15 @@ function initGameState() {
     forkGrabbed: false,
 
    // Show opening Clippy tip on the player sprite
-gs.clippyIntroLines = [
+clippyIntroLines: [
   "It looks like you started a new game!",
   "WASD to move · Mouse to aim · Click to shoot",
   "R to reload · Shift to dash · P to pause",
-  "Good luck — you'll need it.",
+  "Good luck... you'll need it.",
 ];
-gs.clippyIntroTimer = 0;
-gs.clippyIntroLine = 0;
-gs.clippyIntroDone = false;
+clippyIntroTimer: 0;
+clippyIntroLine: 0;
+clippyIntroDone: false;
 
     // Item flags
     bouncyHouse: false,
@@ -275,11 +275,13 @@ if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 
       tip.textContent = def.label.replace(/\n/g,' ');
       card.appendChild(tip);
 
+      card.addEventListener('click', () => clippyExplain(id));
+
+
       container.appendChild(card);
     });
   }
 
- card.addEventListener('click', () => clippyExplain(id));
 }
 
 const CLIPPY_ITEM_TIPS = {
