@@ -1060,7 +1060,7 @@ if (ai.hatState === 'RIDING') {
     const bOrient = (hai && typeof hai.balloonOrient === 'number') ? hai.balloonOrient : 0;
     // The balloon sprite's "top" (nozzle) is at angle bOrient - PI/2 in world space
     // We want the hat on the nozzle side (opposite the knot)
-    const RIDE_DIST = 45;
+    const RIDE_DIST = 55;
     // drawWaterBalloon rotates the canvas by (orientAngle + PI/2).
     // The knot is at the bottom (+Y) of the unrotated sprite, so in world space
     // the knot sits at angle: (bOrient + PI/2) + PI/2  =  bOrient + PI
