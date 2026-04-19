@@ -296,7 +296,7 @@ function drawPartyHat(epos, ehp, ai, frozen) {
     // knotAngle in world space = bOrient + PI (rear of balloon)
     // Hat's bottom should point toward the knot, so rotate sprite to face that direction
     const knotAngle = bOrient + Math.PI;
-    angle = knotAngle + Math.PI / 2; // +PI/2 because hat sprite points "up" by default
+    angle = knotAngle - Math.PI / 2; // +PI/2 because hat sprite points "up" by default
   }
 }
 
@@ -1168,8 +1168,9 @@ if (eb.isTear) {
   ctx.translate(eb.x, eb.y);
   ctx.rotate(tearAngle);
   const tw = 28, th = 18;
-  if (TearBulletImg.complete && TearBulletImg.naturalWidth > 0) {
-    ctx.drawImage(TearBulletImg, -tw * 0.25, -th/2, tw, th);
+ const tearSrc = eb.isRedTear ? RedTearBulletImg : TearBulletImg;
+if (tearSrc.complete && tearSrc.naturalWidth > 0) {
+    ctx.drawImage(tearSrc, -tw * 0.25, -th/2, tw, th);
   } else {
     ctx.fillStyle = '#44aaff'; ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 10;
     ctx.beginPath();
