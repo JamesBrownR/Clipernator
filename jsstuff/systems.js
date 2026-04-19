@@ -737,7 +737,7 @@ function sysAI() {
 
  
 
-  for (const id of ECS.query('enemy','pos','vel','ai','physics')) {
+for (const id of [...ECS.query('enemy','pos','vel','ai','physics')]) {
 
      // Guard: entity may have been destroyed mid-iteration
     if (!ECS.has(id, 'enemy') || !ECS.has(id, 'pos')) continue;
