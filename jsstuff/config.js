@@ -271,3 +271,6 @@ function formatKey(k) {
   if (k === 'Alt')     return 'ALT';
   return k.toUpperCase();
 }
+
+canvas.width  = CFG.W;
+canvas.height = CFG.H;
