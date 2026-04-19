@@ -20,15 +20,15 @@
 ## Problems, somewhat ordered by importance 
 
 
-* replace all enemies, items, bullets, bosses etc with cartoon style
+* replace all enemies, items, bullets, bosses, UI, etc with cartoon style
 * make floor 1 enemies more interactive and unique. 
-   * the birthday hat enemy should chase the player if no masks are around. if a mask is present it should go on the masks head, making it deal twice as much damage, shoot twice as fast, gain homing and changing its tears to be red. (i think this would require a second mask sprite sheet)
-   * the mask and utensil enemy just chase the player. the utensil enemy should not try and go directly tothe player, it should chase until a certain point. the mask enemy should not try and chase the player at all, unlike how it sometimes does.
+ 
+  
 * the cake boss should not mindlessly go to the center all the time. it should just hover around the stage as a idle animation
 * i dont know if cutscenes are possible in html, but if so  I would like a animation of the cake boss falling from the sky
 * there should be a slightl delay between when the boss is defeated and when the stage expands. it should also expand slower
 * clippy should probably have a animation, rather than just being a single sprite
-- floor 2 boss doesnt work at all
+
 - General item pool needs at least 5 more items
 - Clownish is still a bit iffy. wave radius should be expanded slightly. confused enemies should do 3x damage to other enemies (both from contact damage and bullets). confused enemies currently still dont do contact damage. cannonballs that are confused dont charge at enemies and explode. all enemeies when confused should attack other enenmies
 - mask enemies should shoot projectiles from slightly outside themselves, their bullets should not spawn on their hitbox
@@ -36,6 +36,9 @@
 - cannon ball charge speed should be reduced by 20%
 - Clownish upgrade is placeholder
 - im not sure tightrope boots actually works
+
+- floor 2 boss doesnt work at all, and will be completely redesigned after floor one is finished
+  
 
 
 ## Item Pools
@@ -92,19 +95,19 @@
 
 ### Floor 1
 - **Utensil** (fork/knife/spoon) — body drifts toward player; orbiting utensil launches at player on a timer; knife bleeds, spoon knocks back, fork grabs and slows
-- **Mask** — alternates between SMILE (chases) and CRY (stops, fires spread of gravity-affected tear bullets)
+- **Water Balloon** — moves around randomly and fires gravity-affected bullets at the player
 - **Gift Box** — slow wind-up explosion on proximity; player can grab and throw it
 - **Party Hat** — fast, periodically speed-dives at player
 - **Cake Boss** (wave 11) — multi-phase: candle shots, spin bounce, frosting arc balls; loses a candle per HP threshold; at 1 candle enters permanent spiral
 
 ### Floor 2
-- **Birthday Bomber** — charges at player when close
-- **Piñata** — tanky, leaks particles at low HP
-- **Balloon Witch** — orbits player at distance, fires homing bullets
-- **Streamer Ghost** — phases out every few seconds, teleports near player
+
+
 - **Cannonball** — telegraphs then charges across arena; can be reflected by glowstick at any time into an explosion
 - **Ringmaster** — flees player, buffs nearby enemies (speed, size, damage, HP); enemies in aura long enough reach Critical Mass (immune to explosives, 3x damage, explode on contact)
 - **Juggler** — captures nearby enemies and juggles them; throws arc balls and captured enemies at player; orbits ringmaster if one is nearby
+- Clown car - drives around and throws clowns
+- Clowns - chases enemies, gives them extra speed when on them
 - **Boss 2** (wave 26) — spiral, summon, and volley phases; phase 2 at 50% HP
 
 ---
