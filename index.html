@@ -56,61 +56,69 @@ body::before { display: none; }
 
 /* Titlebar */
 #hud {
-  background: linear-gradient(to right, #0a246a 0%, #a6caf0 100%);
-  padding: 3px 3px 2px 6px;
+  background: linear-gradient(to right, #0a246a 0%, #3a6ea8 100%);
+  padding: 2px 2px 2px 4px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: auto;
   height: 18px;
   gap: 2px;
+  user-select: none;
 }
 
 #hud-title {
-  font-family: 'MS Sans Serif', sans-serif;
+  font-family: 'Microsoft Sans Serif', 'MS Sans Serif', Arial, sans-serif;
   font-size: 11px;
   font-weight: bold;
   color: white;
-  letter-spacing: 0;
   display: flex;
   align-items: center;
   gap: 4px;
-  text-shadow: 1px 1px 0 #000033;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+  white-space: nowrap;
 }
 
-  #hud-controls {
-    flex-direction: row;
-    display: flex;
-  }
-  
+#hud-controls {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
 #hud-controls button {
-  font-family: 'MS Sans Serif', sans-serif;
-  font-size: 11px;
+  font-family: 'Marlett', 'Webdings', Arial, sans-serif;
+  font-size: 9px;
   width: 16px;
   height: 14px;
-  background: #c0c0c0;
-  border: 2px solid;
-  border-color: #ffffff #404040 #404040 #ffffff; /* raised */
+  min-width: 16px;
+  background: #d4d0c8;
+  border-top: 1px solid #ffffff;
+  border-left: 1px solid #ffffff;
+  border-right: 1px solid #404040;
+  border-bottom: 1px solid #404040;
+  box-shadow: inset 1px 1px 0 #e8e8e0, inset -1px -1px 0 #808080;
   cursor: pointer;
   padding: 0;
-  color: #000;
-  line-height: 1;
+  color: #000000;
+  line-height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  outline: none;
+  flex-shrink: 0;
 }
 
-/* THIS is the key fix for the indent on click */
 #hud-controls button:active {
-  border-color: #404040 #ffffff #ffffff #404040; /* flipped = sunken */
-  padding: 1px 0 0 1px; /* shift content slightly */
+  border-top: 1px solid #404040;
+  border-left: 1px solid #404040;
+  border-right: 1px solid #ffffff;
+  border-bottom: 1px solid #ffffff;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #e8e8e0;
+  padding: 1px 0 0 1px;
 }
 
-/* Close button is slightly wider and has a red tint on hover */
-#hud-close {
-  background: #c0c0c0 !important;
+#hud-close:hover {
+  background: #d4d0c8;
 }
-#hud-close:hover { background: #ff4444 !important; color: white !important; }
 
  #toolbar { 
    height: 26px;
@@ -356,12 +364,14 @@ canvas {
 <div id="wrapper">
 <div id="hud">
   <span id="hud-title">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAA..." 
+         width="14" height="14" style="image-rendering:pixelated;" onerror="this.style.display='none'">
     CLIPBLAST.EXE
   </span>
   <div id="hud-controls">
-    <button id="hud-min" title="Minimize">&#x5F;</button>
-    <button id="hud-max" title="Maximize">&#x25A1;</button>
-    <button id="hud-close" id="hud-close" title="Close">&#x2715;</button>
+    <button id="hud-min"   title="Minimize">&#x30;</button>
+    <button id="hud-max"   title="Maximize">&#x31;</button>
+    <button id="hud-close" title="Close">&#x72;</button>
   </div>
 </div>
 <!-- REPLACE the menubar div with this: -->
