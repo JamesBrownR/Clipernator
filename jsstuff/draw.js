@@ -349,18 +349,15 @@ function drawGiftBox(epos, ehp, ai, frozen) {
   const DRAW_SIZE = 64;
 
   const windupRatio = Math.min(1, (ai.windupTimer || 0) / 120);
-  const usingWindup = windupRatio > 0 || (ai.thrown);
+  const usingWindup = windupRatio > 0 || ai.thrown;
 
-  // Shaking: increases with windup progress
+  // Shaking increases with windup progress
   const shakeAmt = windupRatio * 7;
   const sx = usingWindup ? (Math.random() - 0.5) * shakeAmt : 0;
   const sy = usingWindup ? (Math.random() - 0.5) * shakeAmt : 0;
 
-  const drawX = x + sx;
-  const drawY = y + sy;
-
   ctx.save();
-  ctx.translate(drawX, drawY);
+  ctx.translate(x + sx, y + sy);
 
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
   else {
@@ -368,14 +365,14 @@ function drawGiftBox(epos, ehp, ai, frozen) {
     ctx.shadowBlur = 10 + windupRatio * 18;
   }
 
-  const WINDUP_FRAMES = 8;
-  const WINDUP_COLS = 3;
+  const WINDUP_FRAMES = 16;
+  const WINDUP_COLS = 4;
+  const WINDUP_ROWS = 4;
 
   if (usingWindup && giftBoxWindUpSheet.complete && giftBoxWindUpSheet.naturalWidth > 0) {
-    // Map windupRatio (0→1) to frame index (0→7), forward or reverse
     const frameIndex = Math.round(windupRatio * (WINDUP_FRAMES - 1));
-    const frameW = Math.floor(giftBoxWindUpSheet.naturalWidth / WINDUP_COLS);
-    const frameH = Math.floor(giftBoxWindUpSheet.naturalHeight / Math.ceil(WINDUP_FRAMES / WINDUP_COLS));
+    const frameW = Math.floor(giftBoxWindUpSheet.naturalWidth  / WINDUP_COLS);
+    const frameH = Math.floor(giftBoxWindUpSheet.naturalHeight / WINDUP_ROWS);
     const col = frameIndex % WINDUP_COLS;
     const row = Math.floor(frameIndex / WINDUP_COLS);
     ctx.drawImage(
@@ -384,16 +381,14 @@ function drawGiftBox(epos, ehp, ai, frozen) {
       -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
     );
   } else if (giftBoxIdleSheet.complete && giftBoxIdleSheet.naturalWidth > 0) {
-    // Use idle sheet when not winding up
     const COLS = 4, ROWS = 4, TOTAL_FRAMES = 16;
-    const frameW = giftBoxIdleSheet.naturalWidth / COLS;
+    const frameW = giftBoxIdleSheet.naturalWidth  / COLS;
     const frameH = giftBoxIdleSheet.naturalHeight / ROWS;
     if (ai._gbAnimTick === undefined) { ai._gbAnimTick = 0; ai._gbAnimFrame = 0; }
     ai._gbAnimTick++;
     if (ai._gbAnimTick >= 8) { ai._gbAnimTick = 0; ai._gbAnimFrame = (ai._gbAnimFrame + 1) % TOTAL_FRAMES; }
-    const frame = ai._gbAnimFrame;
-    const col = frame % COLS;
-    const row = Math.floor(frame / COLS);
+    const col = ai._gbAnimFrame % COLS;
+    const row = Math.floor(ai._gbAnimFrame / COLS);
     ctx.drawImage(giftBoxIdleSheet,
       col * frameW, row * frameH, frameW, frameH,
       -DRAW_SIZE / 2, -DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
@@ -405,21 +400,17 @@ function drawGiftBox(epos, ehp, ai, frozen) {
   // HP bar
   const bw = 40;
   ctx.fillStyle = '#330000';
-  ctx.fillRect(x - bw / 2, y - 46, bw, 5);
+  ctx.fillRect(x - bw/2, y - 46, bw, 5);
   ctx.fillStyle = ehp.hp < ehp.maxHp / 2 ? '#ff6666' : '#ffaa00';
-  ctx.fillRect(x - bw / 2, y - 46, bw * (ehp.hp / ehp.maxHp), 5);
+  ctx.fillRect(x - bw/2, y - 46, bw * (ehp.hp / ehp.maxHp), 5);
 
   // Windup warning ring
   if (windupRatio > 0.2) {
     ctx.save();
     ctx.globalAlpha = windupRatio * 0.7;
-    ctx.strokeStyle = '#ff4400';
-    ctx.lineWidth = 2;
-    ctx.shadowColor = '#ff4400';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(x, y, 34 + windupRatio * 10, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2;
+    ctx.shadowColor = '#ff4400'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(x, y, 34 + windupRatio * 10, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
 }
