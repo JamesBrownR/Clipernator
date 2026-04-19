@@ -952,15 +952,7 @@ function drawBullet(b) {
     } else {
       ctx.drawImage(bulletImg, -W/2, -H/2, W, H);
     }
-  } else {
-    // Fallback canvas drawing
-    const color = b.damageMult >= 4 ? '#ff3333' :
-                  b.damageMult >= 3 ? '#cc44ff' :
-                  b.damageMult >= 2 ? '#4488ff' :
-                  gs.bouncyHouse    ? '#88ffdd' : '#ffcc44';
-    ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 9;
-    ctx.fillRect(-8*scale, -2.5*scale, 16*scale, 5*scale);
-  }
+  } 
 
   ctx.restore();
 }
