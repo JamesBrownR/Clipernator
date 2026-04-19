@@ -4,11 +4,10 @@
 <meta charset="UTF-8">
 <title>CLIPERNATOR</title>
 <style> 
-  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
 
   @font-face {
   font-family: 'Fixedsys';
-  src: url('fonts/FSEX300.ttf') format('truetype');
+  src: url('/fonts/FSEX300.ttf') format('truetype');
 }
   
   :root {
@@ -57,7 +56,7 @@ body::before { display: none; }
   justify-content: space-between;
   align-items: center;
   width: 700px;
-  height: 22px;
+  height: 18px;
 }
 
 #hud::before { display: none; } /* remove the pseudo-element text */
@@ -89,7 +88,11 @@ body::before { display: none; }
   padding: 1px 0 0 1px;
 }
 
-  
+ #toolbar { 
+   height: 26px;
+  font-family: 'Marlett', 'Fixedsys', monospace;
+font-size: 11px;
+ }
 
 /* Canvas area — sunken inset */
 canvas {
