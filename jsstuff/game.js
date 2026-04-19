@@ -1,5 +1,5 @@
 // ============================================================
-// CLIPBLAST: PARTY HUNTER — Game Core 
+// CLIPBLAST: PARTY HUNTER  Game Core 
 // ECS, game state, input, loop, HUD, pause, game over
 // ============================================================
  
@@ -88,6 +88,17 @@ function initGameState() {
     pendingChoice: false,
     heldGiftBox: null,
     forkGrabbed: false,
+
+   // Show opening Clippy tip on the player sprite
+gs.clippyIntroLines = [
+  "It looks like you started a new game!",
+  "WASD to move · Mouse to aim · Click to shoot",
+  "R to reload · Shift to dash · P to pause",
+  "Good luck — you'll need it.",
+];
+gs.clippyIntroTimer = 0;
+gs.clippyIntroLine = 0;
+gs.clippyIntroDone = false;
 
     // Item flags
     bouncyHouse: false,
@@ -239,7 +250,7 @@ if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 
 
   statsEl.textContent = lines.join('\n');
 
-  // Items — Win2k icon squares with tooltip
+  // Items Win2k icon squares with tooltip
   const container = document.getElementById('pause-items');
   container.innerHTML = '';
 
@@ -267,6 +278,70 @@ if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 
       container.appendChild(card);
     });
   }
+
+ card.addEventListener('click', () => clippyExplain(id));
+}
+
+const CLIPPY_ITEM_TIPS = {
+  birthday:        "It looks like your enemies are moving! BIRTHDAY PARTY freezes all of them for 3 seconds. Surprise!!!",
+  cookie:          "It looks like you're slow! GOLDEN COOKIE gives you 7x speed AND reload speed for 7 seconds.",
+  doubledCake:     "It looks like you want more damage! DOUBLE CAKE makes every bullet 2x damage... but 40% are duds.",
+  tripleCake:      "It looks like you upgraded your cake! TRIPLE CAKE = 3x damage, 45% dud chance. Worth it!",
+  quadCake:        "It looks like you're a gambler! QUAD CAKE = 4x damage but half your bullets are duds. High risk!",
+  bouncy:          "It looks like walls are in the way! BOUNCY HOUSE makes bullets, enemies, AND you bounce off walls.",
+  dash:            "It looks like you need to dodge! PARTY POPPER lets you SHIFT-dash through enemies. 3 charges.",
+  shakeFizzlePop:  "It looks like you're building up pressure! SHAKE FIZZLE POP charges a meter. When full, get hit for a massive shockwave.",
+  flawlessBaking:  "It looks like you're dodging perfectly! FLAWLESS BAKING rewards a clean wave with +2 max ammo.",
+  cursedCandles:   "It looks like you like pain! CURSED CANDLES drain 5 HP/sec but each lit candle adds +2 bullets per shot.",
+  mirrorMaze:      "It looks like bullets are flying everywhere! MIRROR MAZE lets you redirect them. Shoot the shard!",
+  popcornBucket:   "It looks like enemies are dropping things! Collect 5 POPCORN KERNELS from kills for a bullet frenzy.",
+  ragingRings:     "It looks like bullets keep missing! RAGING RINGS captures them to orbit you at 3x damage instead.",
+  tightropeBoots:  "It looks like you want to go faster! TIGHTROPE BOOTS gives +200% move speed. Zoom.",
+  clownish:        "It looks like you have a nose! CLOWNISH grows a blue nose over time. It HONKS and confuses nearby enemies.",
+  bowlingBall:     "It looks like you want to bowl! Next shot fires a giant ball that pierces, bounces, and explodes on expiry.",
+  paperCuts:       "It looks like enemies are hard to kill! PAPER CUTS makes any damaged enemy bleed 1 HP per second.",
+  extraClips:      "It looks like you need more ammo! EXTRA CLIPS gives +15% max HP and ammo, and fully heals you.",
+  clownishUpgrade: "It looks like your nose got bigger! FULL CLOWN MODE fires a ring of 8 bullets and confuses everyone nearby.",
+  popcornUpgrade:  "It looks like you want bigger frenzies! MEGA POPCORN only needs 3 kernels and lasts 6 seconds.",
+};
+
+function clippyExplain(itemId) {
+  const tip = CLIPPY_ITEM_TIPS[itemId];
+  const el = document.getElementById('clippy-bubble-text');
+  if (el && tip) {
+    el.textContent = tip;
+    // Wiggle the clippy image
+    const img = document.getElementById('clippy-pause-img');
+    if (img) {
+      img.style.transition = 'transform 0.1s';
+      img.style.transform = 'rotate(-12deg) scale(1.12)';
+      setTimeout(() => { img.style.transform = 'rotate(4deg) scale(1.05)'; }, 100);
+      setTimeout(() => { img.style.transform = 'rotate(0deg) scale(1)'; }, 220);
+    }
+  }
+}
+
+// Random idle Clippy tips shown in pause menu
+const CLIPPY_IDLE_TIPS = [
+  "It looks like you're paused! The enemies are waiting... patiently.",
+  "Did you know? Confused enemies deal 3x damage to other enemies!",
+  "It looks like you need help! Try clicking an item above to learn about it.",
+  "It looks like the Ringmaster is nearby! Stay away... he buffs all his friends.",
+  "Did you know? Glowstick reflects bullets back as explosives with no cooldown on success!",
+  "It looks like you have dash charges! SHIFT dashes through enemies and damages them.",
+  "Did you know? Gift boxes can be grabbed with E and thrown at enemies!",
+  "It looks like the boss is tough! Each candle you blow out makes it more aggressive.",
+  "Did you know? Bowling balls pierce ALL enemies and explode when they expire!",
+  "It looks like you're doing great! ...probably.",
+];
+
+let _clippyIdleIdx = 0;
+function clippyIdleTip() {
+  const el = document.getElementById('clippy-bubble-text');
+  if (!el) return;
+  // Only show idle tip if nothing item-specific is showing
+  el.textContent = CLIPPY_IDLE_TIPS[_clippyIdleIdx % CLIPPY_IDLE_TIPS.length];
+  _clippyIdleIdx++;
 }
 
 // ================================================================
