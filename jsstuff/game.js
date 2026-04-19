@@ -498,11 +498,7 @@ canvas.addEventListener('contextmenu', e => {
   tryPickUpGiftBox();
 });
 
-canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  mouse.x = (e.clientX - rect.left) / renderScale;
-  mouse.y = (e.clientY - rect.top)  / renderScale;
-});
+
 
 document.addEventListener('keydown', e => {
   // Keybind screen intercepts its own keys via capture listener — don't handle here
