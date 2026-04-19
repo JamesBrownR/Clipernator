@@ -163,31 +163,18 @@ function updateHUD() {
   document.getElementById('score-val').textContent = gs.score;
   document.getElementById('health-bar').style.width =
     Math.max(0, (gs.health / gs.maxHealth) * 100) + '%';
+  // Turn bar red when low
+  document.getElementById('health-bar').style.background =
+    gs.health < gs.maxHealth * 0.3 ? '#cc0000' : '#00aa00';
   document.getElementById('health-num').textContent = Math.max(0, gs.health);
   document.getElementById('ammo-val').textContent = gs.ammo + '/' + gs.maxAmmo;
   document.getElementById('wave-val').textContent = gs.wave;
 
   const ticketHud = document.getElementById('ticket-hud');
   if (ticketHud) {
-    ticketHud.style.display = gs.floor === 2 ? 'inline' : 'none';
+    ticketHud.style.display = gs.floor === 2 ? 'flex' : 'none';
     document.getElementById('ticket-val').textContent = gs.tickets || 0;
   }
-
-  const f2 = gs.floor === 2;
-  const t = Date.now() / 600;
-  const circus = f2 ? ['#ff2200','#ff6600','#ffcc00','#ff6600'][Math.floor(t) % 4] : null;
-  const primary   = f2 ? circus : 'var(--green)';
-  const glow1     = f2 ? circus : 'var(--green2)';
-  const glowRgba  = f2 ? 'rgba(255,80,0,0.15)'  : 'rgba(0,255,100,0.1)';
-  const insetRgba = f2 ? 'rgba(255,60,0,0.06)'  : 'rgba(0,255,100,0.04)';
-
-  const wrapper = document.getElementById('wrapper');
-  const hud     = document.getElementById('hud');
-  const bot     = document.getElementById('bottom-bar');
-  wrapper.style.border    = `3px solid ${primary}`;
-  wrapper.style.boxShadow = `0 0 30px ${glow1}, 0 0 60px ${glowRgba}, inset 0 0 30px ${insetRgba}`;
-  hud.style.borderBottom  = `3px solid ${primary}`;
-  bot.style.borderTop     = `3px solid ${primary}`;
 }
 
 function showMsg(txt) {
