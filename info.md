@@ -24,7 +24,7 @@
 
 
 * replace all cake boss, items, bosses, etc with cartoon style
-* replace ui with windows 2000 style
+
 * unsure which style items should have
 
  
