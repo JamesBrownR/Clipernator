@@ -87,7 +87,7 @@ const INTRO = (() => {
     { text: '    Detecting IDE Secondary Slave  ... None', color: '#aaaaaa', delay: 150 },
     { text: '', color: '#aaaaaa', delay: 200 },
     { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 600 },
-    { text: '         party.exe flagged — quarantine failed.', color: '#ff4444', delay: 0 },
+    { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
     { text: '', color: '#aaaaaa', delay: 400 },
     { text: 'Press DEL to enter SETUP', color: '#aaaaaa', delay: 0 },
     { text: '12/10/97-i430VX,UMC8669-2A59GH2BC-00', color: '#555555', delay: 200 },
@@ -192,8 +192,8 @@ const INTRO = (() => {
     { type: 'prompt', text: '', delay: 200 },
     { type: 'input',  text: 'query party.exe --verbose', delay: 80 },
     { type: 'output', text: '', delay: 200 },
-    { type: 'output', text: '[party.exe] Status: ACTIVE — blocking 14 processes', color: '#ffdd00', delay: 0 },
-    { type: 'output', text: '[party.exe] Origin: UNKNOWN — first seen 00:00:00', color: '#ffdd00', delay: 0 },
+    { type: 'output', text: '[party.exe] Status: ACTIVE. Blocking 14 processes', color: '#ffdd00', delay: 0 },
+    { type: 'output', text: '[party.exe] Origin: UNKNOWN. First seen 00:00:00', color: '#ffdd00', delay: 0 },
     { type: 'output', text: '[party.exe] Threat level: ███████ CRITICAL', color: '#ff4444', delay: 0 },
     { type: 'output', text: '', delay: 500 },
     { type: 'clippy_ask', text: 'party.exe is preventing you from\nopening files. Would you like\nme to open it?', delay: 0 },
@@ -413,7 +413,7 @@ const INTRO = (() => {
     c.fillStyle = '#00ff66';
     c.fillText('BIOS item cache detected. Select one to load into memory:', 40, 50);
     c.fillStyle = '#555555';
-    c.fillText('(No description data available — choose wisely)', 40, 72);
+    c.fillText('(No description data available. Choose wisely)', 40, 72);
 
     const cardW = 200, cardH = 110, startX = 100, cardY = 140, gap = 60;
 
