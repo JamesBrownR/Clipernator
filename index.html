@@ -567,39 +567,12 @@ canvas {
           <div id="pause-items" style="display:flex; flex-wrap:wrap; gap:5px; min-height:32px; align-items:center; padding-top:2px;"></div>
         </fieldset>
         <!-- Clippy advisor -->
+<!-- Clippy advisor -->
 <fieldset style="border:1px solid #808080; padding:4px 10px 8px 10px; margin:0; position:relative;">
   <legend style="font-size:11px; color:#000; padding:0 4px; font-family:'MS Sans Serif',Arial,sans-serif;">Assistant</legend>
-  <div style="display:flex; align-items:flex-end; gap:10px; ">
-   <!-- Speech bubble -->
-<div id="clippy-bubble" style="
-  background:#ffffcc;
-  border-top:1px solid #808080;
-  border-left:1px solid #808080;
-  border-right:1px solid #ffffff;
-  border-bottom:1px solid #ffffff;
-  outline:1px solid #000000;
-  padding:7px 10px;
-  font-family:'MS Sans Serif',Arial,sans-serif;
-  font-size:11px;
-  color:#000;
-  line-height:1.5;
-  flex:1;
-  min-height:50px;
-  position:relative;
-">
-      <div id="clippy-bubble-text">It looks like you're playing CLIPBLAST! Click an item above to learn what it does.</div>
-      <!-- Tail pointing right toward Clippy — right side, vertically centered -->
-      <div style="position:absolute; right:-9px; top:50%; transform:translateY(-50%); width:0; height:0;
-        border-top:8px solid transparent;
-        border-bottom:8px solid transparent;
-        border-left:9px solid #000;"></div>
-      <div style="position:absolute; right:-7px; top:50%; transform:translateY(-50%); width:0; height:0;
-        border-top:7px solid transparent;
-        border-bottom:7px solid transparent;
-        border-left:8px solid #ffffcc;"></div>
-    </div>
-    <!-- Clippy image -->
-    <img src="sprites/Clippy.png" id="clippy-pause-img" style="width:54px; height:54px; image-rendering:pixelated; flex-shrink:0; margin-bottom:2px;" alt="Clippy">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <canvas id="clippy-bubble-canvas" width="270" height="70" style="image-rendering:pixelated; flex-shrink:0;"></canvas>
+    <img src="sprites/Clippy.png" id="clippy-pause-img" style="width:54px; height:54px; image-rendering:pixelated; flex-shrink:0;" alt="Clippy">
   </div>
 </fieldset>
         <!-- Separator -->
