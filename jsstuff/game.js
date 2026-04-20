@@ -1,5 +1,5 @@
 // ============================================================
-// CLIPBLAST: PARTY HUNTER  Game Core  
+// CLIPBLAST: PARTY HUNTER  Game Core   
 // ECS, game state, input, loop, HUD, pause, game over
 // ============================================================
  
