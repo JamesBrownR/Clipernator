@@ -279,38 +279,118 @@ if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 
       container.appendChild(card);
     });
   }
+  drawClippyBubble();
 
 }
 
 const CLIPPY_ITEM_TIPS = {
-  birthday:        "It looks like your enemies are moving! BIRTHDAY PARTY freezes all of them for 3 seconds. Surprise!!!",
+  birthday:        "Surprise! BIRTHDAY PARTY freezes all enemies for 3 seconds.",
   cookie:          "It looks like you're slow! GOLDEN COOKIE gives you 7x speed AND reload speed for 7 seconds.",
   doubledCake:     "It looks like you want more damage! DOUBLE CAKE makes every bullet 2x damage... but 40% are duds.",
-  tripleCake:      "It looks like you upgraded your cake! TRIPLE CAKE = 3x damage, 45% dud chance. Worth it!",
+  tripleCake:      "TRIPLE CAKE = 3x damage, 45% dud chance. Worth it!",
   quadCake:        "It looks like you're a gambler! QUAD CAKE = 4x damage but half your bullets are duds. High risk!",
-  bouncy:          "It looks like walls are in the way! BOUNCY HOUSE makes bullets, enemies, AND you bounce off walls.",
-  dash:            "It looks like you need to dodge! PARTY POPPER lets you SHIFT-dash through enemies. 3 charges.",
-  shakeFizzlePop:  "It looks like you're building up pressure! SHAKE FIZZLE POP charges a meter. When full, get hit for a massive shockwave.",
+  bouncy:          "BOUNCY HOUSE makes bullets, enemies, AND you bounce off walls.",
+  dash:            "Need to dodge? PARTY POPPER lets you SHIFT-dash through enemies. 3 charges.",
+  shakeFizzlePop:  "SHAKE FIZZLE POP charges a meter. When full, you're buffed, and get hit for a massive shockwave.",
   flawlessBaking:  "It looks like you're dodging perfectly! FLAWLESS BAKING rewards a clean wave with +2 max ammo.",
-  cursedCandles:   "It looks like you like pain! CURSED CANDLES drain 5 HP/sec but each lit candle adds +2 bullets per shot.",
-  mirrorMaze:      "It looks like bullets are flying everywhere! MIRROR MAZE lets you redirect them. Shoot the shard!",
-  popcornBucket:   "It looks like enemies are dropping things! Collect 5 POPCORN KERNELS from kills for a bullet frenzy.",
+  cursedCandles:   "It looks like... you like pain! CURSED CANDLES drain 5 HP/sec but each lit candle adds +2 bullets per shot.",
+  mirrorMaze:      "Bullets are flying everywhere.. MIRROR MAZE lets you redirect them. Shoot the shard!",
+  popcornBucket:   "Collect 5 POPCORN KERNELS from kills for a bullet frenzy.",
   ragingRings:     "It looks like bullets keep missing! RAGING RINGS captures them to orbit you at 3x damage instead.",
   tightropeBoots:  "It looks like you want to go faster! TIGHTROPE BOOTS gives +200% move speed. Zoom.",
-  clownish:        "It looks like you have a nose! CLOWNISH grows a blue nose over time. It HONKS and confuses nearby enemies.",
-  bowlingBall:     "It looks like you want to bowl! Next shot fires a giant ball that pierces, bounces, and explodes on expiry.",
-  paperCuts:       "It looks like enemies are hard to kill! PAPER CUTS makes any damaged enemy bleed 1 HP per second.",
-  extraClips:      "It looks like you need more ammo! EXTRA CLIPS gives +15% max HP and ammo, and fully heals you.",
-  clownishUpgrade: "It looks like your nose got bigger! FULL CLOWN MODE fires a ring of 8 bullets and confuses everyone nearby.",
+  clownish:        "You have a nose! CLOWNISH grows a blue nose over time. It HONKS and confuses nearby enemies.",
+  bowlingBall:     "Want to bowl? Next shot fires a giant ball that pierces, bounces, and explodes on expiry.",
+  paperCuts:       "PAPER CUTS makes any damaged enemy bleed 1 HP per second.",
+  extraClips:      "EXTRA CLIPS gives +15% max HP and ammo, and fully heals you... it stacks!",
+  clownishUpgrade: "Placeholder! LOL...",
   popcornUpgrade:  "It looks like you want bigger frenzies! MEGA POPCORN only needs 3 kernels and lasts 6 seconds.",
 };
 
+let _clippyBubbleText = "It looks like you discovered how to PAUSE! Click an item above to learn what it does.";
+
+function drawClippyBubble() {
+  const canvas = document.getElementById('clippy-bubble-canvas');
+  if (!canvas) return;
+  const c = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Draw at 1/3 resolution then upscale for pixelated look
+  const SCALE = 3;
+  const lw = Math.floor(W / SCALE), lh = Math.floor(H / SCALE);
+
+  const off = document.createElement('canvas');
+  off.width = lw; off.height = lh;
+  const oc = off.getContext('2d');
+
+  // Background
+  oc.fillStyle = '#ffffcc';
+  oc.fillRect(0, 0, lw, lh);
+
+  // Border — 1px black outline
+  oc.strokeStyle = '#000000';
+  oc.lineWidth = 1;
+  oc.strokeRect(0.5, 0.5, lw - 1, lh - 1);
+
+  // Inner sunken bevel (Win2k recessed field look)
+  oc.strokeStyle = '#808080';
+  oc.lineWidth = 1;
+  oc.beginPath();
+  oc.moveTo(1, lh - 2); oc.lineTo(1, 1); oc.lineTo(lw - 2, 1);
+  oc.stroke();
+  oc.strokeStyle = '#ffffff';
+  oc.beginPath();
+  oc.moveTo(1, lh - 2); oc.lineTo(lw - 2, lh - 2); oc.lineTo(lw - 2, 1);
+  oc.stroke();
+
+  // Tail on right side (points right toward clippy)
+  const tailY = Math.floor(lh / 2);
+  oc.fillStyle = '#ffffcc';
+  oc.strokeStyle = '#000000';
+  oc.lineWidth = 1;
+  // Outline triangle
+  oc.beginPath();
+  oc.moveTo(lw - 1, tailY - 5);
+  oc.lineTo(lw + 5, tailY);
+  oc.lineTo(lw - 1, tailY + 5);
+  oc.stroke();
+  // Fill triangle (cover the border edge)
+  oc.beginPath();
+  oc.moveTo(lw - 2, tailY - 4);
+  oc.lineTo(lw + 4, tailY);
+  oc.lineTo(lw - 2, tailY + 4);
+  oc.fill();
+
+  // Text — word-wrap into the low-res canvas
+  oc.fillStyle = '#000000';
+  oc.font = '5px "MS Sans Serif", Arial, sans-serif';
+  oc.textBaseline = 'top';
+  const maxW = lw - 8;
+  const words = _clippyBubbleText.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur ? cur + ' ' + w : w;
+    if (oc.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+    else cur = test;
+  }
+  if (cur) lines.push(cur);
+  const lineH = 7;
+  const startY = Math.max(4, Math.floor((lh - lines.length * lineH) / 2));
+  for (let i = 0; i < lines.length; i++) {
+    oc.fillText(lines[i], 4, startY + i * lineH);
+  }
+
+  // Scale up to main canvas
+  c.clearRect(0, 0, W, H);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(off, 0, 0, lw, lh, 0, 0, W, H);
+}
+
 function clippyExplain(itemId) {
   const tip = CLIPPY_ITEM_TIPS[itemId];
-  const el = document.getElementById('clippy-bubble-text');
-  if (el && tip) {
-    el.textContent = tip;
-    // Wiggle the clippy image
+  if (tip) {
+    _clippyBubbleText = tip;
+    drawClippyBubble();
     const img = document.getElementById('clippy-pause-img');
     if (img) {
       img.style.transition = 'transform 0.1s';
@@ -323,12 +403,12 @@ function clippyExplain(itemId) {
 
 // Random idle Clippy tips shown in pause menu
 const CLIPPY_IDLE_TIPS = [
-  "It looks like you're paused! The enemies are waiting... patiently.",
+  "It looks like you're paused! The enemies are waiting... patiently?",
   "Did you know? Confused enemies deal 3x damage to other enemies!",
   "It looks like you need help! Try clicking an item above to learn about it.",
   "It looks like the Ringmaster is nearby! Stay away... he buffs all his friends.",
   "Did you know? Glowstick reflects bullets back as explosives with no cooldown on success!",
-  "It looks like you have dash charges! SHIFT dashes through enemies and damages them.",
+  "SHIFT dashes through enemies and damages them.",
   "Did you know? Gift boxes can be grabbed with E and thrown at enemies!",
   "It looks like the boss is tough! Each candle you blow out makes it more aggressive.",
   "Did you know? Bowling balls pierce ALL enemies and explode when they expire!",
@@ -337,11 +417,9 @@ const CLIPPY_IDLE_TIPS = [
 
 let _clippyIdleIdx = 0;
 function clippyIdleTip() {
-  const el = document.getElementById('clippy-bubble-text');
-  if (!el) return;
-  // Only show idle tip if nothing item-specific is showing
-  el.textContent = CLIPPY_IDLE_TIPS[_clippyIdleIdx % CLIPPY_IDLE_TIPS.length];
+  _clippyBubbleText = CLIPPY_IDLE_TIPS[_clippyIdleIdx % CLIPPY_IDLE_TIPS.length];
   _clippyIdleIdx++;
+  drawClippyBubble();
 }
 
 // ================================================================
