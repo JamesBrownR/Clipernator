@@ -160,6 +160,10 @@ clippyIntroTimer: 0, clippyIntroLine: 0, clippyIntroDone: false,
   ECS.add(pId, 'pos',    { x: worldW / 2, y: worldH / 2, angle: 0 });
   ECS.add(pId, 'vel',    { vx: 0, vy: 0 });
   gs.playerId = pId;
+
+ //Apply difficulty chosen in intro
+  if (typeof INTRO !== 'undefined') INTRO.applyDifficultyToGs(gs);
+ 
 }
 
 // ================================================================
@@ -549,18 +553,31 @@ function loop(timestamp = 0) {
   animId = requestAnimationFrame(loop);
 }
 
-function startGame() {
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('item-choice').style.display = 'none';
-  gameRunning = true;
-  isPaused = false;
-  muzzleFlash = 0;
-  meleeSwingTimer = 0;
-  initGameState();
-  updateHUD();
-  lastTime = performance.now();
-  loop();
-}
+ function startGame() {
+   document.getElementById('overlay').style.display = 'none';
+     document.getElementById('item-choice').style.display = 'none';
+
+     // Run intro sequence first, then actually start
+     if (typeof INTRO !== 'undefined' && !window._introPlayed) {
+       window._introPlayed = true;
+       INTRO.start(() => {
+         _doStartGame();
+       });
+     } else {
+       _doStartGame();
+     }
+   }
+
+   function _doStartGame() {
+     gameRunning = true;
+     isPaused = false;
+     muzzleFlash = 0;
+     meleeSwingTimer = 0;
+     initGameState();
+     updateHUD();
+     lastTime = performance.now();
+     loop();
+   }
 
 function tryPickUpGiftBox() {
   if (gs.heldGiftBox !== null) {
