@@ -293,7 +293,7 @@ const CLIPPY_ITEM_TIPS = {
   dash:            "Need to dodge? PARTY POPPER lets you SHIFT-dash through enemies. 3 charges.",
   shakeFizzlePop:  "SHAKE FIZZLE POP charges a meter. When full, you're buffed, and get hit for a massive shockwave.",
   flawlessBaking:  "It looks like you're dodging perfectly! FLAWLESS BAKING rewards a clean wave with +2 max ammo.",
-  cursedCandles:   "It looks like... you like pain! CURSED CANDLES drain 5 HP/sec but each lit candle adds +2 bullets per shot.",
+  cursedCandles:   "It looks like... you love pain! CURSED CANDLES drain 5 HP/sec but each lit candle adds +2 bullets per shot.",
   mirrorMaze:      "Bullets are flying everywhere.. MIRROR MAZE lets you redirect them. Shoot the shard!",
   popcornBucket:   "Collect 5 POPCORN KERNELS from kills for a bullet frenzy.",
   ragingRings:     "It looks like bullets keep missing! RAGING RINGS captures them to orbit you at 3x damage instead.",
