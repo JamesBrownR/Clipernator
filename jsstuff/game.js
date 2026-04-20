@@ -396,12 +396,12 @@ function clippyExplain(itemId) {
 const CLIPPY_IDLE_TIPS = [
   "It looks like you're paused! The enemies are waiting... patiently?",
   "Did you know? Confused enemies deal 3x damage to other enemies!",
-  "It looks like you need help! Try clicking an item above to learn about it.",
+  "Need help? Try clicking an item above to learn about it.",
   "It looks like the Ringmaster is nearby! Stay away... he buffs all his friends.",
   "Did you know? Glowstick reflects bullets back as explosives with no cooldown on success!",
   "SHIFT dashes through enemies and damages them.",
   "Did you know? Gift boxes can be grabbed with E and thrown at enemies!",
-  "It looks like the boss is tough! Each candle you blow out makes it more aggressive.",
+  "Each candle you blow out makes it more aggressive.",
   "Did you know? Bowling balls pierce ALL enemies and explode when they expire!",
   "It looks like you're doing great! ...probably.",
 ];
