@@ -1684,7 +1684,12 @@ function spawnEnemy() {
   const subtypes=['fork','knife','spoon'];
   ECS.add(id,'enemy',{type,subtype:type==='utensil'?subtypes[Math.floor(Math.random()*3)]:undefined});
   ECS.add(id,'pos',{x,y,angle:0}); ECS.add(id,'vel',{vx:0,vy:0});
-  ECS.add(id,'hp',{hp:Math.ceil(baseHp*def.hpMult),maxHp:Math.ceil(baseHp*def.hpMult),hitFlash:0});
+
+ 
+ const hpMult = (gs._enemyHpMult || 1.0);
+ ECS.add(id,'hp',{hp:Math.ceil(baseHp*def.hpMult*hpMult), maxHp:Math.ceil(baseHp*def.hpMult*hpMult), hitFlash:0});
+
+ 
   ECS.add(id,'physics',{speed:(1.2+Math.random()*0.6+gs.wave*0.12)*def.speedMult});
 ECS.add(id,'ai',{shootCooldown:120,ambushTimer:0,diveTimer:0,dashHit:false,balloonOrient:type==='waterballoon'?Math.floor(Math.random()*4):0});  spawnParticles(x, y, '#ff4400', 10);
 }
