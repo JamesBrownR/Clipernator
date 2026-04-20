@@ -315,7 +315,7 @@ function drawClippyBubble() {
   const W = canvas.width, H = canvas.height;
 
   // Draw at 1/3 resolution then upscale for pixelated look
-  const SCALE = 2;
+  const SCALE = 3;
   const lw = Math.floor(W / SCALE), lh = Math.floor(H / SCALE);
 
   const off = document.createElement('canvas');
@@ -328,10 +328,10 @@ function drawClippyBubble() {
 
   // Border — 1px black outline
   oc.strokeStyle = '#000000';
-  oc.lineWidth = 2;
-  oc.strokeRect(0.5, 0.5, lw - 1, lh - 1);
-
+  oc.lineWidth = 1.5;
  
+    oc.roundRect(bx, by, bw, bh, 6);
+   
 
   // Tail on right side (points right toward clippy)
   const tailY = Math.floor(lh / 2);
