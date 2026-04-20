@@ -329,7 +329,7 @@ oc.fillRect(0, 0, lw, lh);
 oc.strokeStyle = '#000000';
 oc.lineWidth = 1.5;
 oc.beginPath();
-oc.roundRect(0.5, 0.5, lw - 1, lh - 1, 3);
+oc.roundRect(1.5, 1.5, lw - 2, lh - 2, 4);
 oc.fill();
 oc.stroke();
  
