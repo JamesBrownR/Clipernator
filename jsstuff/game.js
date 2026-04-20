@@ -314,57 +314,68 @@ function drawClippyBubble() {
   const c = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
-  const SCALE = 3;
-  const lw = Math.floor(W / SCALE), lh = Math.floor(H / SCALE);
-
-  const off = document.createElement('canvas');
-  off.width = lw; off.height = lh;
-  const oc = off.getContext('2d');
-
-  // Background fill
-  oc.fillStyle = '#ffffcc';
-  oc.fillRect(0, 0, lw, lh);
-
-  // Rounded border — fill the whole canvas with padding
-  const pad = 2;
-  const radius = 60; // in low-res pixels = 12px rendered
-  oc.strokeStyle = '#000000';
-  oc.lineWidth = 1.5;
-  oc.beginPath();
-  oc.roundRect(pad, pad, lw - pad * 2 - 6, lh - pad * 2, radius);
-  oc.fillStyle = '#ffffcc';
-  oc.fill();
-  oc.stroke();
-
-  // Tail on right side pointing toward Clippy image
-  const tailY = Math.floor(lh / 2);
-  const tailX = lw - 6 - pad; // right edge of the bubble box
-  // Outline triangle
-  oc.beginPath();
-  oc.moveTo(tailX, tailY - 4);
-  oc.lineTo(tailX + 6, tailY);
-  oc.lineTo(tailX, tailY + 4);
-  oc.strokeStyle = '#000000';
-  oc.lineWidth = 1;
-  oc.stroke();
-  // Fill triangle (cover the border edge)
-  oc.beginPath();
-  oc.moveTo(tailX + 1, tailY - 3);
-  oc.lineTo(tailX + 5, tailY);
-  oc.lineTo(tailX + 1, tailY + 3);
-  oc.fillStyle = '#ffffcc';
-  oc.fill();
-
-  // Scale up to main canvas (pixelated for the chunky rounded corners)
   c.clearRect(0, 0, W, H);
-  c.imageSmoothingEnabled = false;
-  c.drawImage(off, 0, 0, lw, lh, 0, 0, W, H);
 
-  // Text at full resolution on top — crisp
+  const tailW = 10;
+  const bubbleW = W - tailW - 2;
+  const bubbleH = H - 2;
+  const bx = 1, by = 1;
+  const radius = 6;
+
+  // Drop shadow
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.25)';
+  c.shadowBlur = 4;
+  c.shadowOffsetX = 1;
+  c.shadowOffsetY = 1;
+  c.fillStyle = '#ffffcc';
+  c.beginPath();
+  c.roundRect(bx, by, bubbleW, bubbleH, radius);
+  c.fill();
+  c.restore();
+
+  // Fill
+  c.fillStyle = '#ffffcc';
+  c.beginPath();
+  c.roundRect(bx, by, bubbleW, bubbleH, radius);
+  c.fill();
+
+  // Border
+  c.strokeStyle = '#000000';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.roundRect(bx, by, bubbleW, bubbleH, radius);
+  c.stroke();
+
+  // Tail pointing right toward Clippy image
+  const tailX = bx + bubbleW - 1;
+  const midY = Math.floor(H / 2);
+  // Fill tail (cover border edge first)
+  c.fillStyle = '#ffffcc';
+  c.beginPath();
+  c.moveTo(tailX, midY - 7);
+  c.lineTo(tailX + tailW, midY);
+  c.lineTo(tailX, midY + 7);
+  c.closePath();
+  c.fill();
+  // Tail outline (two sides only, not the base)
+  c.strokeStyle = '#000000';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(tailX, midY - 7);
+  c.lineTo(tailX + tailW, midY);
+  c.lineTo(tailX, midY + 7);
+  c.stroke();
+  // Re-fill to erase the base seam from the border
+  c.fillStyle = '#ffffcc';
+  c.fillRect(tailX - 1, midY - 7, 3, 15);
+
+  // Text
   c.fillStyle = '#000000';
   c.font = '11px "MS Sans Serif", Arial, sans-serif';
   c.textBaseline = 'top';
-  const maxW = W - 28; // leave room for tail
+  const padX = 8, padY = 7;
+  const maxW = bubbleW - padX * 2;
   const words = _clippyBubbleText.split(' ');
   const lines = [];
   let cur = '';
@@ -374,10 +385,11 @@ function drawClippyBubble() {
     else cur = test;
   }
   if (cur) lines.push(cur);
-  const lineH = 14;
-  const startY = Math.max(6, Math.floor((H - lines.length * lineH) / 2));
+  const lineH = 15;
+  const totalH = lines.length * lineH;
+  const startY = Math.max(padY, Math.floor((H - totalH) / 2));
   for (let i = 0; i < lines.length; i++) {
-    c.fillText(lines[i], 8, startY + i * lineH);
+    c.fillText(lines[i], padX, startY + i * lineH);
   }
 }
 
