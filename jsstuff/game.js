@@ -329,7 +329,8 @@ function drawClippyBubble() {
   // Border — 1px black outline
   oc.strokeStyle = '#000000';
   oc.lineWidth = 1.5;
- 
+   oc.strokeRect(0.5, 0.5, lw - 1, lh - 1);
+  oc.beginPath();
     oc.roundRect(bx, by, bw, bh, 6);
    
 
