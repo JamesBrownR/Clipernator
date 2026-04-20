@@ -314,7 +314,6 @@ function drawClippyBubble() {
   const c = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
-  // Draw at 1/3 resolution then upscale for pixelated look
   const SCALE = 3;
   const lw = Math.floor(W / SCALE), lh = Math.floor(H / SCALE);
 
@@ -322,47 +321,50 @@ function drawClippyBubble() {
   off.width = lw; off.height = lh;
   const oc = off.getContext('2d');
 
- oc.fillStyle = '#ffffcc';
-oc.fillRect(0, 0, lw, lh);
-
- // Border — rounded corners, no bevel
-oc.strokeStyle = '#000000';
-oc.lineWidth = 1.5;
-oc.beginPath();
-oc.roundRect(100,100,200,42,6);
-oc.fill();
-oc.stroke();
- 
-   
-
-  // Tail on right side (points right toward clippy)
-  const tailY = Math.floor(lh / 2);
+  // Background fill
   oc.fillStyle = '#ffffcc';
+  oc.fillRect(0, 0, lw, lh);
+
+  // Rounded border — fill the whole canvas with padding
+  const pad = 2;
+  const radius = 4; // in low-res pixels = 12px rendered
   oc.strokeStyle = '#000000';
-  oc.lineWidth = 1;
+  oc.lineWidth = 1.5;
+  oc.beginPath();
+  oc.roundRect(pad, pad, lw - pad * 2 - 6, lh - pad * 2, radius);
+  oc.fillStyle = '#ffffcc';
+  oc.fill();
+  oc.stroke();
+
+  // Tail on right side pointing toward Clippy image
+  const tailY = Math.floor(lh / 2);
+  const tailX = lw - 6 - pad; // right edge of the bubble box
   // Outline triangle
   oc.beginPath();
-  oc.moveTo(lw - 1, tailY - 5);
-  oc.lineTo(lw + 5, tailY);
-  oc.lineTo(lw - 1, tailY + 5);
+  oc.moveTo(tailX, tailY - 4);
+  oc.lineTo(tailX + 6, tailY);
+  oc.lineTo(tailX, tailY + 4);
+  oc.strokeStyle = '#000000';
+  oc.lineWidth = 1;
   oc.stroke();
   // Fill triangle (cover the border edge)
   oc.beginPath();
-  oc.moveTo(lw - 2, tailY - 4);
-  oc.lineTo(lw + 4, tailY);
-  oc.lineTo(lw - 2, tailY + 4);
+  oc.moveTo(tailX + 1, tailY - 3);
+  oc.lineTo(tailX + 5, tailY);
+  oc.lineTo(tailX + 1, tailY + 3);
+  oc.fillStyle = '#ffffcc';
   oc.fill();
 
- // Scale up background/border/tail to main canvas (pixelated)
+  // Scale up to main canvas (pixelated for the chunky rounded corners)
   c.clearRect(0, 0, W, H);
   c.imageSmoothingEnabled = false;
   c.drawImage(off, 0, 0, lw, lh, 0, 0, W, H);
 
-  // Text drawn at full resolution on top — crisp, not pixelated
+  // Text at full resolution on top — crisp
   c.fillStyle = '#000000';
   c.font = '11px "MS Sans Serif", Arial, sans-serif';
   c.textBaseline = 'top';
-  const maxW = W - 16;
+  const maxW = W - 28; // leave room for tail
   const words = _clippyBubbleText.split(' ');
   const lines = [];
   let cur = '';
