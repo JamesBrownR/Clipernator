@@ -322,14 +322,16 @@ function drawClippyBubble() {
   off.width = lw; off.height = lh;
   const oc = off.getContext('2d');
 
-  // Background
-  oc.fillStyle = '#ffffcc';
-  oc.fillRect(0, 0, lw, lh);
+ oc.fillStyle = '#ffffcc';
+oc.fillRect(0, 0, lw, lh);
 
-  // Border — 1px black outline
-  oc.strokeStyle = '#000000';
-  oc.lineWidth = 1.5;
-   oc.strokeRect(0.5, 0.5, lw - 1, lh - 1);
+ // Border — rounded corners, no bevel
+oc.strokeStyle = '#000000';
+oc.lineWidth = 1.5;
+oc.beginPath();
+oc.roundRect(0.5, 0.5, lw - 1, lh - 1, 3);
+oc.fill();
+oc.stroke();
  
    
 
