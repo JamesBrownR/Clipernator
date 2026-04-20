@@ -347,28 +347,33 @@ function drawClippyBubble() {
   c.roundRect(bx, by, bubbleW, bubbleH, radius);
   c.stroke();
 
-  // Tail pointing right toward Clippy image
-  const tailX = bx + bubbleW - 1;
-  const midY = Math.floor(H / 2);
-  // Fill tail (cover border edge first)
-  c.fillStyle = '#ffffcc';
-  c.beginPath();
-  c.moveTo(tailX, midY - 7);
-  c.lineTo(tailX + tailW, midY);
-  c.lineTo(tailX, midY + 7);
-  c.closePath();
-  c.fill();
-  // Tail outline (two sides only, not the base)
-  c.strokeStyle = '#000000';
-  c.lineWidth = 1;
-  c.beginPath();
-  c.moveTo(tailX, midY - 7);
-  c.lineTo(tailX + tailW, midY);
-  c.lineTo(tailX, midY + 7);
-  c.stroke();
-  // Re-fill to erase the base seam from the border
-  c.fillStyle = '#ffffcc';
-  c.fillRect(tailX - 1, midY - 7, 3, 15);
+ // Combined bubble + tail as one path
+const midY = Math.floor(H / 2);
+const tailX = bx + bubbleW;
+
+c.beginPath();
+// Start at top-left, go clockwise
+c.moveTo(bx + radius, by);
+c.lineTo(tailX - radius, by);
+c.arcTo(tailX, by, tailX, by + radius, radius);
+// top side of tail gap
+c.lineTo(tailX, midY - 7);
+c.lineTo(tailX + tailW, midY);
+c.lineTo(tailX, midY + 7);
+// bottom side of tail gap
+c.lineTo(tailX, H - by - radius);
+c.arcTo(tailX, H - by, tailX - radius, H - by, radius);
+c.lineTo(bx + radius, H - by);
+c.arcTo(bx, H - by, bx, H - by - radius, radius);
+c.lineTo(bx, by + radius);
+c.arcTo(bx, by, bx + radius, by, radius);
+c.closePath();
+
+c.fillStyle = '#ffffcc'; // or 'transparent' / rgba with 0 alpha
+c.fill();
+c.strokeStyle = '#000000';
+c.lineWidth = 1;
+c.stroke();
 
   // Text
   c.fillStyle = '#000000';
