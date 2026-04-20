@@ -360,30 +360,30 @@ function drawClippyBubble() {
   oc.lineTo(lw - 2, tailY + 4);
   oc.fill();
 
-  // Text — word-wrap into the low-res canvas
-  oc.fillStyle = '#000000';
-  oc.font = '5px "MS Sans Serif", Arial, sans-serif';
-  oc.textBaseline = 'top';
-  const maxW = lw - 8;
+ // Scale up background/border/tail to main canvas (pixelated)
+  c.clearRect(0, 0, W, H);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(off, 0, 0, lw, lh, 0, 0, W, H);
+
+  // Text drawn at full resolution on top — crisp, not pixelated
+  c.fillStyle = '#000000';
+  c.font = '11px "MS Sans Serif", Arial, sans-serif';
+  c.textBaseline = 'top';
+  const maxW = W - 16;
   const words = _clippyBubbleText.split(' ');
   const lines = [];
   let cur = '';
   for (const w of words) {
     const test = cur ? cur + ' ' + w : w;
-    if (oc.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+    if (c.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
     else cur = test;
   }
   if (cur) lines.push(cur);
-  const lineH = 7;
-  const startY = Math.max(4, Math.floor((lh - lines.length * lineH) / 2));
+  const lineH = 14;
+  const startY = Math.max(6, Math.floor((H - lines.length * lineH) / 2));
   for (let i = 0; i < lines.length; i++) {
-    oc.fillText(lines[i], 4, startY + i * lineH);
+    c.fillText(lines[i], 8, startY + i * lineH);
   }
-
-  // Scale up to main canvas
-  c.clearRect(0, 0, W, H);
-  c.imageSmoothingEnabled = false;
-  c.drawImage(off, 0, 0, lw, lh, 0, 0, W, H);
 }
 
 function clippyExplain(itemId) {
