@@ -326,8 +326,8 @@ function drawClippyBubble() {
   oc.fillRect(0, 0, lw, lh);
 
   // Rounded border — fill the whole canvas with padding
-  const pad = 3;
-  const radius = 12; // in low-res pixels = 12px rendered
+  const pad = 1.6;
+  const radius = 30; // in low-res pixels = 12px rendered
   oc.strokeStyle = '#000000';
   oc.lineWidth = 1.5;
   oc.beginPath();
