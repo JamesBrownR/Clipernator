@@ -81,12 +81,19 @@ const INTRO = (() => {
     { text: 'Drawa Modular BIOS v4.51PG, An Energy Star Ally', color: '#aaaaaa', delay: 0 },
     { text: 'Copyright (C) 1984-97, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
     { text: '', color: '#aaaaaa', delay: 400 },
-    { text: '(CLIPBLAST) Letnep i430VX PCIset(TM)', color: '#aaaaaa', delay: 0 },
     { text: '', color: '#aaaaaa', delay: 300 },
     { text: 'PENTIUM-S CPU at 666MHz', color: '#00ff66', delay: 200 },
     { text: 'Memory Test :    65536K OK', color: '#00ff66', delay: 900 },
     { text: '', color: '#aaaaaa', delay: 400 },
- 
+
+     { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 300 },
+    { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
+    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 0 },
+    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 0 },
+    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 0 },
+    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 0 },
+    { text: '', color: '#aaaaaa', delay: 300 },
+    
     { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
   
     // IDE detection — starts ~9500ms after first line
@@ -95,15 +102,8 @@ const INTRO = (() => {
     { text: '    Detecting IDE Secondary Master ... None', color: '#aaaaaa', delay: 600 },
     { text: '    Detecting IDE Secondary Slave  ... None', color: '#aaaaaa', delay: 600 },
     { text: '', color: '#aaaaaa', delay: 300 },
-    { text: 'Ultra DMA Mode 2 Enabled', color: '#aaaaaa', delay: 400 },
     { text: '', color: '#aaaaaa', delay: 200 },
-    { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 300 },
-    { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
-    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 0 },
-    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 0 },
-    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 0 },
-    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 300 },
+   
     { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
     { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
     { text: '', color: '#aaaaaa', delay: 500 },
