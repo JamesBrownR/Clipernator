@@ -107,9 +107,7 @@ const INTRO = (() => {
     { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
     { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
     { text: '', color: '#aaaaaa', delay: 500 },
-    { text: 'Press DEL to enter SETUP', color: '#aaaaaa', delay: 0 },
-    { text: '12/10/97-i430VX,UMC8669-2A59GH2BC-00', color: '#555555', delay: 300 },
-    { text: '', color: '#aaaaaa', delay: 400 },
+ 
     { text: '>>> SELECT DIFFICULTY <<<', color: '#ffdd00', delay: 600, isDifficultyPrompt: true },
   ];
 
