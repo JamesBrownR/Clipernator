@@ -97,39 +97,34 @@ calculator:   'sprites/ui/calculator.png',
     { text: 'PENTIUM-S CPU at 666MHz', color: '#00ff66', delay: 500 },
   ];
 
-  const BIOS_LINES_POST_MEM = [
-    { text: '', color: '#aaaaaa', delay: 600 },
-    { text: 'Drawa Plug and Play BIOS Extension  v1.0A', color: '#aaaaaa', delay: 400 },
-    { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
-  ];
+const BIOS_LINES_POST_MEM = [
+  { text: '', color: '#aaaaaa', delay: 600 },
+  { text: 'Drawa Plug and Play BIOS Extension  v1.0A', color: '#aaaaaa', delay: 400 },
+  { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
+  { text: '', color: '#aaaaaa', delay: 300 },
+];
 
+const IDE_DETECT_LINES = [
+  { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa' },
+  { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa' },
+  { text: '    Detecting IDE Secondary Master ... None',   color: '#aaaaaa' },
+  { text: '    Detecting IDE Secondary Slave  ... None',   color: '#aaaaaa' },
+  { text: '', color: '#aaaaaa' },
+];
 
-
-  const BIOS_LINES_POST_IDE = [
-    { text: '', color: '#aaaaaa', delay: 300 },
-    { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 500 },
-    { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
-    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 500 },
-    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 500 },
-    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 500 },
-    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 500 },
-    { text: '', color: '#aaaaaa', delay: 300 },
-     { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
-    { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 500 },
-    { text: '>>> SELECT DIFFICULTY <<<', color: '#ffdd00', delay: 600, isDifficultyPrompt: true },
-  ];
-
-
-    const IDE_DETECT_LINES = [
-    { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa' },
-    { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa' },
-    { text: '    Detecting IDE Secondary Master ... None',   color: '#aaaaaa' },
-    { text: '    Detecting IDE Secondary Slave  ... None',   color: '#aaaaaa' },
-       { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 500 },
-    { text: '', color: '#aaaaaa', delay: 400 },
-  
-  ];
+const BIOS_LINES_POST_IDE = [
+  { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 500 },
+  { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
+  { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 400 },
+  { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 400 },
+  { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 400 },
+  { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 400 },
+  { text: '', color: '#aaaaaa', delay: 300 },
+  { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
+  { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
+  { text: '', color: '#aaaaaa', delay: 500 },
+  { text: '>>> SELECT DIFFICULTY <<<', color: '#ffdd00', delay: 600, isDifficultyPrompt: true },
+];
 
   // Item draft
   let draftItems = [];
@@ -287,6 +282,7 @@ calculator:   'sprites/ui/calculator.png',
     ideLineIdx = 0; ideAnimTimer = 0; ideAnimStarted = false; ideLines = [];
     biosCursor = true; biosCursorTimer = 0;
     playSound('startup1');
+setTimeout(() => playSound('startup2', true), 1000); // start loop after startup1 finishes
 
     let acc = 0;
     BIOS_LINES_PRE.forEach((line, i) => {
@@ -601,7 +597,8 @@ calculator:   'sprites/ui/calculator.png',
     desktopLoadingData = false;
     desktopClickedData = false;
     stopSound('startup3');
-    playSound('startup2', true);
+stopSound('startup2');
+playSound('startup3');
     attachDesktopClicks();
     requestAnimationFrame(desktopLoop);
   }
