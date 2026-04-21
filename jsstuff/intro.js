@@ -88,10 +88,10 @@ const INTRO = (() => {
 
      { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 300 },
     { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
-    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 250 },
-    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 250 },
-    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 250 },
-    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 250 },
+    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 550 },
+    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 550 },
+    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 550 },
+    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 550 },
     { text: '', color: '#aaaaaa', delay: 300 },
     
     { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 100 },
