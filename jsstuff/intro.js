@@ -88,17 +88,17 @@ const INTRO = (() => {
 
      { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 300 },
     { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
-    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 0 },
-    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 0 },
-    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 0 },
-    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 0 },
+    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 250 },
+    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 250 },
+    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 250 },
+    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 250 },
     { text: '', color: '#aaaaaa', delay: 300 },
     
-    { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
+    { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 100 },
   
     // IDE detection — starts ~9500ms after first line
-    { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa', delay: 900 },
-    { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa', delay: 700 },
+    { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa', delay: 400 },
+    { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa', delay: 400 },
     { text: '    Detecting IDE Secondary Master ... None', color: '#aaaaaa', delay: 600 },
     { text: '    Detecting IDE Secondary Slave  ... None', color: '#aaaaaa', delay: 600 },
     { text: '', color: '#aaaaaa', delay: 300 },
