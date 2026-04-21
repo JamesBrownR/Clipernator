@@ -560,7 +560,7 @@ const INTRO = (() => {
     c.fillStyle = '#00ff66';
     c.fillText('BIOS item cache detected. Select one to load into memory:', 40, 50);
     c.fillStyle = '#555555';
-    c.fillText('(No description data available. Choose wisely)', 40, 72);
+    c.fillText('(DESCRIPTION DATA: UNAVAILABLE)', 40, 72); // this should be in red
 
     const cardW = 200, cardH = 110, startX = 100, cardY = 140, gap = 60;
     draftItems.forEach((item, i) => {
