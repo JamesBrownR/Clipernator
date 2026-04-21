@@ -111,7 +111,10 @@ const INTRO = (() => {
     { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 500 },
     { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 500 },
     { text: '', color: '#aaaaaa', delay: 300 },
-   
+     { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
+    { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
+    { text: '', color: '#aaaaaa', delay: 500 },
+    { text: '>>> SELECT DIFFICULTY <<<', color: '#ffdd00', delay: 600, isDifficultyPrompt: true },
   ];
 
 
@@ -122,10 +125,7 @@ const INTRO = (() => {
     { text: '    Detecting IDE Secondary Slave  ... None',   color: '#aaaaaa' },
        { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 500 },
     { text: '', color: '#aaaaaa', delay: 400 },
-    { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
-    { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 500 },
-    { text: '>>> SELECT DIFFICULTY <<<', color: '#ffdd00', delay: 600, isDifficultyPrompt: true },
+  
   ];
 
   // Item draft
