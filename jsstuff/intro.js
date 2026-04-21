@@ -63,6 +63,8 @@ function playStartup2Loop() {
   startup2Source = ctx.createBufferSource();
   startup2Source.buffer = startup2Buffer;
   startup2Source.loop = true;
+  startup2Source.loopStart = 0;
+  startup2Source.loopEnd = startup2Buffer.duration;
   startup2Source.connect(ctx.destination);
   startup2Source.start(0);
 }
