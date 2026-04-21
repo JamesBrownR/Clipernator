@@ -21,7 +21,9 @@ const INTRO = (() => {
     clippyJump:     'sprites/clippy/Clippy_jump.png',
     clippyNormal:   'sprites/Clippy.png',
     folder:         'sprites/ui/folder.png',
-    appGeneric:     'sprites/ui/app_generic.png',
+    appGeneric:   'sprites/ui/app_generic.png',
+computer:     'sprites/ui/computer.png',
+calculator:   'sprites/ui/calculator.png',
     dataLocked:     'sprites/ui/data_locked.png',
     sapmovy:        'sprites/ui/sapmovy.png',
     drawalogo:      'sprites/ui/drawalogo.png',
@@ -161,15 +163,15 @@ const INTRO = (() => {
   let desktopClickedData = false;
 
   const DESKTOP_APPS = [
-    { id: 'mycomputer',  label: 'My Computer',       sprite: 'appGeneric', x: 24,  y: 30  },
-    { id: 'recycle',     label: 'Recycle Bin',        sprite: 'appGeneric', x: 24,  y: 100 },
+   { id: 'mycomputer',  label: 'My Computer',  sprite: 'computer',    x: 24,  y: 30  },
+{ id: 'calculator',  label: 'Calculator',   sprite: 'calculator',  x: 110, y: 170 },
+    { id: 'recycle',     label: 'Trash',        sprite: 'trash', x: 24,  y: 100 },
     { id: 'docs',        label: 'My Documents',       sprite: 'folder',     x: 24,  y: 170 },
-    { id: 'notepad',     label: 'Notepad',            sprite: 'appGeneric', x: 24,  y: 240 },
-    { id: 'internet',    label: 'Internet\nExplorer', sprite: 'sapmovy',    x: 24,  y: 310 },
+    { id: 'notepad',     label: 'Notepad',            sprite: 'notes', x: 24,  y: 240 },
+    { id: 'internet',    label: 'Sapmovy', sprite: 'sapmovy',    x: 24,  y: 310 },
     { id: 'data',        label: 'data.md',            sprite: 'dataLocked', x: 24,  y: 400 },
     { id: 'folder1',     label: 'Projects',           sprite: 'folder',     x: 110, y: 30  },
     { id: 'folder2',     label: 'Downloads',          sprite: 'folder',     x: 110, y: 100 },
-    { id: 'calculator',  label: 'Calculator',         sprite: 'appGeneric', x: 110, y: 170 },
   ];
 
   const ERROR_MESSAGES = {
