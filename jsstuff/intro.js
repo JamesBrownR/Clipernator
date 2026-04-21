@@ -10,11 +10,13 @@ const INTRO = (() => {
 
   // ── Asset paths ──
   const SND = {
-    startup1: 'sounds/soundeffects/opening/startup1.mp3',
-    startup2: 'sounds/soundeffects/opening/startup2.mp3',
-    click:    'sounds/soundeffects/opening/click.mp3',
+    startup1:   'sounds/soundeffects/opening/startup1.mp3',
+    startup2:   'sounds/soundeffects/opening/startup2.mp3',
+    startup3:   'sounds/soundeffects/opening/startup3.mp3',
+    click:      'sounds/soundeffects/opening/click.mp3',
+    confirm:    'sounds/soundeffects/opening/confirm.mp3',
     bluescreen: 'sounds/soundeffects/opening/bluescreen.mp3',
-    typing:   'sounds/soundeffects/opening/typing.mp3',
+    typing:     'sounds/soundeffects/opening/typing.mp3',
   };
 
   const SPR = {
@@ -50,14 +52,17 @@ const INTRO = (() => {
   function stopSound(key) {
     if (audioCache[key]) { audioCache[key].pause(); audioCache[key].currentTime = 0; }
   }
+  // Stop all looping music tracks
+  function stopAllMusic() {
+    ['startup2'].forEach(k => stopSound(k));
+  }
 
   // ── State ──
   let stage = 'BIOS';
-  let onDone = null; // callback when intro finishes
+  let onDone = null;
   let container = null;
   let overlayEl = null;
 
-  // shared
   let keyHandler = null;
 
   // BIOS state
@@ -67,38 +72,40 @@ const INTRO = (() => {
   let biosTimer = 0;
   let biosPhase = 'typing'; // 'typing' | 'difficulty' | 'done'
   let difficultySelected = 0; // 0=Easy 1=Normal 2=Hard
-  const BIOS_LINE_DELAY = 38;  // ms per char
-  const BIOS_PAUSE_BETWEEN = 180; // ms between lines
+  // Slower: more ms per char and between lines
+  const BIOS_LINE_DELAY = 55;
+  const BIOS_PAUSE_BETWEEN = 280;
 
   const BIOS_LINES = [
     { text: 'Award Modular BIOS v4.51PG, An Energy Star Ally', color: '#aaaaaa', delay: 0 },
     { text: 'Copyright (C) 1984-97, Award Software, Inc.', color: '#aaaaaa', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 200 },
+    { text: '', color: '#aaaaaa', delay: 300 },
     { text: '(CLIPBLAST) Intel i430VX PCIset(TM)', color: '#aaaaaa', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 120 },
-    { text: 'PENTIUM-S CPU at 666MHz', color: '#00ff66', delay: 0 },
-    { text: 'Memory Test :    65536K OK', color: '#00ff66', delay: 400 },
     { text: '', color: '#aaaaaa', delay: 200 },
+    { text: 'PENTIUM-S CPU at 666MHz', color: '#00ff66', delay: 0 },
+    { text: 'Memory Test :    65536K OK', color: '#00ff66', delay: 600 },
+    { text: '', color: '#aaaaaa', delay: 300 },
     { text: 'Award Plug and Play BIOS Extension  v1.0A', color: '#aaaaaa', delay: 0 },
     { text: 'Copyright (C) 1997, Award Software, Inc.', color: '#aaaaaa', delay: 0 },
-    { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa', delay: 300 },
-    { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa', delay: 200 },
-    { text: '    Detecting IDE Secondary Master... None', color: '#aaaaaa', delay: 150 },
-    { text: '    Detecting IDE Secondary Slave  ... None', color: '#aaaaaa', delay: 150 },
-    { text: '', color: '#aaaaaa', delay: 200 },
-    { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 600 },
-    { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 400 },
-    { text: 'Press DEL to enter SETUP', color: '#aaaaaa', delay: 0 },
-    { text: '12/10/97-i430VX,UMC8669-2A59GH2BC-00', color: '#555555', delay: 200 },
+    { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa', delay: 450 },
+    { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa', delay: 300 },
+    { text: '    Detecting IDE Secondary Master... None', color: '#aaaaaa', delay: 250 },
+    { text: '    Detecting IDE Secondary Slave  ... None', color: '#aaaaaa', delay: 250 },
     { text: '', color: '#aaaaaa', delay: 300 },
-    { text: '>>> SELECT DIFFICULTY <<<', color: '#ffdd00', delay: 400, isDifficultyPrompt: true },
+    { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
+    { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
+    { text: '', color: '#aaaaaa', delay: 500 },
+    { text: 'Press DEL to enter SETUP', color: '#aaaaaa', delay: 0 },
+    { text: '12/10/97-i430VX,UMC8669-2A59GH2BC-00', color: '#555555', delay: 300 },
+    { text: '', color: '#aaaaaa', delay: 400 },
+    { text: '>>> SELECT DIFFICULTY <<<', color: '#ffdd00', delay: 600, isDifficultyPrompt: true },
   ];
 
   // ITEM DRAFT state
   let draftItems = [];
   let draftSelected = 0;
-  let draftPhase = 'choosing'; // 'choosing' | 'done'
+  let draftPhase = 'choosing';
+  let draftCount = 0; // how many items to pick based on difficulty
 
   // DESKTOP LOAD state
   let desktopLoadLines = [];
@@ -121,7 +128,7 @@ const INTRO = (() => {
   ];
 
   // DESKTOP state
-  let desktopPhase = 'idle'; // 'idle' | 'error' | 'loading_data' | 'bluescreen_transition'
+  let desktopPhase = 'idle';
   let desktopErrorMsg = '';
   let desktopErrorVisible = false;
   let desktopErrorApp = '';
@@ -158,7 +165,7 @@ const INTRO = (() => {
   // BLUESCREEN state
   let bluescreenTimer = 0;
   let clippyVisible = false;
-  let clippyAnim = 'notice'; // 'notice' | 'engineer' | 'normal'
+  let clippyAnim = 'notice';
   let clippyAnimFrame = 0;
   let clippyAnimTimer = 0;
   let clippyDialogText = '';
@@ -167,14 +174,14 @@ const INTRO = (() => {
   let clippyDialogSelected = 0;
   let clippyDialogVisible = false;
   let clippyBounceTimer = 0;
-  let clippySlideY = 300; // slides in from bottom
+  let clippySlideY = 300;
 
   // TERMINAL state
   let termLines = [];
   let termCurrentLine = '';
   let termCharIdx = 0;
   let termLineTimer = 0;
-  let termPhase = 0; // which line sequence we're on
+  let termPhase = 0;
   let termDone = false;
   let termCursor = true;
   let termCursorTimer = 0;
@@ -200,14 +207,14 @@ const INTRO = (() => {
   ];
 
   // GAME_WINDOW state
-  let gameWindowPhase = 'opening'; // 'opening' | 'enemy_spawn' | 'clippy_ask' | 'clippy_jump' | 'done'
+  let gameWindowPhase = 'opening';
   let gameWindowTimer = 0;
   let introEnemyId = null;
   let introEnemyX = 0;
   let introEnemyY = 0;
   let introEnemyVx = 0.4;
   let introEnemyVy = 0.3;
-  let clippyJumpProgress = 0; // 0→1 during jump
+  let clippyJumpProgress = 0;
   let clippyJumpStartX = 0;
   let clippyJumpStartY = 0;
   let clippyJumpTargetX = 0;
@@ -226,7 +233,6 @@ const INTRO = (() => {
     `;
     document.body.appendChild(overlayEl);
 
-    // Main canvas for drawn stages
     const c = document.createElement('canvas');
     c.id = 'intro-canvas';
     c.style.cssText = 'display:block; width:100%; height:100%;';
@@ -278,15 +284,24 @@ const INTRO = (() => {
     biosLines = [];
     playSound('startup1');
 
+    // After startup1, play startup2 looping
+    // startup1 is ~3s, give it a moment then start the loop
+    setTimeout(() => {
+      if (stage === 'BIOS' || stage === 'ITEM_DRAFT') {
+        playSound('startup2', true);
+      }
+    }, 2800);
+
     let accumDelay = 0;
     BIOS_LINES.forEach((line, i) => {
       accumDelay += line.delay || 0;
       const d = accumDelay;
+      // Slower: extra base delay per line
       setTimeout(() => {
         if (stage !== 'BIOS') return;
         if (line.isDifficultyPrompt) { biosPhase = 'difficulty'; }
         biosLines.push({ ...line, visible: true, typed: 0, fullLen: line.text.length });
-      }, d + i * 60);
+      }, d + i * 90);
     });
 
     attachKeys((e) => {
@@ -299,9 +314,11 @@ const INTRO = (() => {
           difficultySelected = (difficultySelected + 1) % 3;
           playSound('click');
         } else if (e.key === 'Enter') {
-          playSound('click');
+          playSound('confirm');
           applyDifficulty(difficultySelected);
           biosPhase = 'done';
+          // Easy = 0 items, Normal = 1, Hard = 2
+          draftCount = difficultySelected === 0 ? 0 : difficultySelected === 1 ? 1 : 2;
           setTimeout(() => startItemDraft(), 600);
         }
       }
@@ -329,18 +346,18 @@ const INTRO = (() => {
     biosLines.forEach(line => {
       if (!line.visible) return;
       if (line.isDifficultyPrompt) {
-        // Draw difficulty selector
         c.fillStyle = '#ffdd00';
         c.fillText('>>> SELECT DIFFICULTY <<<', 40, y);
         y += lineH + 6;
         const opts = ['Easy', 'Normal', 'Hard'];
         opts.forEach((opt, i) => {
           const selected = i === difficultySelected && biosPhase === 'difficulty';
-          c.fillStyle = selected ? '#000000' : '#888888';
           if (selected) {
             c.fillStyle = '#ffdd00';
             c.fillRect(40, y - 14, 120, 18);
             c.fillStyle = '#000000';
+          } else {
+            c.fillStyle = '#888888';
           }
           const prefix = selected ? '> ' : '  ';
           c.fillText(prefix + opt, 44, y);
@@ -361,18 +378,36 @@ const INTRO = (() => {
   // ================================================================
   // STAGE: ITEM DRAFT
   // ================================================================
+  // Base item pool — items that appear on all floors, not floor-specific
+  const BASE_ITEM_IDS = ['paperCuts', 'extraClips'];
+
   function startItemDraft() {
     stage = 'ITEM_DRAFT';
     detachKeys();
     draftSelected = 0;
     draftPhase = 'choosing';
 
-    // Pick 3 random general items (or any non-floor-specific items)
-    const pool = [...GENERAL_ITEM_IDS, ...ALL_ITEM_IDS.filter(id =>
-      !['birthday','cookie'].includes(id)
-    )];
+    if (draftCount === 0) {
+      // Easy mode: skip item draft entirely
+      setTimeout(() => startDesktopLoad(), 400);
+      return;
+    }
+
+    // Build a pool: repeat base items to fill slots if needed
+    // draftCount = 1 (Normal) or 2 (Hard)
+    // We always show 3 cards but only allow picking draftCount of them
+    // Actually: show exactly draftCount cards, repeat items if pool is small
+    const pool = [];
+    // Fill with enough items (with repeats if needed) to show 3 cards
+    for (let i = 0; i < 3; i++) {
+      pool.push(BASE_ITEM_IDS[i % BASE_ITEM_IDS.length]);
+    }
+    // Shuffle, but keep deterministic variety
     const shuffled = pool.sort(() => Math.random() - 0.5);
     draftItems = shuffled.slice(0, 3).map(id => ITEM_DEFS[id]);
+
+    // Track how many the player has picked so far this draft
+    let pickedCount = 0;
 
     attachKeys((e) => {
       if (stage !== 'ITEM_DRAFT') return;
@@ -384,12 +419,27 @@ const INTRO = (() => {
           draftSelected = (draftSelected + 1) % 3;
           playSound('click');
         } else if (e.key === 'Enter') {
-          playSound('click');
-          draftPhase = 'done';
+          playSound('confirm');
           const chosen = draftItems[draftSelected];
-          gs.unlockedItems.push(chosen.id);
+          if (!gs.unlockedItems.includes(chosen.id)) {
+            gs.unlockedItems.push(chosen.id);
+          }
           chosen.effect(gs);
-          setTimeout(() => startDesktopLoad(), 500);
+          pickedCount++;
+
+          if (pickedCount >= draftCount) {
+            // Done picking
+            draftPhase = 'done';
+            setTimeout(() => startDesktopLoad(), 500);
+          } else {
+            // Hard mode: pick again from a fresh shuffle
+            const pool2 = [];
+            for (let i = 0; i < 3; i++) pool2.push(BASE_ITEM_IDS[i % BASE_ITEM_IDS.length]);
+            pool2.sort(() => Math.random() - 0.5);
+            draftItems = pool2.map(id => ITEM_DEFS[id]);
+            draftSelected = 0;
+            // Redraw with new items
+          }
         }
       }
     });
@@ -421,22 +471,18 @@ const INTRO = (() => {
       const x = startX + i * (cardW + gap);
       const selected = i === draftSelected && draftPhase === 'choosing';
 
-      // Card background
       c.fillStyle = selected ? '#003300' : '#111111';
       c.fillRect(x, cardY, cardW, cardH);
 
-      // Border
       c.strokeStyle = selected ? '#00ff66' : '#333333';
       c.lineWidth = selected ? 2 : 1;
       c.strokeRect(x, cardY, cardW, cardH);
 
-      // Selection indicator
       if (selected) {
         c.fillStyle = '#00ff66';
         c.fillText('>', x - 18, cardY + 58);
       }
 
-      // Item name only — no description
       c.fillStyle = selected ? '#00ff66' : '#888888';
       c.font = 'bold 13px "Fixedsys", "Courier New", monospace';
       const label = item.label.replace(/\n/g, ' ');
@@ -471,7 +517,10 @@ const INTRO = (() => {
     desktopLoadLines = [];
     desktopLoadIdx = 0;
     desktopLoadDone = false;
-    playSound('startup2');
+
+    // Stop startup2 loop, play startup3 for desktop loading
+    stopSound('startup2');
+    playSound('startup3');
 
     let accumDelay = 800;
     DESKTOP_LOAD_LINES.forEach((line, i) => {
@@ -526,7 +575,6 @@ const INTRO = (() => {
   function desktopLoop() {
     if (stage !== 'DESKTOP') return;
 
-    // Loading spinner for data.md
     if (desktopLoadingData) {
       desktopLoadDotsTimer++;
       if (desktopLoadDotsTimer > 20) {
@@ -542,9 +590,7 @@ const INTRO = (() => {
   function handleDesktopClick(mx, my) {
     if (desktopPhase === 'loading_data') return;
 
-    // Close error dialog
     if (desktopErrorVisible) {
-      // OK button area (centered bottom of error box)
       const bx = 480 - 90, by = 300 - 130;
       const okX = bx + 70, okY = by + 175;
       if (mx > okX && mx < okX + 60 && my > okY && my < okY + 22) {
@@ -554,10 +600,8 @@ const INTRO = (() => {
       return;
     }
 
-    // Icon hit test (48x64 per icon)
     const IW = 48, IH = 64;
     for (const app of DESKTOP_APPS) {
-      // Scale: canvas is 960x600, icons at pixel coords
       if (mx >= app.x && mx <= app.x + IW && my >= app.y && my <= app.y + IH) {
         playSound('click');
         if (app.id === 'data') {
@@ -584,7 +628,6 @@ const INTRO = (() => {
     desktopLoadDots = 0;
     desktopLoadDotsTimer = 0;
 
-    // After 2 seconds → bluescreen
     setTimeout(() => {
       desktopLoadingData = false;
       playSound('bluescreen');
@@ -596,33 +639,27 @@ const INTRO = (() => {
     const c = getCtx(); if (!c) return;
     const W = 960, H = 600;
 
-    // Teal desktop background
     c.fillStyle = '#008080';
     c.fillRect(0, 0, W, H);
 
-    // Subtle scanline texture
     for (let y = 0; y < H; y += 2) {
       c.fillStyle = 'rgba(0,0,0,0.04)';
       c.fillRect(0, y, W, 1);
     }
 
-    // Desktop icons
     DESKTOP_APPS.forEach(app => {
       const { x, y, label, sprite } = app;
       const IW = 48, IH = 48;
 
-      // Icon image
       const img = imgs[sprite];
       if (img && img.complete && img.naturalWidth > 0) {
         c.drawImage(img, x, y, IW, IH);
       } else {
-        // Fallback placeholder
         c.fillStyle = sprite === 'dataLocked' ? '#cc4400' :
                       sprite === 'folder'     ? '#ffcc44' : '#aaaacc';
         c.fillRect(x, y, IW, IH);
         c.strokeStyle = '#000'; c.lineWidth = 1;
         c.strokeRect(x, y, IW, IH);
-        // Fallback label icon
         c.fillStyle = '#000';
         c.font = 'bold 9px "MS Sans Serif", Arial, sans-serif';
         c.textAlign = 'center';
@@ -632,12 +669,10 @@ const INTRO = (() => {
         c.textAlign = 'left';
       }
 
-      // Label
       c.font = '11px "MS Sans Serif", Arial, sans-serif';
       c.textAlign = 'center';
       const lines = label.split('\n');
       lines.forEach((ln, li) => {
-        // Text shadow
         c.fillStyle = 'rgba(0,0,0,0.7)';
         c.fillText(ln, x + IW/2 + 1, y + IH + 14 + li * 13 + 1);
         c.fillStyle = '#ffffff';
@@ -646,24 +681,20 @@ const INTRO = (() => {
       c.textAlign = 'left';
     });
 
-    // Loading cursor over data.md
     if (desktopLoadingData) {
       const dots = '.'.repeat(desktopLoadDots);
       c.font = '13px "Fixedsys", monospace';
       c.fillStyle = '#ffdd00';
       c.fillText('Opening' + dots, 24, 490);
-      // Spinning cursor indicator
       const t = Date.now() / 200;
       const frames = ['|', '/', '—', '\\'];
       c.fillText(frames[Math.floor(t) % 4], 110, 490);
     }
 
-    // Error dialog
     if (desktopErrorVisible) {
       drawErrorDialog(c, desktopErrorApp, desktopErrorMsg);
     }
 
-    // Taskbar
     drawTaskbar(c, W, H);
   }
 
@@ -672,21 +703,17 @@ const INTRO = (() => {
     const bw = 340, bh = 200;
     const bx = W/2 - bw/2, by = 300 - bh/2;
 
-    // Shadow
     c.fillStyle = 'rgba(0,0,0,0.4)';
     c.fillRect(bx+4, by+4, bw, bh);
 
-    // Dialog body
     c.fillStyle = '#d4d0c8';
     c.fillRect(bx, by, bw, bh);
 
-    // Win2k border
     c.strokeStyle = '#ffffff'; c.lineWidth = 2;
     c.strokeRect(bx, by, bw, bh);
     c.strokeStyle = '#404040'; c.lineWidth = 1;
     c.beginPath(); c.moveTo(bx+bw-1, by+1); c.lineTo(bx+bw-1, by+bh-1); c.lineTo(bx+1, by+bh-1); c.stroke();
 
-    // Titlebar
     const grad = c.createLinearGradient(bx, by, bx+bw, by);
     grad.addColorStop(0, '#0a246a'); grad.addColorStop(1, '#3a6ea8');
     c.fillStyle = grad;
@@ -695,7 +722,6 @@ const INTRO = (() => {
     c.font = 'bold 11px "MS Sans Serif", Arial, sans-serif';
     c.fillText('⚠  ' + title, bx + 8, by + 14);
 
-    // Close button in titlebar
     c.fillStyle = '#d4d0c8';
     c.fillRect(bx+bw-20, by+4, 14, 13);
     c.strokeStyle = '#808080'; c.lineWidth = 1;
@@ -703,7 +729,6 @@ const INTRO = (() => {
     c.fillStyle = '#000'; c.font = '11px "Marlett", Arial';
     c.fillText('r', bx+bw-17, by+14);
 
-    // Error icon + message
     c.fillStyle = '#ff0000';
     c.font = 'bold 26px serif';
     c.fillText('✕', bx + 18, by + 64);
@@ -713,13 +738,11 @@ const INTRO = (() => {
     const msgLines = msg.split('\n');
     msgLines.forEach((ln, i) => c.fillText(ln, bx + 54, by + 48 + i * 16));
 
-    // Horizontal separator
     c.strokeStyle = '#808080'; c.lineWidth = 1;
     c.beginPath(); c.moveTo(bx+6, by+bh-38); c.lineTo(bx+bw-6, by+bh-38); c.stroke();
     c.strokeStyle = '#ffffff';
     c.beginPath(); c.moveTo(bx+6, by+bh-37); c.lineTo(bx+bw-6, by+bh-37); c.stroke();
 
-    // OK button
     const okX = bx + bw/2 - 30, okY = by + bh - 30;
     c.fillStyle = '#d4d0c8';
     c.fillRect(okX, okY, 60, 22);
@@ -735,13 +758,11 @@ const INTRO = (() => {
   }
 
   function drawTaskbar(c, W, H) {
-    // Taskbar
     c.fillStyle = '#c0c0c0';
     c.fillRect(0, H-28, W, 28);
     c.strokeStyle = '#ffffff'; c.lineWidth = 1;
     c.beginPath(); c.moveTo(0, H-28); c.lineTo(W, H-28); c.stroke();
 
-    // Start button
     c.fillStyle = '#d4d0c8';
     c.fillRect(2, H-26, 54, 24);
     c.strokeStyle = '#ffffff';
@@ -752,7 +773,6 @@ const INTRO = (() => {
     c.font = 'bold 11px "MS Sans Serif", Arial, sans-serif';
     c.fillText('Start', 10, H-10);
 
-    // Clock
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
     c.fillStyle = '#d4d0c8';
@@ -776,7 +796,6 @@ const INTRO = (() => {
     clippyDialogVisible = false;
     clippyAnim = 'notice';
 
-    // After 3 seconds, Clippy slides in
     setTimeout(() => {
       clippyVisible = true;
       clippyAnim = 'notice';
@@ -787,7 +806,6 @@ const INTRO = (() => {
           if (choice === 0) {
             startTerminal();
           } else {
-            // Stay on bluescreen forever — soft lock as a joke
             showClippyDialog("Are you sure? Things look\npretty bad...", ['OK fine, help me', 'I am fine'],
               (c2) => { if (c2 === 0) startTerminal(); }
             );
@@ -806,7 +824,7 @@ const INTRO = (() => {
         clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length;
         playSound('click');
       } else if (e.key === 'Enter') {
-        playSound('click');
+        playSound('confirm');
         const cb = clippyDialogCallback;
         const sel = clippyDialogSelected;
         clippyDialogVisible = false;
@@ -829,7 +847,6 @@ const INTRO = (() => {
     if (stage !== 'BLUESCREEN') return;
     bluescreenTimer++;
 
-    // Clippy slides up
     if (clippyVisible && clippySlideY > 0) {
       clippySlideY = Math.max(0, clippySlideY - 12);
     }
@@ -871,7 +888,6 @@ const INTRO = (() => {
       c.fillText(ln, 40, 60 + i * 22);
     });
 
-    // Clippy
     if (clippyVisible) {
       const cx = W - 140;
       const cy = H - 180 + clippySlideY;
@@ -905,7 +921,7 @@ const INTRO = (() => {
         clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length;
         playSound('click');
       } else if (e.key === 'Enter') {
-        playSound('click');
+        playSound('confirm');
         const cb = clippyDialogCallback;
         const sel = clippyDialogSelected;
         clippyDialogVisible = false;
@@ -926,7 +942,6 @@ const INTRO = (() => {
         showClippyDialog(step.text, ['Yes, open it', 'No'],
           (choice) => {
             if (choice === 0) {
-              // Type "open party.exe"
               termLines.push({ text: 'C:\\Users\\clippy> open party.exe', color: '#00ff66', isInput: true });
               setTimeout(() => startGameWindow(), 1200);
             } else {
@@ -940,13 +955,11 @@ const INTRO = (() => {
     }
 
     const lineDelay = step.delay !== undefined ? step.delay : 0;
-    const typeDelay = step.type === 'input' ? (step.text.length * 55 + 200) : 0;
 
     setTimeout(() => {
       if (step.type === 'prompt') {
         termLines.push({ text: 'C:\\Users\\clippy> ', color: '#00ff66', isPrompt: true });
       } else if (step.type === 'input') {
-        // Typewriter for input lines
         typeTermLine(step.text, '#ffffff', () => {
           setTimeout(() => runTerminalSequence(idx + 1), 200);
         });
@@ -988,7 +1001,6 @@ const INTRO = (() => {
     c.fillStyle = '#0a0a0a';
     c.fillRect(0, 0, W, H);
 
-    // Terminal text
     c.font = '13px "Fixedsys", "Courier New", monospace';
     const lineH = 18;
     const maxLines = Math.floor((H - 80) / lineH);
@@ -999,13 +1011,11 @@ const INTRO = (() => {
       c.fillText(txt, 20, 40 + i * lineH);
     });
 
-    // Prompt cursor at end if last line isn't typing
     if (termLines.length > 0 && !termLines[termLines.length-1].isTyping && !clippyDialogVisible) {
       const lastY = 40 + (Math.min(termLines.length, maxLines) - 1) * lineH;
       if (termCursor) { c.fillStyle = '#00ff66'; c.fillText('█', 20 + c.measureText(termLines[termLines.length-1].text).width, lastY); }
     }
 
-    // Clippy on right side
     const cx = W - 130;
     const cy = H - 160;
     drawClippyAt(c, cx, cy, clippyAnim, clippyAnimFrame);
@@ -1026,7 +1036,6 @@ const INTRO = (() => {
     clippyAnim = 'normal';
     clippyDialogVisible = false;
 
-    // Spawn a single intro enemy in the center
     introEnemyX = 480;
     introEnemyY = 300;
     introEnemyVx = 0.6;
@@ -1043,7 +1052,7 @@ const INTRO = (() => {
         clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length;
         playSound('click');
       } else if (e.key === 'Enter') {
-        playSound('click');
+        playSound('confirm');
         const cb = clippyDialogCallback;
         const sel = clippyDialogSelected;
         clippyDialogVisible = false;
@@ -1058,10 +1067,8 @@ const INTRO = (() => {
     if (stage !== 'GAME_WINDOW') return;
     gameWindowTimer++;
 
-    // Fade in
     if (gameWindowOpacity < 1) gameWindowOpacity = Math.min(1, gameWindowOpacity + 0.04);
 
-    // Enemy wanders slightly
     if (gameWindowPhase === 'enemy_spawn' || gameWindowPhase === 'clippy_ask') {
       introEnemyX += introEnemyVx;
       introEnemyY += introEnemyVy;
@@ -1070,16 +1077,13 @@ const INTRO = (() => {
       if (introEnemyY < GWY + 50 || introEnemyY > GWY + GWH - 30) introEnemyVy *= -1;
     }
 
-    // If yes was pressed, move enemy to center then jump
     if (gameWindowPhase === 'clippy_jump') {
-      // Move enemy toward center
       const cx = 480, cy = 270;
       introEnemyX += (cx - introEnemyX) * 0.08;
       introEnemyY += (cy - introEnemyY) * 0.08;
 
       clippyJumpProgress += 0.04;
       if (clippyJumpProgress > 1) {
-        // Clippy landed — kill enemy, start game
         gameWindowPhase = 'done';
         setTimeout(() => finishIntro(), 800);
       }
@@ -1088,7 +1092,6 @@ const INTRO = (() => {
     clippyAnimTimer++;
     if (clippyAnimTimer > 12) { clippyAnimTimer = 0; clippyAnimFrame = (clippyAnimFrame + 1) % 4; }
 
-    // Phase transitions
     if (gameWindowPhase === 'opening' && gameWindowTimer === 80) {
       gameWindowPhase = 'enemy_spawn';
     }
@@ -1121,31 +1124,25 @@ const INTRO = (() => {
     const c = getCtx(); if (!c) return;
     const W = 960, H = 600;
 
-    // Desktop background
     c.globalAlpha = gameWindowOpacity;
     c.fillStyle = '#008080';
     c.fillRect(0, 0, W, H);
     c.globalAlpha = 1;
 
-    // Taskbar
     drawTaskbar(c, W, H);
 
-    // Game window
     const GWX = 200, GWY = 80, GWW = 560, GWH = 380;
     if (gameWindowOpacity > 0) {
       c.globalAlpha = gameWindowOpacity;
 
-      // Window shadow
       c.fillStyle = 'rgba(0,0,0,0.35)';
       c.fillRect(GWX+5, GWY+5, GWW, GWH);
 
-      // Window body
       c.fillStyle = '#000000';
       c.fillRect(GWX, GWY, GWW, GWH);
 
-      // Win2k border
       c.fillStyle = '#d4d0c8';
-      c.fillRect(GWX, GWY, GWW, 22); // titlebar area bg
+      c.fillRect(GWX, GWY, GWW, 22);
       const tgrad = c.createLinearGradient(GWX, GWY, GWX+GWW, GWY);
       tgrad.addColorStop(0, '#0a246a'); tgrad.addColorStop(1, '#3a6ea8');
       c.fillStyle = tgrad;
@@ -1154,7 +1151,6 @@ const INTRO = (() => {
       c.font = 'bold 11px "MS Sans Serif", Arial, sans-serif';
       c.fillText('party.exe', GWX+8, GWY+14);
 
-      // Window close/min/max buttons
       ['r','1','0'].forEach((glyph, bi) => {
         const bx = GWX + GWW - 20 - bi*18;
         c.fillStyle = '#d4d0c8';
@@ -1166,27 +1162,22 @@ const INTRO = (() => {
         c.fillText(glyph, bx+2, GWY+14);
       });
 
-      // Game area (black canvas look)
       c.fillStyle = '#0a0a0f';
       c.fillRect(GWX+2, GWY+22, GWW-4, GWH-24);
 
-      // Grid lines
       c.strokeStyle = 'rgba(0,255,100,0.03)';
       c.lineWidth = 1;
       for (let gx = GWX+2; gx < GWX+GWW-2; gx += 40) { c.beginPath(); c.moveTo(gx, GWY+22); c.lineTo(gx, GWY+GWH-2); c.stroke(); }
       for (let gy = GWY+22; gy < GWY+GWH-2; gy += 40) { c.beginPath(); c.moveTo(GWX+2, gy); c.lineTo(GWX+GWW-2, gy); c.stroke(); }
 
-      // Draw intro enemy (simple gift box shape)
       if (gameWindowPhase !== 'done' && clippyJumpProgress < 0.9) {
         drawIntroEnemy(c, introEnemyX, introEnemyY);
       }
 
-      // Kill flash when Clippy lands
       if (gameWindowPhase === 'done') {
         const flashAlpha = Math.max(0, 1 - (gameWindowTimer - 0) * 0.05);
         c.fillStyle = `rgba(255,220,0,${flashAlpha})`;
         c.fillRect(GWX+2, GWY+22, GWW-4, GWH-24);
-        // Particles
         for (let pi = 0; pi < 12; pi++) {
           const pa = (pi/12)*Math.PI*2 + gameWindowTimer*0.1;
           const pr = 20 + pi * 3;
@@ -1198,12 +1189,10 @@ const INTRO = (() => {
       c.globalAlpha = 1;
     }
 
-    // Clippy — bottom right of desktop, or jumping
     const clippyBaseX = W - 130;
     const clippyBaseY = H - 170;
 
     if (gameWindowPhase === 'clippy_jump' && clippyJumpProgress >= 0 && clippyJumpProgress <= 1) {
-      // Arc trajectory
       const t = clippyJumpProgress;
       const arcH = 180;
       const jx = clippyJumpStartX + (clippyJumpTargetX - clippyJumpStartX) * t;
@@ -1219,7 +1208,6 @@ const INTRO = (() => {
   }
 
   function drawIntroEnemy(c, x, y) {
-    // Simple gift box enemy placeholder
     const t = Date.now() / 300;
     c.save();
     c.translate(x, y);
@@ -1245,7 +1233,7 @@ const INTRO = (() => {
     const W = 80, H = 80;
     let img = null;
 
-    if (anim === 'notice')   img = imgs.clippyNotice;
+    if (anim === 'notice')        img = imgs.clippyNotice;
     else if (anim === 'engineer') img = imgs.clippyEngineer;
     else if (anim === 'jump')     img = imgs.clippyJump;
     else                          img = imgs.clippyNormal;
@@ -1253,7 +1241,6 @@ const INTRO = (() => {
     const sheetCols = 4;
 
     if (img && img.complete && img.naturalWidth > 0) {
-      // If it's a sprite sheet (wider than tall), animate frames
       const isSheet = img.naturalWidth > img.naturalHeight * 1.5;
       if (isSheet) {
         const fw = img.naturalWidth / sheetCols;
@@ -1261,30 +1248,23 @@ const INTRO = (() => {
         const col = frame % sheetCols;
         c.drawImage(img, col * fw, 0, fw, fh, x - W/2, y - H/2, W, H);
       } else {
-        // Single sprite (e.g. normal Clippy.png)
-        // Remove black BG (handled by playerCanvas in game — draw normally here)
         c.drawImage(img, x - W/2, y - H/2, W, H);
       }
     } else {
-      // Fallback: draw a simple Clippy-ish shape
       c.save();
       c.translate(x, y);
-      // Body
       c.fillStyle = '#ffcc88';
       c.beginPath(); c.arc(0, -10, 18, 0, Math.PI*2); c.fill();
       c.fillStyle = '#4488ff';
       c.fillRect(-14, 6, 28, 20);
-      // Eyes
       c.fillStyle = '#000';
       c.beginPath(); c.arc(-6, -14, 2.5, 0, Math.PI*2); c.fill();
       c.beginPath(); c.arc(6, -14, 2.5, 0, Math.PI*2); c.fill();
       if (anim === 'engineer') {
-        // Hard hat
         c.fillStyle = '#ffdd00';
         c.fillRect(-18, -30, 36, 8);
         c.fillRect(-12, -38, 24, 12);
       }
-      // Bounce bob
       c.restore();
     }
   }
@@ -1295,27 +1275,22 @@ const INTRO = (() => {
     const optionH = clippyDialogOptions.length * 22 + 10;
     const bh = lines.length * lh + optionH + 36;
 
-    // Shadow
     c.fillStyle = 'rgba(0,0,0,0.3)';
     c.fillRect(bx+3, by+3, bw, bh);
 
-    // Box
     c.fillStyle = '#ffffcc';
     c.fillRect(bx, by, bw, bh);
     c.strokeStyle = '#000000'; c.lineWidth = 1;
     c.strokeRect(bx, by, bw, bh);
 
-    // Text
     c.fillStyle = '#000000';
     c.font = '11px "MS Sans Serif", Arial, sans-serif';
     lines.forEach((ln, i) => c.fillText(ln, bx+10, by+18+i*lh));
 
-    // Separator
     const sepY = by + lines.length * lh + 22;
     c.strokeStyle = '#cccc88'; c.lineWidth = 1;
     c.beginPath(); c.moveTo(bx+6, sepY); c.lineTo(bx+bw-6, sepY); c.stroke();
 
-    // Options
     clippyDialogOptions.forEach((opt, i) => {
       const selected = i === clippyDialogSelected;
       const ox = bx + 10, oy = sepY + 8 + i * 22;
@@ -1334,10 +1309,9 @@ const INTRO = (() => {
     c.fillStyle = '#888888';
     c.fillText('Arrow keys + Enter', bx+10, by+bh-6);
 
-    // Tail pointing right toward Clippy
+    const midY = by + bh/2;
     c.fillStyle = '#ffffcc';
     c.strokeStyle = '#000000'; c.lineWidth = 1;
-    const midY = by + bh/2;
     c.beginPath();
     c.moveTo(bx+bw, midY-8);
     c.lineTo(bx+bw+12, midY);
@@ -1354,15 +1328,13 @@ const INTRO = (() => {
   // DIFFICULTY APPLICATION
   // ================================================================
   function applyDifficulty(idx) {
-    if (!window.gs) return; // gs not ready yet — will be applied at init
+    if (!window.gs) return;
     window._introDifficulty = idx;
   }
 
-  // Called from initGameState after gs is created
   function applyDifficultyToGs(gsRef) {
     const idx = window._introDifficulty !== undefined ? window._introDifficulty : 1;
     if (idx === 0) {
-      // Easy
       gsRef.health = gsRef.maxHealth = 150;
       gsRef.maxAmmo = CFG.MAX_AMMO + 4;
       gsRef.ammo = gsRef.maxAmmo;
@@ -1370,7 +1342,6 @@ const INTRO = (() => {
       gsRef._enemyHpMult = 0.7;
       gsRef._enemyDmgMult = 0.7;
     } else if (idx === 2) {
-      // Hard
       gsRef.health = gsRef.maxHealth = 70;
       gsRef.maxAmmo = Math.max(4, CFG.MAX_AMMO - 2);
       gsRef.ammo = gsRef.maxAmmo;
@@ -1378,7 +1349,6 @@ const INTRO = (() => {
       gsRef._enemyHpMult = 1.4;
       gsRef._enemyDmgMult = 1.4;
     } else {
-      // Normal
       gsRef._difficultyLabel = 'NORMAL';
       gsRef._enemyHpMult = 1.0;
       gsRef._enemyDmgMult = 1.0;
@@ -1392,8 +1362,8 @@ const INTRO = (() => {
     stage = 'DONE';
     detachKeys();
     detachDesktopClicks();
+    stopAllMusic();
 
-    // Fade out
     let alpha = 0;
     const fadeInterval = setInterval(() => {
       alpha += 0.05;
@@ -1414,7 +1384,6 @@ const INTRO = (() => {
   function start(callback) {
     onDone = callback;
     buildOverlay();
-    // Small delay so page is ready
     setTimeout(() => startBIOS(), 200);
   }
 
