@@ -17,7 +17,10 @@ const INTRO = (() => {
 
   const SPR = {
     clippyNotice:   'sprites/clippy/Clippy_notice.png',
-    clippyEngineer: 'sprites/clippy/Clippy_engineer.png',
+     clippyEngineer1: 'sprites/clippy/engineer/Clippy_engineer1.png',
+  clippyEngineer2: 'sprites/clippy/engineer/Clippy_engineer2.png',
+  clippyEngineer3: 'sprites/clippy/engineer/Clippy_engineer3.png',
+  clippyEngineer4: 'sprites/clippy/engineer/Clippy_engineer4.png',
     clippyJump:     'sprites/clippy/Clippy_jump.png',
     clippyNormal:   'sprites/Clippy.png',
     folder:         'sprites/ui/folder.png',
@@ -29,6 +32,13 @@ const INTRO = (() => {
     sapmovy:        'sprites/ui/sapmovy.png',
     drawalogo:      'sprites/ui/drawalogo.png',
   };
+
+  const CLIPPY_FRAME_COUNTS = {
+  notice:    1,
+  engineer:  4,
+  jump:      1,
+  normal:    1,
+};
 
   const imgs = {};
   function loadImg(key, src) {
@@ -875,7 +885,19 @@ function stopSound(key) {
     if (stage !== 'BLUESCREEN') return;
     bluescreenTimer++;
     if (clippyVisible && clippySlideY > 0) clippySlideY = Math.max(0, clippySlideY - 12);
-    clippyAnimTimer++; if (clippyAnimTimer > 12) { clippyAnimTimer = 0; clippyAnimFrame = (clippyAnimFrame + 1) % 4; }
+
+    
+    clippyAnimTimer--;
+if (clippyAnimTimer <= 0) {
+  const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
+  if (count > 1) {
+    let next;
+    do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
+    clippyAnimFrame = next;
+  }
+  clippyAnimTimer = 60 + Math.floor(Math.random() * 120); // 1 to 3 seconds
+}
+    
     drawBluescreen();
     requestAnimationFrame(bluescreenLoop);
   }
@@ -962,7 +984,18 @@ function stopSound(key) {
   function terminalLoop() {
     if (stage !== 'TERMINAL') return;
     termCursorTimer++; if (termCursorTimer > 25) { termCursorTimer = 0; termCursor = !termCursor; }
-    clippyAnimTimer++; if (clippyAnimTimer > 14) { clippyAnimTimer = 0; clippyAnimFrame = (clippyAnimFrame + 1) % 4; }
+   
+    clippyAnimTimer--;
+if (clippyAnimTimer <= 0) {
+  const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
+  if (count > 1) {
+    let next;
+    do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
+    clippyAnimFrame = next;
+  }
+  clippyAnimTimer = 60 + Math.floor(Math.random() * 120); // 1 to 3 seconds
+}
+    
     drawTerminal();
     requestAnimationFrame(terminalLoop);
   }
@@ -1028,7 +1061,19 @@ function stopSound(key) {
       clippyJumpProgress += 0.04;
       if (clippyJumpProgress > 1) { gameWindowPhase = 'done'; setTimeout(() => finishIntro(), 800); }
     }
-    clippyAnimTimer++; if (clippyAnimTimer > 12) { clippyAnimTimer = 0; clippyAnimFrame = (clippyAnimFrame + 1) % 4; }
+
+    
+    clippyAnimTimer--;
+if (clippyAnimTimer <= 0) {
+  const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
+  if (count > 1) {
+    let next;
+    do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
+    clippyAnimFrame = next;
+  }
+  clippyAnimTimer = 60 + Math.floor(Math.random() * 120); // 1 to 3 seconds
+}
+    
     if (gameWindowPhase === 'opening' && gameWindowTimer === 80) gameWindowPhase = 'enemy_spawn';
     if (gameWindowPhase === 'enemy_spawn' && gameWindowTimer === 160) {
       gameWindowPhase = 'clippy_ask';
@@ -1100,24 +1145,32 @@ function stopSound(key) {
   // ================================================================
   // CLIPPY HELPERS
   // ================================================================
-  function drawClippyAt(c, x, y, anim, frame) {
-    const W = 80, H = 80;
-    let img = anim === 'notice' ? imgs.clippyNotice : anim === 'engineer' ? imgs.clippyEngineer : anim === 'jump' ? imgs.clippyJump : imgs.clippyNormal;
-    if (img && img.complete && img.naturalWidth > 0) {
-      if (img.naturalWidth > img.naturalHeight * 1.5) {
-        const cols = 4, fw = img.naturalWidth/cols, fh = img.naturalHeight;
-        c.drawImage(img, (frame%cols)*fw, 0, fw, fh, x-W/2, y-H/2, W, H);
-      } else { c.drawImage(img, x-W/2, y-H/2, W, H); }
-    } else {
-      c.save(); c.translate(x, y);
-      c.fillStyle = '#ffcc88'; c.beginPath(); c.arc(0, -10, 18, 0, Math.PI*2); c.fill();
-      c.fillStyle = '#4488ff'; c.fillRect(-14, 6, 28, 20);
-      c.fillStyle = '#000';
-      c.beginPath(); c.arc(-6, -14, 2.5, 0, Math.PI*2); c.fill();
-      c.beginPath(); c.arc( 6, -14, 2.5, 0, Math.PI*2); c.fill();
-      c.restore();
-    }
+function drawClippyAt(c, x, y, anim, frame) {
+  const W = 80, H = 80;
+  let img;
+
+  if (anim === 'engineer') {
+    // frame is 0-3, maps to engineer1-4
+    const key = 'clippyEngineer' + (frame + 1);
+    img = imgs[key] || imgs.clippyEngineer1;
+  } else if (anim === 'notice') {
+    img = imgs.clippyNotice;
+  } else if (anim === 'jump') {
+    img = imgs.clippyJump;
+  } else {
+    img = imgs.clippyNormal;
   }
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    c.drawImage(img, x - W/2, y - H/2, W, H);
+  } else {
+    // fallback shape if image hasn't loaded
+    c.save(); c.translate(x, y);
+    c.fillStyle = '#ffcc88'; c.beginPath(); c.arc(0, -10, 18, 0, Math.PI*2); c.fill();
+    c.fillStyle = '#4488ff'; c.fillRect(-14, 6, 28, 20);
+    c.restore();
+  }
+}
 
   function drawClippyDialogBox(c, bx, by) {
     const bw = 220, lh = 16;
