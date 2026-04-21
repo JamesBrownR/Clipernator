@@ -24,6 +24,7 @@ const INTRO = (() => {
     appGeneric:   'sprites/ui/app_generic.png',
 computer:     'sprites/ui/computer.png',
 calculator:   'sprites/ui/calculator.png',
+    trash:   'sprites/ui/trash.png',
     dataLocked:     'sprites/ui/data_locked.png',
     sapmovy:        'sprites/ui/sapmovy.png',
     drawalogo:      'sprites/ui/drawalogo.png',
