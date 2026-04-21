@@ -37,20 +37,59 @@ const INTRO = (() => {
   }
   Object.entries(SPR).forEach(([k, v]) => loadImg(k, v));
 
-  const audioCache = {};
-  function playSound(key, loop = false) {
-    try {
-      if (!audioCache[key]) {
-        audioCache[key] = new Audio(SND[key]);
-        audioCache[key].loop = loop;
-      }
-      audioCache[key].currentTime = 0;
-      audioCache[key].play().catch(() => {});
-    } catch(e) {}
+  // Replace the existing audioCache/playSound setup at the top of the INTRO IIFE with this:
+
+const audioCache = {};
+let audioCtx = null;
+let startup2Source = null; // Web Audio source node for seamless looping
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+// Preload startup2 as a decoded buffer for seamless looping
+let startup2Buffer = null;
+fetch('sounds/soundeffects/opening/startup2.mp3')
+  .then(r => r.arrayBuffer())
+  .then(ab => getAudioCtx().decodeAudioData(ab))
+  .then(buf => { startup2Buffer = buf; })
+  .catch(() => {});
+
+function playStartup2Loop() {
+  if (!startup2Buffer) return;
+  stopStartup2Loop();
+  const ctx = getAudioCtx();
+  startup2Source = ctx.createBufferSource();
+  startup2Source.buffer = startup2Buffer;
+  startup2Source.loop = true;
+  startup2Source.connect(ctx.destination);
+  startup2Source.start(0);
+}
+
+function stopStartup2Loop() {
+  if (startup2Source) {
+    try { startup2Source.stop(); } catch(e) {}
+    startup2Source = null;
   }
-  function stopSound(key) {
-    if (audioCache[key]) { audioCache[key].pause(); audioCache[key].currentTime = 0; }
-  }
+}
+
+function playSound(key, loop = false) {
+  if (key === 'startup2') { playStartup2Loop(); return; }
+  try {
+    if (!audioCache[key]) {
+      audioCache[key] = new Audio(SND[key]);
+      audioCache[key].loop = loop;
+    }
+    audioCache[key].currentTime = 0;
+    audioCache[key].play().catch(() => {});
+  } catch(e) {}
+}
+
+function stopSound(key) {
+  if (key === 'startup2') { stopStartup2Loop(); return; }
+  if (audioCache[key]) { audioCache[key].pause(); audioCache[key].currentTime = 0; }
+}
   function stopAllMusic() {
     ['startup1', 'startup2', 'startup3'].forEach(k => stopSound(k));
   }
