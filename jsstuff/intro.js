@@ -22,8 +22,8 @@ const INTRO = (() => {
     clippyNormal:   'sprites/Clippy.png',
     folder:         'sprites/ui/folder.png',
     appGeneric:   'sprites/ui/app_generic.png',
-computer:     'sprites/ui/computer.png',
-calculator:   'sprites/ui/calculator.png',
+    computer:     'sprites/ui/computer.png',
+    calculator:   'sprites/ui/calculator.png',
     trash:   'sprites/ui/trash.png',
     dataLocked:     'sprites/ui/data_locked.png',
     sapmovy:        'sprites/ui/sapmovy.png',
@@ -52,7 +52,7 @@ calculator:   'sprites/ui/calculator.png',
     if (audioCache[key]) { audioCache[key].pause(); audioCache[key].currentTime = 0; }
   }
   function stopAllMusic() {
-    ['startup2', 'startup3'].forEach(k => stopSound(k));
+    ['startup1', 'startup2', 'startup3'].forEach(k => stopSound(k));
   }
 
   let stage = 'BIOS';
@@ -89,6 +89,7 @@ calculator:   'sprites/ui/calculator.png',
   let postMemStarted = false;
   let postIdeStarted = false;
 
+  // ── FIX: IDE detect lines now come AFTER PCI listing (reordered) ──
   const BIOS_LINES_PRE = [
     { text: 'Drawa Modular BIOS v4.51PG, An Energy Star Ally', color: '#aaaaaa', delay: 0 },
     { text: 'Copyright (C) 1984-97, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
@@ -97,34 +98,38 @@ calculator:   'sprites/ui/calculator.png',
     { text: 'PENTIUM-S CPU at 666MHz', color: '#00ff66', delay: 500 },
   ];
 
-const BIOS_LINES_POST_MEM = [
-  { text: '', color: '#aaaaaa', delay: 600 },
-  { text: 'Drawa Plug and Play BIOS Extension  v1.0A', color: '#aaaaaa', delay: 400 },
-  { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
-  { text: '', color: '#aaaaaa', delay: 300 },
-];
+  const BIOS_LINES_POST_MEM = [
+    { text: '', color: '#aaaaaa', delay: 600 },
+    { text: 'Drawa Plug and Play BIOS Extension  v1.0A', color: '#aaaaaa', delay: 400 },
+    { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
+    { text: '', color: '#aaaaaa', delay: 300 },
+    // PCI listing comes FIRST now
+    { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 500 },
+    { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
+    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 400 },
+    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 400 },
+    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 400 },
+    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 400 },
+    { text: '', color: '#aaaaaa', delay: 300 },
+  ];
 
-const IDE_DETECT_LINES = [
-  { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa' },
-  { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa' },
-  { text: '    Detecting IDE Secondary Master ... None',   color: '#aaaaaa' },
-  { text: '    Detecting IDE Secondary Slave  ... None',   color: '#aaaaaa' },
-  { text: '', color: '#aaaaaa' },
-];
+  // IDE detection now happens AFTER PCI listing
+  const IDE_DETECT_LINES = [
+    { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa' },
+    { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa' },
+    { text: '    Detecting IDE Secondary Master ... None',   color: '#aaaaaa' },
+    { text: '    Detecting IDE Secondary Slave  ... None',   color: '#aaaaaa' },
+    { text: '', color: '#aaaaaa' },
+  ];
 
-const BIOS_LINES_POST_IDE = [
-  { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 500 },
-  { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
-  { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 400 },
-  { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 400 },
-  { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 400 },
-  { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 400 },
-  { text: '', color: '#aaaaaa', delay: 300 },
-  { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
-  { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
-  { text: '', color: '#aaaaaa', delay: 500 },
-  { text: '>>> SELECT DIFFICULTY <<<', color: '#ffdd00', delay: 600, isDifficultyPrompt: true },
-];
+  // Post-IDE lines: warnings + difficulty
+  const BIOS_LINES_POST_IDE = [
+    { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
+    { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
+    { text: '', color: '#aaaaaa', delay: 500 },
+    // ── FIX: renamed to "PROCESSOR CALIBRATION", horizontal layout handled in draw ──
+    { text: '>>> PROCESSOR CALIBRATION <<<', color: '#ffffff', delay: 600, isDifficultyPrompt: true },
+  ];
 
   // Item draft
   let draftItems = [];
@@ -159,15 +164,15 @@ const BIOS_LINES_POST_IDE = [
   let desktopClickedData = false;
 
   const DESKTOP_APPS = [
-   { id: 'mycomputer',  label: 'My Computer',  sprite: 'computer',    x: 24,  y: 30  },
-{ id: 'calculator',  label: 'Calculator',   sprite: 'calculator',  x: 110, y: 170 },
-    { id: 'recycle',     label: 'Trash',        sprite: 'trash', x: 24,  y: 100 },
-    { id: 'docs',        label: 'My Documents',       sprite: 'folder',     x: 24,  y: 170 },
-    { id: 'notepad',     label: 'Notepad',            sprite: 'notes', x: 24,  y: 240 },
-    { id: 'internet',    label: 'Sapmovy', sprite: 'sapmovy',    x: 24,  y: 310 },
-    { id: 'data',        label: 'data.md',            sprite: 'dataLocked', x: 24,  y: 400 },
-    { id: 'folder1',     label: 'Projects',           sprite: 'folder',     x: 110, y: 30  },
-    { id: 'folder2',     label: 'Downloads',          sprite: 'folder',     x: 110, y: 100 },
+    { id: 'mycomputer',  label: 'My Computer',  sprite: 'computer',    x: 24,  y: 30  },
+    { id: 'calculator',  label: 'Calculator',   sprite: 'calculator',  x: 110, y: 170 },
+    { id: 'recycle',     label: 'Trash',        sprite: 'trash',       x: 24,  y: 100 },
+    { id: 'docs',        label: 'My Documents', sprite: 'folder',      x: 24,  y: 170 },
+    { id: 'notepad',     label: 'Notepad',      sprite: 'notes',       x: 24,  y: 240 },
+    { id: 'internet',    label: 'Sapmovy',      sprite: 'sapmovy',     x: 24,  y: 310 },
+    { id: 'data',        label: 'data.md',      sprite: 'dataLocked',  x: 24,  y: 400 },
+    { id: 'folder1',     label: 'Projects',     sprite: 'folder',      x: 110, y: 30  },
+    { id: 'folder2',     label: 'Downloads',    sprite: 'folder',      x: 110, y: 100 },
   ];
 
   const ERROR_MESSAGES = {
@@ -281,8 +286,24 @@ const BIOS_LINES_POST_IDE = [
     postMemStarted = false; postIdeStarted = false;
     ideLineIdx = 0; ideAnimTimer = 0; ideAnimStarted = false; ideLines = [];
     biosCursor = true; biosCursorTimer = 0;
+
+    // ── FIX: startup1 plays immediately, startup2 loops right after startup1 ends ──
     playSound('startup1');
-setTimeout(() => playSound('startup2', true), 1000); // start loop after startup1 finishes
+    // startup2 loops from the start — runs in background under startup1
+    // Use a timeout roughly matching startup1 length to start the loop seamlessly
+    // We preload startup2 immediately so there's no gap when it starts looping
+    if (!audioCache['startup2']) {
+      audioCache['startup2'] = new Audio(SND['startup2']);
+      audioCache['startup2'].loop = true;
+    }
+    // Start startup2 at low volume immediately so it's buffered, then fade in after startup1
+    // Simpler: just start looping startup2 after startup1 finishes (~2s typical chime)
+    setTimeout(() => {
+      if (stage === 'BIOS' || stage === 'ITEM_DRAFT' || stage === 'DESKTOP_LOAD') {
+        audioCache['startup2'].currentTime = 0;
+        audioCache['startup2'].play().catch(() => {});
+      }
+    }, 2000);
 
     let acc = 0;
     BIOS_LINES_PRE.forEach((line, i) => {
@@ -299,12 +320,13 @@ setTimeout(() => playSound('startup2', true), 1000); // start loop after startup
     attachKeys((e) => {
       if (stage !== 'BIOS') return;
       if (biosPhase === 'difficulty') {
+        // ── FIX: play switch sound BEFORE updating selection ──
         if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-          difficultySelected = (difficultySelected + 2) % 3;
           playSound('switch');
+          setTimeout(() => { difficultySelected = (difficultySelected + 2) % 3; }, 30);
         } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-          difficultySelected = (difficultySelected + 1) % 3;
           playSound('switch');
+          setTimeout(() => { difficultySelected = (difficultySelected + 1) % 3; }, 30);
         } else if (e.key === 'Enter') {
           playSound('confirm');
           applyDifficulty(difficultySelected);
@@ -339,6 +361,7 @@ setTimeout(() => playSound('startup2', true), 1000); // start loop after startup
             setTimeout(() => {
               if (stage !== 'BIOS') return;
               biosPostMemLines.push({ ...line });
+              // IDE detect starts after ALL post-mem lines (PCI listing) are done
               if (i === BIOS_LINES_POST_MEM.length - 1) {
                 setTimeout(() => { if (stage === 'BIOS') ideAnimStarted = true; }, 400);
               }
@@ -348,7 +371,7 @@ setTimeout(() => playSound('startup2', true), 1000); // start loop after startup
       }
     }
 
-    // IDE detection: one line per ~13 frames
+    // IDE detection: one line per ~13 frames — now runs AFTER PCI listing
     if (ideAnimStarted && ideLineIdx < IDE_DETECT_LINES.length) {
       ideAnimTimer++;
       if (ideAnimTimer >= 13) {
@@ -379,60 +402,78 @@ setTimeout(() => playSound('startup2', true), 1000); // start loop after startup
     const W = 960, H = 600;
     c.fillStyle = '#000000'; c.fillRect(0, 0, W, H);
 
-    // Top-right logo
+    // ── FIX: logo and text centered (shifted right from x=40 to x=200, logo centered) ──
     const logo = imgs.drawalogo;
     if (logo && logo.complete && logo.naturalWidth > 0) {
       const lw = 180, lh = Math.round(logo.naturalHeight * (lw / logo.naturalWidth));
-      c.drawImage(logo, W - lw - 20, 20, lw, lh);
+      // Center the logo horizontally
+      c.drawImage(logo, W / 2 - lw / 2, 20, lw, lh);
     }
 
     c.font = '13px "Fixedsys", "Courier New", monospace';
     const lineH = 18;
-    let y = 30;
+    // ── FIX: start text more toward center of screen ──
+    const textX = 200;
+    let y = 60;
 
     for (const line of biosPreLines) {
       c.fillStyle = line.color || '#aaaaaa';
-      c.fillText(line.text, 40, y);
+      c.fillText(line.text, textX, y);
       y += lineH;
     }
 
     if (memTestLineVisible) {
       c.fillStyle = '#00ff66';
-      c.fillText(`Memory Test :  ${String(memTestValue).padStart(6, ' ')}K OK`, 40, y);
+      c.fillText(`Memory Test :  ${String(memTestValue).padStart(6, ' ')}K OK`, textX, y);
       y += lineH;
     }
 
     for (const line of biosPostMemLines) {
       c.fillStyle = line.color || '#aaaaaa';
-      c.fillText(line.text, 40, y);
+      c.fillText(line.text, textX, y);
       y += lineH;
     }
 
     for (const line of ideLines) {
       c.fillStyle = line.color || '#aaaaaa';
-      c.fillText(line.text, 40, y);
+      c.fillText(line.text, textX, y);
       y += lineH;
     }
 
     for (const line of biosPostIdeLines) {
       if (line.isDifficultyPrompt) {
-        c.fillStyle = '#ffdd00';
-        c.fillText('>>> SELECT DIFFICULTY <<<', 40, y);
-        y += lineH + 6;
-        ['Easy', 'Normal', 'Hard'].forEach((opt, i) => {
+        // ── FIX: white text, "PROCESSOR CALIBRATION", horizontal layout ──
+        c.fillStyle = '#ffffff';
+        c.fillText('>>> PROCESSOR CALIBRATION <<<', textX, y);
+        y += lineH + 8;
+
+        const opts = ['Easy', 'Normal', 'Hard'];
+        const optW = 100;
+        const totalW = opts.length * optW;
+        const startOptX = textX;
+
+        opts.forEach((opt, i) => {
           const sel = i === difficultySelected && biosPhase === 'difficulty';
-          if (sel) { c.fillStyle = '#ffdd00'; c.fillRect(40, y - 14, 120, 18); c.fillStyle = '#000000'; }
-          else c.fillStyle = '#888888';
-          c.fillText((sel ? '> ' : '  ') + opt, 44, y);
-          y += lineH;
+          const ox = startOptX + i * optW;
+          if (sel) {
+            c.fillStyle = '#ffffff';
+            c.fillRect(ox - 2, y - 14, optW - 6, 18);
+            c.fillStyle = '#000000';
+          } else {
+            c.fillStyle = '#888888';
+          }
+          c.fillText((sel ? '> ' : '  ') + opt, ox, y);
         });
+        y += lineH;
+
         if (biosPhase === 'difficulty') {
           c.fillStyle = '#555555';
-          c.fillText('Use arrow keys to select, ENTER to confirm', 40, y + 8);
+          c.fillText('Use arrow keys to select, ENTER to confirm', textX, y + 8);
+          y += lineH + 8;
         }
       } else {
         c.fillStyle = line.color || '#aaaaaa';
-        c.fillText(line.text, 40, y);
+        c.fillText(line.text, textX, y);
         y += lineH;
       }
     }
@@ -449,9 +490,9 @@ setTimeout(() => playSound('startup2', true), 1000); // start loop after startup
       if (allLines.length > 0) {
         const last = allLines[allLines.length - 1];
         const tw = c.measureText(last.text || '').width;
-        const curY = 30 + (allLines.length - 1) * lineH;
+        const curY = 60 + (allLines.length - 1) * lineH;
         c.fillStyle = '#888888';
-        c.fillRect(40 + tw + 2, curY - 12, 8, 14);
+        c.fillRect(textX + tw + 2, curY - 12, 8, 14);
       }
     }
   }
@@ -479,9 +520,14 @@ setTimeout(() => playSound('startup2', true), 1000); // start loop after startup
     attachKeys((e) => {
       if (stage !== 'ITEM_DRAFT') return;
       if (draftPhase !== 'choosing') return;
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { draftSelected = (draftSelected + 2) % 3; playSound('switch'); }
-      else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { draftSelected = (draftSelected + 1) % 3; playSound('switch'); }
-      else if (e.key === 'Enter') {
+      // ── FIX: play switch sound BEFORE updating selection ──
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        playSound('switch');
+        setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        playSound('switch');
+        setTimeout(() => { draftSelected = (draftSelected + 1) % 3; }, 30);
+      } else if (e.key === 'Enter') {
         playSound('confirm');
         const chosen = draftItems[draftSelected];
         if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
@@ -552,8 +598,9 @@ setTimeout(() => playSound('startup2', true), 1000); // start loop after startup
     stage = 'DESKTOP_LOAD';
     detachKeys();
     desktopLoadLines = [];
+    // ── FIX: stop startup1 if still playing, keep startup2 looping — do NOT play startup3 here ──
     stopSound('startup1');
-    playSound('startup3');
+    // startup2 continues looping through this screen — no change needed
 
     let acc = 800;
     DESKTOP_LOAD_LINES.forEach((line, i) => {
@@ -596,9 +643,9 @@ setTimeout(() => playSound('startup2', true), 1000); // start loop after startup
     desktopErrorVisible = false;
     desktopLoadingData = false;
     desktopClickedData = false;
-    stopSound('startup3');
-stopSound('startup2');
-playSound('startup3');
+    // ── FIX: stop startup2 and play startup3 only NOW when desktop appears ──
+    stopSound('startup2');
+    playSound('startup3');
     attachDesktopClicks();
     requestAnimationFrame(desktopLoop);
   }
@@ -617,7 +664,6 @@ playSound('startup3');
     if (desktopPhase === 'loading_data') return;
 
     if (desktopErrorVisible) {
-      // OK button hit test — approximate center of dialog
       const bw = 340, bh = 210, bx = 960/2 - bw/2, by = 300 - bh/2;
       const okX = bx + bw/2 - 30, okY = by + bh - 34;
       if (mx > okX && mx < okX + 60 && my > okY && my < okY + 22) {
@@ -655,7 +701,7 @@ playSound('startup3');
     desktopLoadDots = 0; desktopLoadDotsTimer = 0;
     setTimeout(() => {
       desktopLoadingData = false;
-      stopSound('startup2');
+      stopSound('startup3');
       playSound('bluescreen');
       startBluescreen();
     }, 2200);
@@ -767,9 +813,13 @@ playSound('startup3');
     attachKeys((e) => {
       if (stage !== 'BLUESCREEN') return;
       if (!clippyDialogVisible) return;
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length; playSound('switch'); }
-      else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length; playSound('switch'); }
-      else if (e.key === 'Enter') { playSound('confirm'); const cb = clippyDialogCallback, sel = clippyDialogSelected; clippyDialogVisible = false; if (cb) cb(sel); }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        playSound('switch');
+        setTimeout(() => { clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length; }, 30);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        playSound('switch');
+        setTimeout(() => { clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length; }, 30);
+      } else if (e.key === 'Enter') { playSound('confirm'); const cb = clippyDialogCallback, sel = clippyDialogSelected; clippyDialogVisible = false; if (cb) cb(sel); }
     });
 
     requestAnimationFrame(bluescreenLoop);
@@ -823,9 +873,13 @@ playSound('startup3');
     attachKeys((e) => {
       if (stage !== 'TERMINAL') return;
       if (!clippyDialogVisible) return;
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length; playSound('switch'); }
-      else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length; playSound('switch'); }
-      else if (e.key === 'Enter') { playSound('confirm'); const cb = clippyDialogCallback, sel = clippyDialogSelected; clippyDialogVisible = false; if (cb) cb(sel); }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        playSound('switch');
+        setTimeout(() => { clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length; }, 30);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        playSound('switch');
+        setTimeout(() => { clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length; }, 30);
+      } else if (e.key === 'Enter') { playSound('confirm'); const cb = clippyDialogCallback, sel = clippyDialogSelected; clippyDialogVisible = false; if (cb) cb(sel); }
     });
 
     runTerminalSequence(0);
@@ -906,9 +960,13 @@ playSound('startup3');
     attachKeys((e) => {
       if (stage !== 'GAME_WINDOW') return;
       if (!clippyDialogVisible) return;
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length; playSound('switch'); }
-      else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length; playSound('switch'); }
-      else if (e.key === 'Enter') { playSound('confirm'); const cb = clippyDialogCallback, sel = clippyDialogSelected; clippyDialogVisible = false; if (cb) cb(sel); }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        playSound('switch');
+        setTimeout(() => { clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length; }, 30);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        playSound('switch');
+        setTimeout(() => { clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length; }, 30);
+      } else if (e.key === 'Enter') { playSound('confirm'); const cb = clippyDialogCallback, sel = clippyDialogSelected; clippyDialogVisible = false; if (cb) cb(sel); }
     });
 
     requestAnimationFrame(gameWindowLoop);
