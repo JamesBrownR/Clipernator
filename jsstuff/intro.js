@@ -78,28 +78,17 @@ const INTRO = (() => {
   // ── Extended BIOS lines — IDE detection section starts around 9-10 seconds in ──
   // Total delay before IDE lines: ~9500ms achieved via generous per-line delays
   const BIOS_LINES = [
-    { text: 'Award Modular BIOS v4.51PG, An Energy Star Ally', color: '#aaaaaa', delay: 0 },
-    { text: 'Copyright (C) 1984-97, Award Software, Inc.', color: '#aaaaaa', delay: 0 },
+    { text: 'Drawa Modular BIOS v4.51PG, An Energy Star Ally', color: '#aaaaaa', delay: 0 },
+    { text: 'Copyright (C) 1984-97, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
     { text: '', color: '#aaaaaa', delay: 400 },
-    { text: '(CLIPBLAST) Intel i430VX PCIset(TM)', color: '#aaaaaa', delay: 0 },
+    { text: '(CLIPBLAST) Letnep i430VX PCIset(TM)', color: '#aaaaaa', delay: 0 },
     { text: '', color: '#aaaaaa', delay: 300 },
     { text: 'PENTIUM-S CPU at 666MHz', color: '#00ff66', delay: 200 },
     { text: 'Memory Test :    65536K OK', color: '#00ff66', delay: 900 },
     { text: '', color: '#aaaaaa', delay: 400 },
-    { text: 'Initializing Plug and Play cards...', color: '#aaaaaa', delay: 300 },
-    { text: '  PnP Init Completed', color: '#aaaaaa', delay: 700 },
-    { text: '', color: '#aaaaaa', delay: 200 },
-    { text: 'Award Plug and Play BIOS Extension  v1.0A', color: '#aaaaaa', delay: 0 },
-    { text: 'Copyright (C) 1997, Award Software, Inc.', color: '#aaaaaa', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 300 },
-    { text: 'Checking NVRAM...', color: '#aaaaaa', delay: 200 },
-    { text: '  NVRAM OK', color: '#aaaaaa', delay: 500 },
-    { text: '', color: '#aaaaaa', delay: 200 },
-    { text: 'Verifying DMI Pool Data ...', color: '#aaaaaa', delay: 300 },
-    { text: '  DMI Pool Data Updated', color: '#aaaaaa', delay: 600 },
-    { text: '', color: '#aaaaaa', delay: 200 },
-    { text: 'Auto-Detecting Hard Disks...', color: '#aaaaaa', delay: 400 },
-    { text: '', color: '#aaaaaa', delay: 300 },
+ 
+    { text: 'Copyright (C) 1997, Drawa Software, Inc.', color: '#aaaaaa', delay: 0 },
+  
     // IDE detection — starts ~9500ms after first line
     { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa', delay: 900 },
     { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa', delay: 700 },
