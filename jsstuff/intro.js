@@ -14,6 +14,7 @@ const INTRO = (() => {
     startup2:   'sounds/soundeffects/opening/startup2.mp3',
     startup3:   'sounds/soundeffects/opening/startup3.mp3',
     click:      'sounds/soundeffects/opening/click.mp3',
+    switch:     'sounds/soundeffects/opening/switch.mp3',
     confirm:    'sounds/soundeffects/opening/confirm.mp3',
     bluescreen: 'sounds/soundeffects/opening/bluescreen.mp3',
     typing:     'sounds/soundeffects/opening/typing.mp3',
@@ -52,9 +53,8 @@ const INTRO = (() => {
   function stopSound(key) {
     if (audioCache[key]) { audioCache[key].pause(); audioCache[key].currentTime = 0; }
   }
-  // Stop all looping music tracks
   function stopAllMusic() {
-    ['startup2'].forEach(k => stopSound(k));
+    ['startup2', 'startup3'].forEach(k => stopSound(k));
   }
 
   // ── State ──
@@ -72,25 +72,48 @@ const INTRO = (() => {
   let biosTimer = 0;
   let biosPhase = 'typing'; // 'typing' | 'difficulty' | 'done'
   let difficultySelected = 0; // 0=Easy 1=Normal 2=Hard
-  // Slower: more ms per char and between lines
   const BIOS_LINE_DELAY = 55;
   const BIOS_PAUSE_BETWEEN = 280;
 
+  // ── Extended BIOS lines — IDE detection section starts around 9-10 seconds in ──
+  // Total delay before IDE lines: ~9500ms achieved via generous per-line delays
   const BIOS_LINES = [
     { text: 'Award Modular BIOS v4.51PG, An Energy Star Ally', color: '#aaaaaa', delay: 0 },
     { text: 'Copyright (C) 1984-97, Award Software, Inc.', color: '#aaaaaa', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 300 },
+    { text: '', color: '#aaaaaa', delay: 400 },
     { text: '(CLIPBLAST) Intel i430VX PCIset(TM)', color: '#aaaaaa', delay: 0 },
-    { text: '', color: '#aaaaaa', delay: 200 },
-    { text: 'PENTIUM-S CPU at 666MHz', color: '#00ff66', delay: 0 },
-    { text: 'Memory Test :    65536K OK', color: '#00ff66', delay: 600 },
     { text: '', color: '#aaaaaa', delay: 300 },
+    { text: 'PENTIUM-S CPU at 666MHz', color: '#00ff66', delay: 200 },
+    { text: 'Memory Test :    65536K OK', color: '#00ff66', delay: 900 },
+    { text: '', color: '#aaaaaa', delay: 400 },
+    { text: 'Initializing Plug and Play cards...', color: '#aaaaaa', delay: 300 },
+    { text: '  PnP Init Completed', color: '#aaaaaa', delay: 700 },
+    { text: '', color: '#aaaaaa', delay: 200 },
     { text: 'Award Plug and Play BIOS Extension  v1.0A', color: '#aaaaaa', delay: 0 },
     { text: 'Copyright (C) 1997, Award Software, Inc.', color: '#aaaaaa', delay: 0 },
-    { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa', delay: 450 },
-    { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa', delay: 300 },
-    { text: '    Detecting IDE Secondary Master... None', color: '#aaaaaa', delay: 250 },
-    { text: '    Detecting IDE Secondary Slave  ... None', color: '#aaaaaa', delay: 250 },
+    { text: '', color: '#aaaaaa', delay: 300 },
+    { text: 'Checking NVRAM...', color: '#aaaaaa', delay: 200 },
+    { text: '  NVRAM OK', color: '#aaaaaa', delay: 500 },
+    { text: '', color: '#aaaaaa', delay: 200 },
+    { text: 'Verifying DMI Pool Data ...', color: '#aaaaaa', delay: 300 },
+    { text: '  DMI Pool Data Updated', color: '#aaaaaa', delay: 600 },
+    { text: '', color: '#aaaaaa', delay: 200 },
+    { text: 'Auto-Detecting Hard Disks...', color: '#aaaaaa', delay: 400 },
+    { text: '', color: '#aaaaaa', delay: 300 },
+    // IDE detection — starts ~9500ms after first line
+    { text: '    Detecting IDE Primary Master   ... PCemHD', color: '#aaaaaa', delay: 900 },
+    { text: '    Detecting IDE Primary Slave    ... PCemCD', color: '#aaaaaa', delay: 700 },
+    { text: '    Detecting IDE Secondary Master ... None', color: '#aaaaaa', delay: 600 },
+    { text: '    Detecting IDE Secondary Slave  ... None', color: '#aaaaaa', delay: 600 },
+    { text: '', color: '#aaaaaa', delay: 300 },
+    { text: 'Ultra DMA Mode 2 Enabled', color: '#aaaaaa', delay: 400 },
+    { text: '', color: '#aaaaaa', delay: 200 },
+    { text: 'PCI Device Listing...', color: '#aaaaaa', delay: 300 },
+    { text: 'Bus No.  Device No.  Func No.  Vendor/Device Class  IRQ', color: '#555555', delay: 0 },
+    { text: '  0         0          0       8086/7100  Host/PCI            --', color: '#555555', delay: 0 },
+    { text: '  0         7          0       8086/7110  ISA                 --', color: '#555555', delay: 0 },
+    { text: '  0         7          1       8086/7111  IDE                  9', color: '#555555', delay: 0 },
+    { text: '  0         7          2       8086/7112  USB                 11', color: '#555555', delay: 0 },
     { text: '', color: '#aaaaaa', delay: 300 },
     { text: 'WARNING: Unusual processes detected in memory.', color: '#ff4444', delay: 800 },
     { text: '         party.exe flagged: quarantine failed.', color: '#ff4444', delay: 0 },
@@ -105,7 +128,7 @@ const INTRO = (() => {
   let draftItems = [];
   let draftSelected = 0;
   let draftPhase = 'choosing';
-  let draftCount = 0; // how many items to pick based on difficulty
+  let draftCount = 0;
 
   // DESKTOP LOAD state
   let desktopLoadLines = [];
@@ -284,24 +307,18 @@ const INTRO = (() => {
     biosLines = [];
     playSound('startup1');
 
-    // After startup1, play startup2 looping
-    // startup1 is ~3s, give it a moment then start the loop
-    setTimeout(() => {
-      if (stage === 'BIOS' || stage === 'ITEM_DRAFT') {
-        playSound('startup2', true);
-      }
-    }, 2800);
+    // startup2 starts looping when the desktop (teal home screen) appears
+    // Do NOT start it here — it will be started in transitionToDesktop()
 
     let accumDelay = 0;
     BIOS_LINES.forEach((line, i) => {
       accumDelay += line.delay || 0;
       const d = accumDelay;
-      // Slower: extra base delay per line
       setTimeout(() => {
         if (stage !== 'BIOS') return;
         if (line.isDifficultyPrompt) { biosPhase = 'difficulty'; }
         biosLines.push({ ...line, visible: true, typed: 0, fullLen: line.text.length });
-      }, d + i * 90);
+      }, d + i * 110); // 110ms per line base (was 90) to stretch timeline further
     });
 
     attachKeys((e) => {
@@ -309,15 +326,14 @@ const INTRO = (() => {
       if (biosPhase === 'difficulty') {
         if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
           difficultySelected = (difficultySelected + 2) % 3;
-          playSound('click');
+          playSound('switch'); // switch.mp3 for navigation
         } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
           difficultySelected = (difficultySelected + 1) % 3;
-          playSound('click');
+          playSound('switch'); // switch.mp3 for navigation
         } else if (e.key === 'Enter') {
           playSound('confirm');
           applyDifficulty(difficultySelected);
           biosPhase = 'done';
-          // Easy = 0 items, Normal = 1, Hard = 2
           draftCount = difficultySelected === 0 ? 0 : difficultySelected === 1 ? 1 : 2;
           setTimeout(() => startItemDraft(), 600);
         }
@@ -378,7 +394,6 @@ const INTRO = (() => {
   // ================================================================
   // STAGE: ITEM DRAFT
   // ================================================================
-  // Base item pool — items that appear on all floors, not floor-specific
   const BASE_ITEM_IDS = ['paperCuts', 'extraClips'];
 
   function startItemDraft() {
@@ -388,25 +403,17 @@ const INTRO = (() => {
     draftPhase = 'choosing';
 
     if (draftCount === 0) {
-      // Easy mode: skip item draft entirely
       setTimeout(() => startDesktopLoad(), 400);
       return;
     }
 
-    // Build a pool: repeat base items to fill slots if needed
-    // draftCount = 1 (Normal) or 2 (Hard)
-    // We always show 3 cards but only allow picking draftCount of them
-    // Actually: show exactly draftCount cards, repeat items if pool is small
     const pool = [];
-    // Fill with enough items (with repeats if needed) to show 3 cards
     for (let i = 0; i < 3; i++) {
       pool.push(BASE_ITEM_IDS[i % BASE_ITEM_IDS.length]);
     }
-    // Shuffle, but keep deterministic variety
     const shuffled = pool.sort(() => Math.random() - 0.5);
     draftItems = shuffled.slice(0, 3).map(id => ITEM_DEFS[id]);
 
-    // Track how many the player has picked so far this draft
     let pickedCount = 0;
 
     attachKeys((e) => {
@@ -414,10 +421,10 @@ const INTRO = (() => {
       if (draftPhase === 'choosing') {
         if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
           draftSelected = (draftSelected + 2) % 3;
-          playSound('click');
+          playSound('switch'); // switch.mp3 for navigation
         } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
           draftSelected = (draftSelected + 1) % 3;
-          playSound('click');
+          playSound('switch'); // switch.mp3 for navigation
         } else if (e.key === 'Enter') {
           playSound('confirm');
           const chosen = draftItems[draftSelected];
@@ -428,17 +435,14 @@ const INTRO = (() => {
           pickedCount++;
 
           if (pickedCount >= draftCount) {
-            // Done picking
             draftPhase = 'done';
             setTimeout(() => startDesktopLoad(), 500);
           } else {
-            // Hard mode: pick again from a fresh shuffle
             const pool2 = [];
             for (let i = 0; i < 3; i++) pool2.push(BASE_ITEM_IDS[i % BASE_ITEM_IDS.length]);
             pool2.sort(() => Math.random() - 0.5);
             draftItems = pool2.map(id => ITEM_DEFS[id]);
             draftSelected = 0;
-            // Redraw with new items
           }
         }
       }
@@ -518,8 +522,7 @@ const INTRO = (() => {
     desktopLoadIdx = 0;
     desktopLoadDone = false;
 
-    // Stop startup2 loop, play startup3 for desktop loading
-    stopSound('startup2');
+    // startup3 plays during the final boot text screen (before teal desktop appears)
     playSound('startup3');
 
     let accumDelay = 800;
@@ -568,6 +571,11 @@ const INTRO = (() => {
     desktopErrorVisible = false;
     desktopLoadingData = false;
     desktopClickedData = false;
+
+    // startup2 starts looping NOW — when the teal home screen first appears
+    stopSound('startup3'); // stop the boot screen sound
+    playSound('startup2', true); // loop forever until bluescreen
+
     attachDesktopClicks();
     requestAnimationFrame(desktopLoop);
   }
@@ -630,6 +638,7 @@ const INTRO = (() => {
 
     setTimeout(() => {
       desktopLoadingData = false;
+      stopSound('startup2'); // stop the desktop music when bluescreen hits
       playSound('bluescreen');
       startBluescreen();
     }, 2200);
@@ -819,10 +828,10 @@ const INTRO = (() => {
       if (!clippyDialogVisible) return;
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length;
-        playSound('click');
+        playSound('switch');
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length;
-        playSound('click');
+        playSound('switch');
       } else if (e.key === 'Enter') {
         playSound('confirm');
         const cb = clippyDialogCallback;
@@ -916,10 +925,10 @@ const INTRO = (() => {
       if (!clippyDialogVisible) return;
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length;
-        playSound('click');
+        playSound('switch');
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length;
-        playSound('click');
+        playSound('switch');
       } else if (e.key === 'Enter') {
         playSound('confirm');
         const cb = clippyDialogCallback;
@@ -1047,10 +1056,10 @@ const INTRO = (() => {
       if (!clippyDialogVisible) return;
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         clippyDialogSelected = (clippyDialogSelected + clippyDialogOptions.length - 1) % clippyDialogOptions.length;
-        playSound('click');
+        playSound('switch');
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         clippyDialogSelected = (clippyDialogSelected + 1) % clippyDialogOptions.length;
-        playSound('click');
+        playSound('switch');
       } else if (e.key === 'Enter') {
         playSound('confirm');
         const cb = clippyDialogCallback;
