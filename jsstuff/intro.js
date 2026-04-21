@@ -12,7 +12,11 @@ const INTRO = (() => {
     switch:     'sounds/soundeffects/opening/switch.mp3',
     confirm:    'sounds/soundeffects/opening/confirm.mp3',
     bluescreen: 'sounds/soundeffects/opening/bluescreen.mp3',
-    typing:     'sounds/soundeffects/opening/typing.mp3',
+    fixing: 'sounds/soundeffects/opening/fixing.mp3',
+
+    typing1: 'sounds/soundeffects/opening/typing1.mp3',
+typing2: 'sounds/soundeffects/opening/typing2.mp3',
+typing3: 'sounds/soundeffects/opening/typing3.mp3',
   };
 
   const SPR = {
@@ -928,10 +932,11 @@ if (clippyAnimTimer <= 0) {
   // ================================================================
   // STAGE: TERMINAL
   // ================================================================
-  function startTerminal() {
-    stage = 'TERMINAL';
-    detachKeys();
-    termLines = []; termDone = false; clippyAnim = 'engineer'; clippySlideY = 0;
+ function startTerminal() {
+  stage = 'TERMINAL';
+  detachKeys();
+  termLines = []; termDone = false; clippyAnim = 'engineer'; clippySlideY = 0;
+  playSound('fixing', true);
 
     attachKeys((e) => {
       if (stage !== 'TERMINAL') return;
@@ -952,9 +957,12 @@ if (clippyAnimTimer <= 0) {
   function runTerminalSequence(idx) {
     if (idx >= TERM_SEQUENCE.length) { termDone = true; return; }
     const step = TERM_SEQUENCE[idx];
-    if (step.type === 'clippy_ask') {
-      setTimeout(() => {
-        showClippyDialog(step.text, ['Yes, open it', 'No'], (choice) => {
+   if (step.type === 'clippy_ask') {
+  setTimeout(() => {
+    stopSound('fixing');
+    clippyAnim = 'normal';  // switch back to normal sprite
+    clippyAnimFrame = 0;
+    showClippyDialog(step.text, ['Yes, open it', 'No'], (choice) => {
           if (choice === 0) { termLines.push({ text: 'C:\\Users\\clippy> open party.exe', color: '#00ff66' }); setTimeout(() => startGameWindow(), 1200); }
           else { termLines.push({ text: 'Operation cancelled.', color: '#ff4444' }); setTimeout(() => runTerminalSequence(idx + 1), 500); }
         });
@@ -969,6 +977,17 @@ if (clippyAnimTimer <= 0) {
     }, step.delay || 0);
   }
 
+  function playTypeSound() {
+  const key = 'typing' + (1 + Math.floor(Math.random() * 3));
+  // Can't use audioCache for this — need a fresh Audio each time
+  // so multiple overlapping clicks can play simultaneously
+  try {
+    const a = new Audio(SND[key]);
+    a.volume = 0.4;
+    a.play().catch(() => {});
+  } catch(e) {}
+}
+
   function typeTermLine(text, color, onDone) {
     let i = 0;
     const lineObj = { text: '', color, isTyping: true };
@@ -976,6 +995,7 @@ if (clippyAnimTimer <= 0) {
     function typeChar() {
       if (i >= text.length) { lineObj.isTyping = false; if (onDone) onDone(); return; }
       lineObj.text += text[i++];
+      playTypeSound(); 
       setTimeout(typeChar, 45);
     }
     typeChar();
