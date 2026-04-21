@@ -50,7 +50,7 @@ function getAudioCtx() {
 
 // Preload startup2 as a decoded buffer for seamless looping
 let startup2Buffer = null;
-fetch('sounds/soundeffects/opening/startup2.mp3')
+fetch('sounds/soundeffects/opening/startup2.ogg')
   .then(r => r.arrayBuffer())
   .then(ab => getAudioCtx().decodeAudioData(ab))
   .then(buf => { startup2Buffer = buf; })
