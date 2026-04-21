@@ -553,20 +553,11 @@ function loop(timestamp = 0) {
   animId = requestAnimationFrame(loop);
 }
 
- function startGame() {
-   document.getElementById('overlay').style.display = 'none';
-     document.getElementById('item-choice').style.display = 'none';
-
-     // Run intro sequence first, then actually start
-     if (typeof INTRO !== 'undefined' && !window._introPlayed) {
-       window._introPlayed = true;
-       INTRO.start(() => {
-         _doStartGame();
-       });
-     } else {
-       _doStartGame();
-     }
-   }
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('item-choice').style.display = 'none';
+  _doStartGame(); // intro already played on first load; this is a retry
+}
 
    function _doStartGame() {
      gameRunning = true;
@@ -759,3 +750,14 @@ function offerItemChoice() {
 setInterval(() => {
   if (typeof gs !== 'undefined' && gs && gs.floor === 2 && gameRunning) updateHUD();
 }, 300);
+
+// Auto-start intro immediately when the page loads — no Play button needed
+window.addEventListener('load', () => {
+  if (typeof INTRO !== 'undefined' && !window._introPlayed) {
+    window._introPlayed = true;
+    document.getElementById('overlay').style.display = 'none';
+    INTRO.start(() => {
+      _doStartGame();
+    });
+  }
+});
