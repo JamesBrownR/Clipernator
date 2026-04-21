@@ -6,7 +6,7 @@ const INTRO = (() => {
 
   const SND = {
     startup1:   'sounds/soundeffects/opening/startup1.mp3',
-    startup2:   'sounds/soundeffects/opening/startup2.mp3',
+    startup2:   'sounds/soundeffects/opening/startup2.ogg',
     startup3:   'sounds/soundeffects/opening/startup3.mp3',
     click:      'sounds/soundeffects/opening/click.mp3',
     switch:     'sounds/soundeffects/opening/switch.mp3',
