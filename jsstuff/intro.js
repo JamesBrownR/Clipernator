@@ -579,7 +579,6 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
   // STAGE: ITEM DRAFT
   // ================================================================
   const BASE_ITEM_IDS = ['paperCuts', 'extraClips'];
-
 function startItemDraft() {
     stage = 'ITEM_DRAFT';
     detachKeys();
@@ -588,75 +587,79 @@ function startItemDraft() {
 
     if (draftCount === 0) { setTimeout(() => startDesktopLoad(), 400); return; }
 
-   const pool = [];
+    const pool = [];
     for (let i = 0; i < 3; i++) pool.push(BASE_ITEM_IDS[i % BASE_ITEM_IDS.length]);
     pool.sort(() => Math.random() - 0.5);
     draftItems = pool.slice(0, 3).map(id => ITEM_DEFS[id]);
 
-   
-   // Brief end-of-BIOS lines, then flash into cards
-    draftTransitionLines = [];
-    draftTransitionDone = false;
-    const transLines = [
-        { text: '', delay: 0 },
-        { text: 'Scanning item cache...', color: '#aaaaaa', delay: 200 },
-        { text: 'WARNING: Description fields unreadable.', color: '#ff4444', delay: 400 },
-    ];
-    let acc = 300;
-    transLines.forEach((ln, i) => {
-        acc += (ln.delay || 0) + 80;
-        setTimeout(() => {
-            if (stage !== 'ITEM_DRAFT') return;
-            draftTransitionLines.push({ text: ln.text, color: ln.color });
-            if (i === transLines.length - 1) {
-                // Flash transition into cards
-                setTimeout(() => {
-                    if (stage !== 'ITEM_DRAFT') return;
-                    let flashes = 0;
-                    const flashInterval = setInterval(() => {
-                        flashes++;
-                        const c = getCtx();
-                        if (c) {
-                            c.fillStyle = flashes % 2 === 0 ? '#000000' : '#ffffff';
-                            c.globalAlpha = 0.9;
-                            c.fillRect(0, 0, 960, 600);
-                            c.globalAlpha = 1;
-                        }
-                        if (flashes >= 5) {
-                            clearInterval(flashInterval);
-                            draftPhase = 'choosing';
-                            let pickedCount = 0;
-                            attachKeys((e) => {
-                                if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
-                                if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-                                    playSound('switch');
-                                    setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
-                                } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-                                    playSound('switch');
-                                    setTimeout(() => { draftSelected = (draftSelected + 1) % 3; }, 30);
-                                } else if (e.key === 'Enter') {
-                                    playSound('confirm');
-                                    const chosen = draftItems[draftSelected];
-                                    if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
-                                    chosen.effect(gs);
-                                    pickedCount++;
-                                    if (pickedCount >= draftCount) {
-                                        draftPhase = 'done';
-                                        setTimeout(() => startDesktopLoad(), 500);
-                                    } else {
-                                        const pool2 = [];
-                                        for (let j = 0; j < 3; j++) pool2.push(BASE_ITEM_IDS[j % BASE_ITEM_IDS.length]);
-                                        pool2.sort(() => Math.random() - 0.5);
-                                        draftItems = pool2.map(id => ITEM_DEFS[id]);
-                                        draftSelected = 0;
-                                    }
-                                }
-                            });
-                        }
-                    }, 60);
-                }, 300);
-            }
-        }, acc);
+    function runScanlineFlash(onComplete) {
+      const c = getCtx();
+      const W = 960, H = 600;
+      const TOTAL_FRAMES = 28;
+      let frame = 0;
+      function tick() {
+        if (frame >= TOTAL_FRAMES) { onComplete(); return; }
+        frame++;
+        const progress = frame / TOTAL_FRAMES;
+        c.fillStyle = '#000000';
+        c.fillRect(0, 0, W, H);
+        const BAND_COUNT = 14;
+        const BAND_W = 55;
+        const TILT = 0.22;
+        const sweepX = -BAND_W * 2 + progress * (W + BAND_W * BAND_COUNT * 1.5);
+        c.save();
+        for (let b = 0; b < BAND_COUNT; b++) {
+          const bx = sweepX + b * (BAND_W * 1.6);
+          const alpha = Math.max(0, 0.55 - Math.abs(b - BAND_COUNT * 0.4) * 0.055);
+          c.globalAlpha = alpha * (1 - Math.abs(progress - 0.5) * 1.6);
+          c.save();
+          c.translate(bx, H / 2);
+          c.rotate(-TILT);
+          c.fillStyle = '#cccccc';
+          c.fillRect(-BAND_W / 2, -H * 1.2, BAND_W, H * 2.4);
+          c.restore();
+        }
+        c.restore();
+        c.globalAlpha = 1;
+        if (frame === 13 || frame === 14) {
+          c.fillStyle = `rgba(255,255,255,${frame === 13 ? 0.55 : 0.25})`;
+          c.fillRect(0, 0, W, H);
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    runScanlineFlash(() => {
+      if (stage !== 'ITEM_DRAFT') return;
+      draftPhase = 'choosing';
+      let pickedCount = 0;
+      attachKeys((e) => {
+        if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
+        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          playSound('switch');
+          setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+          playSound('switch');
+          setTimeout(() => { draftSelected = (draftSelected + 1) % 3; }, 30);
+        } else if (e.key === 'Enter') {
+          playSound('confirm');
+          const chosen = draftItems[draftSelected];
+          if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
+          chosen.effect(gs);
+          pickedCount++;
+          if (pickedCount >= draftCount) {
+            draftPhase = 'done';
+            setTimeout(() => startDesktopLoad(), 500);
+          } else {
+            const pool2 = [];
+            for (let j = 0; j < 3; j++) pool2.push(BASE_ITEM_IDS[j % BASE_ITEM_IDS.length]);
+            pool2.sort(() => Math.random() - 0.5);
+            draftItems = pool2.map(id => ITEM_DEFS[id]);
+            draftSelected = 0;
+          }
+        }
+      });
     });
 
     requestAnimationFrame(draftLoop);
@@ -668,26 +671,14 @@ function startItemDraft() {
     requestAnimationFrame(draftLoop);
   }
 
-  function draftLoop() {
-    if (stage !== 'ITEM_DRAFT') return;
-    drawDraft();
-    requestAnimationFrame(draftLoop);
-}
+
 
 function drawDraft() {
     const c = getCtx(); if (!c) return;
     c.fillStyle = '#000000'; c.fillRect(0, 0, 960, 600);
     c.font = '13px "Fixedsys", "Courier New", monospace';
 
-    if (draftPhase === 'transition') {
-        // Draw scanline wipe effect over black
-        const lineH = 18;
-        draftTransitionLines.forEach((ln, i) => {
-            c.fillStyle = ln.color || '#00ff66';
-            c.fillText(ln.text, 40, 60 + i * lineH);
-        });
-        return;
-    }
+  
 
     // Cards phase
     c.fillStyle = '#00ff66';
