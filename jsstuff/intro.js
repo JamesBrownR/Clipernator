@@ -810,6 +810,8 @@ desktopErrorAnimActive = true;
     }
   }, 55);
 }, 2200);
+    }
+               }
   
 
   function drawDesktop() {
