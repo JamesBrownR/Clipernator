@@ -786,7 +786,7 @@ desktopErrorAnimActive = true;
     desktopPhase = 'loading_data';
     desktopLoadingData = true;
     desktopLoadDots = 0; desktopLoadDotsTimer = 0;
-    setTimeout(() => {
+  
       setTimeout(() => {
   desktopLoadingData = false;
   stopSound('startup3');
@@ -811,7 +811,7 @@ desktopErrorAnimActive = true;
   }, 55);
 }, 2200);
     }
-               }
+               
   
 
   function drawDesktop() {
