@@ -330,14 +330,20 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
 
   function getCtx() { return container ? container.getContext('2d') : null; }
 
-  function attachKeys(handler) {
-    detachKeys();
+const _allKeyHandlers = [];
+function attachKeys(handler) {
+    detachKeys(); // remove all previous
     keyHandler = handler;
+    _allKeyHandlers.push(handler);
     window.addEventListener('keydown', keyHandler);
-  }
-  function detachKeys() {
-    if (keyHandler) { window.removeEventListener('keydown', keyHandler); keyHandler = null; }
-  }
+}
+function detachKeys() {
+    for (const h of _allKeyHandlers) {
+        window.removeEventListener('keydown', h);
+    }
+    _allKeyHandlers.length = 0;
+    keyHandler = null;
+}
 
   let desktopClickHandler = null;
   function attachDesktopClicks() {
@@ -376,12 +382,19 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
     }
     // Start startup2 at low volume immediately so it's buffered, then fade in after startup1
     // Simpler: just start looping startup2 after startup1 finishes (~2s typical chime)
-    setTimeout(() => {
-      if (stage === 'BIOS' || stage === 'ITEM_DRAFT' || stage === 'DESKTOP_LOAD') {
-        audioCache['startup2'].currentTime = 0;
-        audioCache['startup2'].play().catch(() => {});
-      }
-    }, 2000);
+   function waitAndPlayStartup2() {
+    if (startup2Buffer) {
+        playStartup2Loop();
+    } else {
+        // Buffer not ready yet — poll until it is
+        setTimeout(waitAndPlayStartup2, 100);
+    }
+}
+setTimeout(() => {
+    if (stage === 'BIOS' || stage === 'ITEM_DRAFT' || stage === 'DESKTOP_LOAD') {
+        waitAndPlayStartup2();
+    }
+}, 2000);
 
     let acc = 0;
     BIOS_LINES_PRE.forEach((line, i) => {
@@ -633,6 +646,7 @@ function startItemDraft() {
     runScanlineFlash(() => {
       if (stage !== 'ITEM_DRAFT') return;
       draftPhase = 'choosing';
+      requestAnimationFrame(draftLoop);
       let pickedCount = 0;
       attachKeys((e) => {
         if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
@@ -662,14 +676,14 @@ function startItemDraft() {
       });
     });
 
-    requestAnimationFrame(draftLoop);
+    
   }
 
-  function draftLoop() {
+ function draftLoop() {
     if (stage !== 'ITEM_DRAFT') return;
-    drawDraft();
+    if (draftPhase !== 'transition') drawDraft(); // don't draw cards during flash
     requestAnimationFrame(draftLoop);
-  }
+}
 
 
 
