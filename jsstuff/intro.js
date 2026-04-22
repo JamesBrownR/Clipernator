@@ -6,6 +6,8 @@ const INTRO = (() => {
 
   let desktopErrorAnimT = 0;    // 0 → 1 growth progress
 let desktopErrorAnimActive = false;
+  let draftTransitionLines = [];
+let draftTransitionDone = false;
   
   const SND = {
     startup1:   'sounds/soundeffects/opening/startup1.mp3',
@@ -616,9 +618,10 @@ function startItemDraft() {
                 setTimeout(() => {
                     if (stage !== 'ITEM_DRAFT') return;
                     draftPhase = 'choosing';
+                  let pickedCount = 0;
                     attachKeys((e) => {
                         if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
-                        let pickedCount = 0;
+                        
                         if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
                             playSound('switch');
                             setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
