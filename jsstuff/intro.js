@@ -789,9 +789,9 @@ desktopErrorAnimActive = true;
   
       setTimeout(() => {
   desktopLoadingData = false;
+  stage = 'FLICKERING'; // stops desktopLoop immediately
   stopSound('startup3');
   playSound('bluescreen');
-  // Screen flicker before bluescreen
   let flickers = 0;
   const totalFlickers = 6;
   const flickerInterval = setInterval(() => {
@@ -1203,7 +1203,7 @@ if (clippyAnimTimer <= 0) {
     } else if (gameWindowPhase !== 'clippy_jump') {
       drawClippyAt(c, clippyBaseX, clippyBaseY, clippyAnim, clippyAnimFrame);
     }
-    if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 330, clippyBaseY - 100, cx, cy);
+if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 330, clippyBaseY - 100, clippyBaseX, clippyBaseY);
   }
 
  function drawIntroEnemy(c, x, y) {
