@@ -137,6 +137,7 @@ function stopSound(key) {
 
   let stage = 'BIOS';
   let onDone = null;
+  let _introDone = false; // guard against double-firing onDone
   let container = null;
   let overlayEl = null;
   let keyHandler = null;
@@ -373,22 +374,11 @@ function detachKeys() {
     ideLineIdx = 0; ideAnimTimer = 0; ideAnimStarted = false; ideLines = [];
     biosCursor = true; biosCursorTimer = 0;
 
-    // ── FIX: startup1 plays immediately, startup2 loops right after startup1 ends ──
     playSound('startup1');
-    // startup2 loops from the start — runs in background under startup1
-    // Use a timeout roughly matching startup1 length to start the loop seamlessly
-    // We preload startup2 immediately so there's no gap when it starts looping
-    if (!audioCache['startup2']) {
-      audioCache['startup2'] = new Audio(SND['startup2']);
-      audioCache['startup2'].loop = true;
-    }
-    // Start startup2 at low volume immediately so it's buffered, then fade in after startup1
-    // Simpler: just start looping startup2 after startup1 finishes (~2s typical chime)
    function waitAndPlayStartup2() {
     if (startup2Buffer) {
         playStartup2Loop();
     } else {
-        // Buffer not ready yet — poll until it is
         setTimeout(waitAndPlayStartup2, 100);
     }
 }
@@ -413,7 +403,6 @@ setTimeout(() => {
     attachKeys((e) => {
       if (stage !== 'BIOS') return;
       if (biosPhase === 'difficulty') {
-        // ── FIX: play switch sound BEFORE updating selection ──
         if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
           playSound('switch');
           setTimeout(() => { difficultySelected = (difficultySelected + 2) % 3; }, 30);
@@ -436,11 +425,9 @@ setTimeout(() => {
   function biosLoop() {
     if (stage !== 'BIOS') return;
 
-    // Cursor blink
     biosCursorTimer++;
     if (biosCursorTimer >= 30) { biosCursorTimer = 0; biosCursor = !biosCursor; }
 
-    // Memory test count-up
     if (memTestStarted && !memTestDone) {
       memTestValue = Math.min(memTestValue + Math.ceil(memTestTarget / 50), memTestTarget);
       if (memTestValue >= memTestTarget) {
@@ -454,7 +441,6 @@ setTimeout(() => {
             setTimeout(() => {
               if (stage !== 'BIOS') return;
               biosPostMemLines.push({ ...line });
-              // IDE detect starts after ALL post-mem lines (PCI listing) are done
               if (i === BIOS_LINES_POST_MEM.length - 1) {
                 setTimeout(() => { if (stage === 'BIOS') ideAnimStarted = true; }, 400);
               }
@@ -464,7 +450,6 @@ setTimeout(() => {
       }
     }
 
-    // IDE detection: one line per ~13 frames — now runs AFTER PCI listing
     if (ideAnimStarted && ideLineIdx < IDE_DETECT_LINES.length) {
       ideAnimTimer++;
       if (ideAnimTimer >= 13) {
@@ -495,17 +480,14 @@ setTimeout(() => {
     const W = 960, H = 600;
     c.fillStyle = '#000000'; c.fillRect(0, 0, W, H);
 
-    // ── FIX: logo and text centered (shifted right from x=40 to x=200, logo centered) ──
     const logo = imgs.drawalogo;
     if (logo && logo.complete && logo.naturalWidth > 0) {
       const lw = 180, lh = Math.round(logo.naturalHeight * (lw / logo.naturalWidth));
-      // Center the logo horizontally
       c.drawImage(logo, W / 2 - lw / 2, 20, lw, lh);
     }
 
     c.font = '13px "Fixedsys", "Courier New", monospace';
     const lineH = 18;
-    // ── FIX: start text more toward center of screen ──
     const textX = 200;
     let y = 60;
 
@@ -535,14 +517,12 @@ setTimeout(() => {
 
     for (const line of biosPostIdeLines) {
       if (line.isDifficultyPrompt) {
-        // ── FIX: white text, "PROCESSOR CALIBRATION", horizontal layout ──
         c.fillStyle = '#ffffff';
         c.fillText('>>> PROCESSOR CALIBRATION <<<', textX, y);
         y += lineH + 8;
 
         const opts = ['Easy', 'Normal', 'Hard'];
         const optW = 100;
-        const totalW = opts.length * optW;
         const startOptX = textX;
 
         opts.forEach((opt, i) => {
@@ -571,7 +551,6 @@ setTimeout(() => {
       }
     }
 
-    // Blinking grey cursor on the last line while typing
     if (biosPhase === 'typing' && biosCursor) {
       const allLines = [
         ...biosPreLines,
@@ -594,18 +573,14 @@ setTimeout(() => {
   // STAGE: ITEM DRAFT
   // ================================================================
   const BASE_ITEM_IDS = ['paperCuts', 'extraClips'];
-function startItemDraft() {
+
+  function startItemDraft() {
     stage = 'ITEM_DRAFT';
     detachKeys();
     draftSelected = 0;
     draftPhase = 'transition';
 
     if (draftCount === 0) { setTimeout(() => startDesktopLoad(), 400); return; }
-
-    const pool = [];
-    for (let i = 0; i < 3; i++) pool.push(BASE_ITEM_IDS[i % BASE_ITEM_IDS.length]);
-    pool.sort(() => Math.random() - 0.5);
-    draftItems = pool.slice(0, 3).map(id => ITEM_DEFS[id]);
 
     function runScanlineFlash(onComplete) {
       const c = getCtx();
@@ -645,67 +620,99 @@ function startItemDraft() {
       requestAnimationFrame(tick);
     }
 
-   runScanlineFlash(() => {
-  if (stage !== 'ITEM_DRAFT') return;
-  draftPhase = 'choosing';
-  requestAnimationFrame(draftLoop);
-  let pickedCount = 0;
-  let picking = false;
-
-  function setupDraftKeys() {
-    attachKeys((e) => {
-      if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing' || picking) return;
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-        playSound('switch');
-        draftSelected = (draftSelected + 2) % 3;
-      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-        playSound('switch');
-        draftSelected = (draftSelected + 1) % 3;
-      } else if (e.key === 'Enter') {
-        picking = true;
-        playSound('confirm');
-        detachKeys();
-        const chosen = draftItems[draftSelected];
-        if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
-        chosen.effect(gs);
-        pickedCount++;
-        if (pickedCount >= draftCount) {
-          draftPhase = 'done';
-          setTimeout(() => startDesktopLoad(), 400);
-        } else {
-          const pool2 = [];
-          for (let j = 0; j < 3; j++) pool2.push(BASE_ITEM_IDS[j % BASE_ITEM_IDS.length]);
-          pool2.sort(() => Math.random() - 0.5);
-          draftItems = pool2.map(id => ITEM_DEFS[id]);
-          draftSelected = 0;
-          picking = false;
-          setupDraftKeys();
-        }
+    // Build a pool of up to 3 unique items the player doesn't own yet.
+    // Draws from ALL_ITEM_IDS first, then falls back to BASE_ITEM_IDS.
+    function buildDraftPool() {
+      const allIds = typeof ALL_ITEM_IDS !== 'undefined'
+        ? [...ALL_ITEM_IDS, ...BASE_ITEM_IDS]
+        : [...BASE_ITEM_IDS];
+      // Remove already-unlocked items
+      const available = allIds.filter(id => !gs.unlockedItems.includes(id));
+      // Shuffle
+      for (let i = available.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [available[i], available[j]] = [available[j], available[i]];
       }
+      // Deduplicate and take up to 3
+      const seen = new Set();
+      const chosen = [];
+      for (const id of available) {
+        if (!seen.has(id)) { seen.add(id); chosen.push(id); }
+        if (chosen.length >= 3) break;
+      }
+      // Pad with BASE_ITEM_IDS if fewer than 3 unique items available
+      let padIdx = 0;
+      while (chosen.length < 3) {
+        chosen.push(BASE_ITEM_IDS[padIdx % BASE_ITEM_IDS.length]);
+        padIdx++;
+      }
+      return chosen.map(id => ITEM_DEFS[id]).filter(Boolean);
+    }
+
+    runScanlineFlash(() => {
+      if (stage !== 'ITEM_DRAFT') return;
+      draftPhase = 'choosing';
+      draftItems = buildDraftPool();
+      draftSelected = 0;
+      requestAnimationFrame(draftLoop);
+
+      let pickedCount = 0;
+      let picking = false;
+
+      function setupDraftKeys() {
+        attachKeys((e) => {
+          if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
+          // Hard guard — ignore if already processing a pick
+          if (picking) return;
+
+          const itemCount = draftItems.length;
+          if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+            playSound('switch');
+            draftSelected = (draftSelected + itemCount - 1) % itemCount;
+          } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+            playSound('switch');
+            draftSelected = (draftSelected + 1) % itemCount;
+          } else if (e.key === 'Enter') {
+            picking = true;          // set immediately, before any async
+            playSound('confirm');
+            detachKeys();            // remove listener right away
+
+            const chosen = draftItems[draftSelected];
+            if (chosen && chosen.id && !gs.unlockedItems.includes(chosen.id)) {
+              gs.unlockedItems.push(chosen.id);
+              chosen.effect(gs);
+            }
+            pickedCount++;
+
+            if (pickedCount >= draftCount) {
+              draftPhase = 'done';
+              setTimeout(() => startDesktopLoad(), 600);
+            } else {
+              // Build a fresh pool (excludes just-picked item since it's now in unlockedItems)
+              draftItems = buildDraftPool();
+              draftSelected = 0;
+              picking = false;
+              setupDraftKeys();      // re-attach for next pick
+            }
+          }
+        });
+      }
+
+      setupDraftKeys();
     });
   }
-  setupDraftKeys();
-});
 
-    
+  function draftLoop() {
+    if (stage !== 'ITEM_DRAFT') return;
+    if (draftPhase !== 'transition') drawDraft();
+    requestAnimationFrame(draftLoop);
   }
 
- function draftLoop() {
-    if (stage !== 'ITEM_DRAFT') return;
-    if (draftPhase !== 'transition') drawDraft(); // don't draw cards during flash
-    requestAnimationFrame(draftLoop);
-}
-
-
-
-function drawDraft() {
+  function drawDraft() {
     const c = getCtx(); if (!c) return;
     c.fillStyle = '#000000'; c.fillRect(0, 0, 960, 600);
     c.font = '13px "Fixedsys", "Courier New", monospace';
 
-  
-
-    // Cards phase
     c.fillStyle = '#00ff66';
     c.fillText('BIOS item cache detected. Select one to load into memory:', 40, 50);
     c.fillStyle = '#ff4444';
@@ -713,6 +720,7 @@ function drawDraft() {
 
     const cardW = 200, cardH = 110, startX = 100, cardY = 140, gap = 60;
     draftItems.forEach((item, i) => {
+        if (!item) return;
         const x = startX + i * (cardW + gap);
         const sel = i === draftSelected && draftPhase === 'choosing';
         c.fillStyle = sel ? '#003300' : '#111111'; c.fillRect(x, cardY, cardW, cardH);
@@ -720,7 +728,7 @@ function drawDraft() {
         if (sel) { c.fillStyle = '#00ff66'; c.fillText('>', x - 18, cardY + 58); }
         c.fillStyle = sel ? '#00ff66' : '#888888';
         c.font = 'bold 13px "Fixedsys", "Courier New", monospace';
-        const label = item.label.replace(/\n/g, ' ');
+        const label = item.label ? item.label.replace(/\n/g, ' ') : '???';
         const words = label.split(' ');
         let l1 = '', l2 = '';
         words.forEach(w => { if (c.measureText(l1 + w).width < cardW - 20) l1 += (l1 ? ' ' : '') + w; else l2 += (l2 ? ' ' : '') + w; });
@@ -738,7 +746,7 @@ function drawDraft() {
         c.fillStyle = '#00ff66'; c.font = '14px "Fixedsys", "Courier New", monospace';
         c.fillText('Loading selected item... OK', 40, 380);
     }
-}
+  }
 
   // ================================================================
   // STAGE: DESKTOP LOAD
@@ -747,9 +755,7 @@ function drawDraft() {
     stage = 'DESKTOP_LOAD';
     detachKeys();
     desktopLoadLines = [];
-    // ── FIX: stop startup1 if still playing, keep startup2 looping — do NOT play startup3 here ──
     stopSound('startup1');
-    // startup2 continues looping through this screen — no change needed
 
     let acc = 800;
     DESKTOP_LOAD_LINES.forEach((line, i) => {
@@ -792,7 +798,6 @@ function drawDraft() {
     desktopErrorVisible = false;
     desktopLoadingData = false;
     desktopClickedData = false;
-    // ── FIX: stop startup2 and play startup3 only NOW when desktop appears ──
     stopSound('startup2');
     playSound('startup3');
     attachDesktopClicks();
@@ -809,23 +814,23 @@ function drawDraft() {
     requestAnimationFrame(desktopLoop);
 
     if (desktopErrorAnimActive) {
-  desktopErrorAnimT = Math.min(1, desktopErrorAnimT + 0.09);
-  if (desktopErrorAnimT >= 1) desktopErrorAnimActive = false;
-}
+      desktopErrorAnimT = Math.min(1, desktopErrorAnimT + 0.09);
+      if (desktopErrorAnimT >= 1) desktopErrorAnimActive = false;
+    }
   }
 
   function handleDesktopClick(mx, my) {
     if (desktopPhase === 'loading_data') return;
 
     if (desktopErrorVisible) {
-const BW = 340, BH = 210;
-const ease = desktopErrorAnimT < 0.5
-  ? 2 * desktopErrorAnimT * desktopErrorAnimT
-  : -1 + (4 - 2 * desktopErrorAnimT) * desktopErrorAnimT;
-const bw = Math.round(BW * ease);
-const bh = Math.round(BH * ease);
-const bx = 960/2 - bw/2;
-const by = 300 - bh/2;
+      const BW = 340, BH = 210;
+      const ease = desktopErrorAnimT < 0.5
+        ? 2 * desktopErrorAnimT * desktopErrorAnimT
+        : -1 + (4 - 2 * desktopErrorAnimT) * desktopErrorAnimT;
+      const bw = Math.round(BW * ease);
+      const bh = Math.round(BH * ease);
+      const bx = 960/2 - bw/2;
+      const by = 300 - bh/2;
       const okX = bx + bw/2 - 30, okY = by + bh - 34;
       if (mx > okX && mx < okX + 60 && my > okY && my < okY + 22) {
         desktopErrorVisible = false;
@@ -842,14 +847,14 @@ const by = 300 - bh/2;
           handleDataClick();
         } else if (app.sprite === 'folder') {
           desktopErrorVisible = true;
-desktopErrorAnimT = 0;
-desktopErrorAnimActive = true;
+          desktopErrorAnimT = 0;
+          desktopErrorAnimActive = true;
           desktopErrorApp = app.label;
           desktopErrorMsg = ERROR_MESSAGES[app.id] || 'This folder is empty.';
         } else {
           desktopErrorVisible = true;
-desktopErrorAnimT = 0;
-desktopErrorAnimActive = true;
+          desktopErrorAnimT = 0;
+          desktopErrorAnimActive = true;
           desktopErrorApp = app.label.replace('\n', ' ');
           desktopErrorMsg = ERROR_MESSAGES[app.id] || 'This application cannot be opened.';
         }
@@ -865,32 +870,29 @@ desktopErrorAnimActive = true;
     desktopLoadingData = true;
     desktopLoadDots = 0; desktopLoadDotsTimer = 0;
   
-      setTimeout(() => {
-  desktopLoadingData = false;
-  stage = 'FLICKERING'; // stops desktopLoop immediately
-  stopSound('startup3');
-  playSound('bluescreen');
-  let flickers = 0;
-  const totalFlickers = 6;
-  const flickerInterval = setInterval(() => {
-    flickers++;
-    // Draw alternating black/white flashes over the desktop canvas
-    const c = getCtx();
-    if (c) {
-      c.fillStyle = flickers % 2 === 0 ? '#000000' : '#ffffff';
-      c.globalAlpha = 0.85;
-      c.fillRect(0, 0, 960, 600);
-      c.globalAlpha = 1;
-    }
-    if (flickers >= totalFlickers) {
-      clearInterval(flickerInterval);
-      startBluescreen();
-    }
-  }, 55);
-}, 2200);
-    }
-               
-  
+    setTimeout(() => {
+      desktopLoadingData = false;
+      stage = 'FLICKERING';
+      stopSound('startup3');
+      playSound('bluescreen');
+      let flickers = 0;
+      const totalFlickers = 6;
+      const flickerInterval = setInterval(() => {
+        flickers++;
+        const c = getCtx();
+        if (c) {
+          c.fillStyle = flickers % 2 === 0 ? '#000000' : '#ffffff';
+          c.globalAlpha = 0.85;
+          c.fillRect(0, 0, 960, 600);
+          c.globalAlpha = 1;
+        }
+        if (flickers >= totalFlickers) {
+          clearInterval(flickerInterval);
+          startBluescreen();
+        }
+      }, 55);
+    }, 2200);
+  }
 
   function drawDesktop() {
     const c = getCtx(); if (!c) return;
@@ -984,16 +986,16 @@ desktopErrorAnimActive = true;
 
     setTimeout(() => {
       clippyVisible = true; clippyAnim = 'notice'; clippyAnimFrame = 0;
-setTimeout(() => showClippyDialog(
-  "It looks like you're having\ntechnical difficulties!\nNeed help?",
-  ['Yes, please!', 'No thanks'],
-  (choice) => {
-    clippyAnim = 'bluescreen_idle';
-    if (choice === 0) startTerminal();
-    else showClippyDialog("Are you sure? Things look\npretty bad...", ['OK fine, help me', 'Bug off'],
-      (c2) => { if (c2 === 0) startTerminal(); });
-  }
-), 800);
+      setTimeout(() => showClippyDialog(
+        "It looks like you're having\ntechnical difficulties!\nNeed help?",
+        ['Yes, please!', 'No thanks'],
+        (choice) => {
+          clippyAnim = 'bluescreen_idle';
+          if (choice === 0) startTerminal();
+          else showClippyDialog("Are you sure? Things look\npretty bad...", ['OK fine, help me', 'Bug off'],
+            (c2) => { if (c2 === 0) startTerminal(); });
+        }
+      ), 800);
     }, 3000);
 
     attachKeys((e) => {
@@ -1021,17 +1023,16 @@ setTimeout(() => showClippyDialog(
     bluescreenTimer++;
     if (clippyVisible && clippySlideY > 0) clippySlideY = Math.max(0, clippySlideY - 12);
 
-    
     clippyAnimTimer--;
-if (clippyAnimTimer <= 0) {
-  const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
-  if (count > 1) {
-    let next;
-    do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
-    clippyAnimFrame = next;
-  }
-  clippyAnimTimer = 60 + Math.floor(Math.random() * 120); // 1 to 3 seconds
-}
+    if (clippyAnimTimer <= 0) {
+      const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
+      if (count > 1) {
+        let next;
+        do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
+        clippyAnimFrame = next;
+      }
+      clippyAnimTimer = 60 + Math.floor(Math.random() * 120);
+    }
     
     drawBluescreen();
     requestAnimationFrame(bluescreenLoop);
@@ -1063,11 +1064,11 @@ if (clippyAnimTimer <= 0) {
   // ================================================================
   // STAGE: TERMINAL
   // ================================================================
- function startTerminal() {
-  stage = 'TERMINAL';
-  detachKeys();
-  termLines = []; termDone = false; clippyAnim = 'engineer'; clippySlideY = 0;
-  playSound('fixing', true);
+  function startTerminal() {
+    stage = 'TERMINAL';
+    detachKeys();
+    termLines = []; termDone = false; clippyAnim = 'engineer'; clippySlideY = 0;
+    playSound('fixing', true);
 
     attachKeys((e) => {
       if (stage !== 'TERMINAL') return;
@@ -1088,12 +1089,12 @@ if (clippyAnimTimer <= 0) {
   function runTerminalSequence(idx) {
     if (idx >= TERM_SEQUENCE.length) { termDone = true; return; }
     const step = TERM_SEQUENCE[idx];
-   if (step.type === 'clippy_ask') {
-  setTimeout(() => {
-    stopSound('fixing');
-    clippyAnim = 'normal';  // switch back to normal sprite
-    clippyAnimFrame = 0;
-    showClippyDialog(step.text, ['Yes, open it', 'No'], (choice) => {
+    if (step.type === 'clippy_ask') {
+      setTimeout(() => {
+        stopSound('fixing');
+        clippyAnim = 'normal';
+        clippyAnimFrame = 0;
+        showClippyDialog(step.text, ['Yes, open it', 'No'], (choice) => {
           if (choice === 0) { termLines.push({ text: 'C:\\Users\\clippy> open party.exe', color: '#00ff66' }); setTimeout(() => startGameWindow(), 1200); }
           else { termLines.push({ text: 'Operation cancelled.', color: '#ff4444' }); setTimeout(() => runTerminalSequence(idx + 1), 500); }
         });
@@ -1108,15 +1109,15 @@ if (clippyAnimTimer <= 0) {
     }, step.delay || 0);
   }
 
- function playTypeSound() {
-  const key = 'typing' + (1 + Math.floor(Math.random() * 3));
-  try {
-    const a = new Audio(SND[key]);
-    a.volume = 0.25 + Math.random() * 0.3;        // 0.25 – 0.55
-    a.playbackRate = 0.88 + Math.random() * 0.28;  // 0.88 – 1.16
-    a.play().catch(() => {});
-  } catch(e) {}
-}
+  function playTypeSound() {
+    const key = 'typing' + (1 + Math.floor(Math.random() * 3));
+    try {
+      const a = new Audio(SND[key]);
+      a.volume = 0.25 + Math.random() * 0.3;
+      a.playbackRate = 0.88 + Math.random() * 0.28;
+      a.play().catch(() => {});
+    } catch(e) {}
+  }
 
   function typeTermLine(text, color, onDone) {
     let i = 0;
@@ -1136,15 +1137,15 @@ if (clippyAnimTimer <= 0) {
     termCursorTimer++; if (termCursorTimer > 25) { termCursorTimer = 0; termCursor = !termCursor; }
    
     clippyAnimTimer--;
-if (clippyAnimTimer <= 0) {
-  const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
-  if (count > 1) {
-    let next;
-    do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
-    clippyAnimFrame = next;
-  }
-  clippyAnimTimer = 60 + Math.floor(Math.random() * 120); // 1 to 3 seconds
-}
+    if (clippyAnimTimer <= 0) {
+      const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
+      if (count > 1) {
+        let next;
+        do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
+        clippyAnimFrame = next;
+      }
+      clippyAnimTimer = 60 + Math.floor(Math.random() * 120);
+    }
     
     drawTerminal();
     requestAnimationFrame(terminalLoop);
@@ -1166,7 +1167,7 @@ if (clippyAnimTimer <= 0) {
       c.fillStyle = '#00ff66';
       c.fillText('\u2588', 20 + c.measureText(last.text).width, 40 + (Math.min(termLines.length, maxLines) - 1) * lineH);
     }
- const cx = W - 110, cy = H - 160;
+    const cx = W - 110, cy = H - 160;
     if (clippyDialogVisible) drawClippyDialogBox(c, cx - 310, cy - 80, cx, cy);
     drawClippyAt(c, cx, cy, clippyAnim, clippyAnimFrame);
   }
@@ -1177,7 +1178,7 @@ if (clippyAnimTimer <= 0) {
   function startGameWindow() {
     stage = 'GAME_WINDOW';
     gameWindowPhase = 'opening'; gameWindowTimer = 0; gameWindowOpacity = 0;
-   clippyAnim = 'watching'; clippyAnimFrame = 0; clippyDialogVisible = false;
+    clippyAnim = 'watching'; clippyAnimFrame = 0; clippyDialogVisible = false;
     introEnemyX = 480; introEnemyY = 300; introEnemyVx = 0.6; introEnemyVy = 0.4;
     clippyJumpProgress = -1;
 
@@ -1209,26 +1210,29 @@ if (clippyAnimTimer <= 0) {
     if (gameWindowPhase === 'clippy_jump') {
       introEnemyX += (480 - introEnemyX) * 0.08; introEnemyY += (300 - introEnemyY) * 0.08;
       clippyJumpProgress += 0.04;
-       clippyAnimFrame = clippyJumpProgress > 0.8 ? 1 : 0; 
-      if (clippyJumpProgress > 1) { gameWindowPhase = 'done'; setTimeout(() => finishIntro(), 800); }
+      clippyAnimFrame = clippyJumpProgress > 0.8 ? 1 : 0; 
+      if (clippyJumpProgress > 1) {
+        gameWindowPhase = 'done';
+        // Use a guard so finishIntro can only fire once
+        setTimeout(() => finishIntro(), 800);
+      }
     }
 
-    
     clippyAnimTimer--;
-if (clippyAnimTimer <= 0) {
-  const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
-  if (count > 1) {
-    let next;
-    do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
-    clippyAnimFrame = next;
-  }
-  clippyAnimTimer = 60 + Math.floor(Math.random() * 120); // 1 to 3 seconds
-}
+    if (clippyAnimTimer <= 0) {
+      const count = CLIPPY_FRAME_COUNTS[clippyAnim] || 1;
+      if (count > 1 && gameWindowPhase !== 'clippy_jump') {
+        let next;
+        do { next = Math.floor(Math.random() * count); } while (next === clippyAnimFrame);
+        clippyAnimFrame = next;
+      }
+      clippyAnimTimer = 60 + Math.floor(Math.random() * 120);
+    }
     
     if (gameWindowPhase === 'opening' && gameWindowTimer === 80) gameWindowPhase = 'enemy_spawn';
     if (gameWindowPhase === 'enemy_spawn' && gameWindowTimer === 160) {
       gameWindowPhase = 'clippy_ask';
-        clippyAnim = 'normal'; clippyAnimFrame = 0;
+      clippyAnim = 'normal'; clippyAnimFrame = 0;
       showClippyDialog(
         "It looks like viruses are\ndefending the data file.\nIt is dangerous to fight\nthem alone. Want my help?",
         ['Yes!', 'I got this'],
@@ -1281,204 +1285,184 @@ if (clippyAnimTimer <= 0) {
     } else if (gameWindowPhase !== 'clippy_jump') {
       drawClippyAt(c, clippyBaseX, clippyBaseY, clippyAnim, clippyAnimFrame);
     }
-if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 330, clippyBaseY - 100, clippyBaseX, clippyBaseY);
+    if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 330, clippyBaseY - 100, clippyBaseX, clippyBaseY);
   }
 
- function drawIntroEnemy(c, x, y) {
-  if (giftBoxIdleSheet.complete && giftBoxIdleSheet.naturalWidth > 0) {
-    const COLS = 4, ROWS = 4;
-    const frameW = giftBoxIdleSheet.naturalWidth / COLS;
-    const frameH = giftBoxIdleSheet.naturalHeight / ROWS;
-    const frame = Math.floor(Date.now() / 133) % 16; // ~7.5fps
-    const col = frame % COLS;
-    const row = Math.floor(frame / COLS);
-    const DRAW_SIZE = 56;
-    c.drawImage(giftBoxIdleSheet,
-      col * frameW, row * frameH, frameW, frameH,
-      x - DRAW_SIZE/2, y - DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE
-    );
+  function drawIntroEnemy(c, x, y) {
+    if (typeof giftBoxIdleSheet !== 'undefined' && giftBoxIdleSheet.complete && giftBoxIdleSheet.naturalWidth > 0) {
+      const COLS = 4, ROWS = 4;
+      const frameW = giftBoxIdleSheet.naturalWidth / COLS;
+      const frameH = giftBoxIdleSheet.naturalHeight / ROWS;
+      const frame = Math.floor(Date.now() / 133) % 16;
+      const col = frame % COLS;
+      const row = Math.floor(frame / COLS);
+      const DRAW_SIZE = 56;
+      c.drawImage(giftBoxIdleSheet,
+        col * frameW, row * frameH, frameW, frameH,
+        x - DRAW_SIZE/2, y - DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE
+      );
+    }
   }
-}
 
   // ================================================================
   // CLIPPY HELPERS
   // ================================================================
-function drawClippyAt(c, x, y, anim, frame) {
-  const W = 180, H = 180;
-  let img = null;
-  let flipX = false;
+  function drawClippyAt(c, x, y, anim, frame) {
+    const W = 180, H = 180;
+    let img = null;
+    let flipX = false;
 
-  if (anim === 'engineer') {
-    img = imgs['clippyEngineer' + (frame + 1)] || imgs.clippyEngineer1;
-  } else if (anim === 'notice') {
-    img = frame === 0 ? imgs.clippyNotice1 : imgs.clippyNotice2;
-  } else if (anim === 'normal') {
-    img = [imgs.clippyNormal1, imgs.clippyNormal2, imgs.clippyNormal3][frame % 3];
-  } else if (anim === 'watching') {
-    // watching1 = upright, watching2 = upleft (mirrored to face right)
-    img = frame === 0 ? imgs.clippyWatching1 : imgs.clippyWatching2;
-    if (frame === 1) flipX = true;
-  } else if (anim === 'bluescreen_idle') {
-    img = frame === 0 ? imgs.clippyStressed1 : imgs.clippyStressed2;
-  } else if (anim === 'jump') {
-    img = frame === 0 ? imgs.clippyJump1 : imgs.clippyJump2;
-    // jump1 (upright) needs to face left, jump2 (crouching) needs to face right
-    if (frame === 0) flipX = true;
-  } else {
-    img = imgs.clippyNormal1;
-  }
-
-  if (img && img.complete && img.naturalWidth > 0) {
-    c.save();
-    c.translate(x, y);
-    if (flipX) c.scale(-1, 1);
-    c.drawImage(img, -W/2, -H/2, W, H);
-    c.restore();
-  } else {
-    c.save(); c.translate(x, y);
-    c.fillStyle = '#ffcc88'; c.beginPath(); c.arc(0, -10, 18, 0, Math.PI*2); c.fill();
-    c.fillStyle = '#4488ff'; c.fillRect(-14, 6, 28, 20);
-    c.restore();
-  }
-}
-
-function drawClippyDialogBox(c, bx, by, clippyX, clippyY) {
-  const bw = 260, lh = 18;
-  const lines = clippyDialogText.split('\n');
-  const optionH = clippyDialogOptions.length * 26 + 16;
-  const bh = lines.length * lh + optionH + 48;
-  const r = 10;
-
-  // Drop shadow
-  c.save();
-  c.shadowColor = 'rgba(0,0,0,0.28)';
-  c.shadowBlur = 7;
-  c.shadowOffsetX = 2; c.shadowOffsetY = 2;
-
-  // Bubble body
-  c.fillStyle = '#ffffcc';
-  c.beginPath();
-  c.moveTo(bx + r, by);
-  c.lineTo(bx + bw - r, by);
-  c.arcTo(bx + bw, by, bx + bw, by + r, r);
-  c.lineTo(bx + bw, by + bh - r);
-  c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
-  c.lineTo(bx + r, by + bh);
-  c.arcTo(bx, by + bh, bx, by + bh - r, r);
-  c.lineTo(bx, by + r);
-  c.arcTo(bx, by, bx + r, by, r);
-  c.closePath();
-  c.fill();
-  c.restore();
-
-  // Border
-  c.strokeStyle = '#aaaaaa';
-  c.lineWidth = 1.5;
-  c.beginPath();
-  c.moveTo(bx + r, by);
-  c.lineTo(bx + bw - r, by);
-  c.arcTo(bx + bw, by, bx + bw, by + r, r);
-  c.lineTo(bx + bw, by + bh - r);
-  c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
-  c.lineTo(bx + r, by + bh);
-  c.arcTo(bx, by + bh, bx, by + bh - r, r);
-  c.lineTo(bx, by + r);
-  c.arcTo(bx, by, bx + r, by, r);
-  c.closePath();
-  c.stroke();
-
- // Dynamic tail — points from bubble edge toward Clippy center
-const bubbleCenterY = by + bh / 2;
-const clippyIsRight = (clippyX || 0) > bx + bw;
-const clippyIsBelow = (clippyY || 0) > by + bh;
-const clippyIsAbove = (clippyY || 0) < by;
-
-let tailAttachX, tailAttachY, tailTipX, tailTipY, tailA, tailB;
-
-if (clippyIsRight) {
-  // Tail exits right edge
-  const clampedY = Math.max(by + 20, Math.min(by + bh - 20, clippyY || bubbleCenterY));
-  tailAttachX = bx + bw - 1;
-  tailA = { x: tailAttachX, y: clampedY - 11 };
-  tailB = { x: tailAttachX, y: clampedY + 16 };
-  tailTipX = clippyX - 40;
-  tailTipY = clippyY || bubbleCenterY;
-} else {
-  // Tail exits left edge
-  const clampedY = Math.max(by + 20, Math.min(by + bh - 20, clippyY || bubbleCenterY));
-  tailAttachX = bx + 1;
-  tailA = { x: tailAttachX, y: clampedY - 11 };
-  tailB = { x: tailAttachX, y: clampedY + 16 };
-  tailTipX = (clippyX || 0) + 40;
-  tailTipY = clippyY || bubbleCenterY;
-}
-
-c.fillStyle = '#ffffcc';
-c.beginPath();
-c.moveTo(tailA.x, tailA.y);
-c.lineTo(tailTipX, tailTipY);
-c.lineTo(tailB.x, tailB.y);
-c.closePath();
-c.fill();
-
-c.strokeStyle = '#aaaaaa';
-c.lineWidth = 1.5;
-c.beginPath();
-c.moveTo(tailA.x, tailA.y);
-c.lineTo(tailTipX, tailTipY);
-c.lineTo(tailB.x, tailB.y);
-c.stroke();
-
-// Cover the seam on whichever edge the tail attaches to
-c.fillStyle = '#ffffcc';
-if (clippyIsRight) {
-  c.fillRect(bx + bw - 2, tailA.y, 4, tailB.y - tailA.y);
-} else {
-  c.fillRect(bx - 2, tailA.y, 4, tailB.y - tailA.y);
-}
-
-  // Cover seam on right edge of bubble
-  c.fillStyle = '#ffffcc';
-  c.fillRect(bx + bw - 2, tailY - 10, 4, 27);
-
-  // Text
-  c.fillStyle = '#000000';
-  c.font = '13px "MS Sans Serif", Arial, sans-serif';
-  lines.forEach((ln, i) => c.fillText(ln, bx + 14, by + 22 + i * lh));
-
-  // Separator line
-  const sepY = by + lines.length * lh + 28;
-  c.strokeStyle = '#cccc99';
-  c.lineWidth = 1;
-  c.beginPath(); c.moveTo(bx + 8, sepY); c.lineTo(bx + bw - 8, sepY); c.stroke();
-
-  // Options
-  clippyDialogOptions.forEach((opt, i) => {
-    const sel = i === clippyDialogSelected;
-    const oy = sepY + 16 + i * 26;
-    if (sel) {
-      c.fillStyle = '#000080';
-      c.fillRect(bx + 6, oy - 15, bw - 12, 20);
-      c.fillStyle = '#ffffff';
-      c.font = 'bold 13px "MS Sans Serif", Arial, sans-serif';
-      c.fillText('\u25ba ' + opt, bx + 12, oy);
+    if (anim === 'engineer') {
+      img = imgs['clippyEngineer' + (frame + 1)] || imgs.clippyEngineer1;
+    } else if (anim === 'notice') {
+      img = frame === 0 ? imgs.clippyNotice1 : imgs.clippyNotice2;
+    } else if (anim === 'normal') {
+      img = [imgs.clippyNormal1, imgs.clippyNormal2, imgs.clippyNormal3][frame % 3];
+    } else if (anim === 'watching') {
+      img = frame === 0 ? imgs.clippyWatching1 : imgs.clippyWatching2;
+      if (frame === 1) flipX = true;
+    } else if (anim === 'bluescreen_idle') {
+      img = frame === 0 ? imgs.clippyStressed1 : imgs.clippyStressed2;
+    } else if (anim === 'jump') {
+      img = frame === 0 ? imgs.clippyJump1 : imgs.clippyJump2;
+      if (frame === 0) flipX = true;
     } else {
-      // Classic Clippy blue circle bullet
-      c.fillStyle = '#1a5cc8';
-      c.beginPath();
-      c.arc(bx + 18, oy - 5, 5, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = '#000000';
-      c.font = '13px "MS Sans Serif", Arial, sans-serif';
-      c.fillText(opt, bx + 30, oy);
+      img = imgs.clippyNormal1;
     }
-  });
 
-  // Hint
-  c.font = '10px "MS Sans Serif", Arial, sans-serif';
-  c.fillStyle = '#999977';
-  c.fillText('Arrow keys + Enter', bx + 10, by + bh - 7);
-}
+    if (img && img.complete && img.naturalWidth > 0) {
+      c.save();
+      c.translate(x, y);
+      if (flipX) c.scale(-1, 1);
+      c.drawImage(img, -W/2, -H/2, W, H);
+      c.restore();
+    } else {
+      c.save(); c.translate(x, y);
+      c.fillStyle = '#ffcc88'; c.beginPath(); c.arc(0, -10, 18, 0, Math.PI*2); c.fill();
+      c.fillStyle = '#4488ff'; c.fillRect(-14, 6, 28, 20);
+      c.restore();
+    }
+  }
+
+  function drawClippyDialogBox(c, bx, by, clippyX, clippyY) {
+    const bw = 260, lh = 18;
+    const lines = clippyDialogText.split('\n');
+    const optionH = clippyDialogOptions.length * 26 + 16;
+    const bh = lines.length * lh + optionH + 48;
+    const r = 10;
+
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0.28)';
+    c.shadowBlur = 7;
+    c.shadowOffsetX = 2; c.shadowOffsetY = 2;
+
+    c.fillStyle = '#ffffcc';
+    c.beginPath();
+    c.moveTo(bx + r, by);
+    c.lineTo(bx + bw - r, by);
+    c.arcTo(bx + bw, by, bx + bw, by + r, r);
+    c.lineTo(bx + bw, by + bh - r);
+    c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
+    c.lineTo(bx + r, by + bh);
+    c.arcTo(bx, by + bh, bx, by + bh - r, r);
+    c.lineTo(bx, by + r);
+    c.arcTo(bx, by, bx + r, by, r);
+    c.closePath();
+    c.fill();
+    c.restore();
+
+    c.strokeStyle = '#aaaaaa';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(bx + r, by);
+    c.lineTo(bx + bw - r, by);
+    c.arcTo(bx + bw, by, bx + bw, by + r, r);
+    c.lineTo(bx + bw, by + bh - r);
+    c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
+    c.lineTo(bx + r, by + bh);
+    c.arcTo(bx, by + bh, bx, by + bh - r, r);
+    c.lineTo(bx, by + r);
+    c.arcTo(bx, by, bx + r, by, r);
+    c.closePath();
+    c.stroke();
+
+    // Dynamic tail pointing toward Clippy
+    const bubbleCenterY = by + bh / 2;
+    const clippyIsRight = (clippyX || 0) > bx + bw;
+    let tailAttachX, tailA, tailB, tailTipX, tailTipY;
+    const clampedY = Math.max(by + 20, Math.min(by + bh - 20, clippyY || bubbleCenterY));
+
+    if (clippyIsRight) {
+      tailAttachX = bx + bw - 1;
+      tailA = { x: tailAttachX, y: clampedY - 11 };
+      tailB = { x: tailAttachX, y: clampedY + 16 };
+      tailTipX = (clippyX || 0) - 40;
+      tailTipY = clippyY || bubbleCenterY;
+    } else {
+      tailAttachX = bx + 1;
+      tailA = { x: tailAttachX, y: clampedY - 11 };
+      tailB = { x: tailAttachX, y: clampedY + 16 };
+      tailTipX = (clippyX || 0) + 40;
+      tailTipY = clippyY || bubbleCenterY;
+    }
+
+    c.fillStyle = '#ffffcc';
+    c.beginPath();
+    c.moveTo(tailA.x, tailA.y);
+    c.lineTo(tailTipX, tailTipY);
+    c.lineTo(tailB.x, tailB.y);
+    c.closePath();
+    c.fill();
+
+    c.strokeStyle = '#aaaaaa';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(tailA.x, tailA.y);
+    c.lineTo(tailTipX, tailTipY);
+    c.lineTo(tailB.x, tailB.y);
+    c.stroke();
+
+    // Cover seam
+    c.fillStyle = '#ffffcc';
+    if (clippyIsRight) {
+      c.fillRect(bx + bw - 2, tailA.y, 4, tailB.y - tailA.y);
+    } else {
+      c.fillRect(bx - 2, tailA.y, 4, tailB.y - tailA.y);
+    }
+
+    c.fillStyle = '#000000';
+    c.font = '13px "MS Sans Serif", Arial, sans-serif';
+    lines.forEach((ln, i) => c.fillText(ln, bx + 14, by + 22 + i * lh));
+
+    const sepY = by + lines.length * lh + 28;
+    c.strokeStyle = '#cccc99';
+    c.lineWidth = 1;
+    c.beginPath(); c.moveTo(bx + 8, sepY); c.lineTo(bx + bw - 8, sepY); c.stroke();
+
+    clippyDialogOptions.forEach((opt, i) => {
+      const sel = i === clippyDialogSelected;
+      const oy = sepY + 16 + i * 26;
+      if (sel) {
+        c.fillStyle = '#000080';
+        c.fillRect(bx + 6, oy - 15, bw - 12, 20);
+        c.fillStyle = '#ffffff';
+        c.font = 'bold 13px "MS Sans Serif", Arial, sans-serif';
+        c.fillText('\u25ba ' + opt, bx + 12, oy);
+      } else {
+        c.fillStyle = '#1a5cc8';
+        c.beginPath();
+        c.arc(bx + 18, oy - 5, 5, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#000000';
+        c.font = '13px "MS Sans Serif", Arial, sans-serif';
+        c.fillText(opt, bx + 30, oy);
+      }
+    });
+
+    c.font = '10px "MS Sans Serif", Arial, sans-serif';
+    c.fillStyle = '#999977';
+    c.fillText('Arrow keys + Enter', bx + 10, by + bh - 7);
+  }
 
   // ================================================================
   // DIFFICULTY
@@ -1502,7 +1486,15 @@ if (clippyIsRight) {
   // FINISH
   // ================================================================
   function finishIntro() {
-    stage = 'DONE'; detachKeys(); detachDesktopClicks(); stopAllMusic();
+    // Guard: only fire once even if called from multiple paths
+    if (_introDone) return;
+    _introDone = true;
+
+    stage = 'DONE';
+    detachKeys();
+    detachDesktopClicks();
+    stopAllMusic();
+
     let alpha = 0;
     const fadeInterval = setInterval(() => {
       alpha += 0.05;
@@ -1519,6 +1511,7 @@ if (clippyIsRight) {
 
   function start(callback) {
     onDone = callback;
+    _introDone = false;
     buildOverlay();
     setTimeout(() => startBIOS(), 200);
   }
