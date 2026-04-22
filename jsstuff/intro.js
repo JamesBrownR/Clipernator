@@ -1166,15 +1166,21 @@ if (clippyAnimTimer <= 0) {
     if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 330, clippyBaseY - 100);
   }
 
-  function drawIntroEnemy(c, x, y) {
-    const t = Date.now() / 300;
-    c.save(); c.translate(x, y);
-    c.fillStyle = '#ffaa00'; c.fillRect(-16, -12, 32, 20);
-    c.fillStyle = '#ff6600'; c.fillRect(-16, -12, 32, 5); c.fillRect(-3, -16, 6, 22);
-    c.fillStyle = '#ff2200'; c.shadowColor = '#ff4400'; c.shadowBlur = 8 + Math.sin(t) * 4;
-    for (let i = 0; i < 5; i++) { const a = t+(i/5)*Math.PI*2, r=22; c.fillRect(Math.cos(a)*r-2, Math.sin(a)*r-2, 4, 4); }
-    c.restore();
+ function drawIntroEnemy(c, x, y) {
+  if (giftBoxIdleSheet.complete && giftBoxIdleSheet.naturalWidth > 0) {
+    const COLS = 4, ROWS = 4;
+    const frameW = giftBoxIdleSheet.naturalWidth / COLS;
+    const frameH = giftBoxIdleSheet.naturalHeight / ROWS;
+    const frame = Math.floor(Date.now() / 133) % 16; // ~7.5fps
+    const col = frame % COLS;
+    const row = Math.floor(frame / COLS);
+    const DRAW_SIZE = 56;
+    c.drawImage(giftBoxIdleSheet,
+      col * frameW, row * frameH, frameW, frameH,
+      x - DRAW_SIZE/2, y - DRAW_SIZE/2, DRAW_SIZE, DRAW_SIZE
+    );
   }
+}
 
   // ================================================================
   // CLIPPY HELPERS
