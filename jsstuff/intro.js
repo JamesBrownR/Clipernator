@@ -593,20 +593,14 @@ function startItemDraft() {
     pool.sort(() => Math.random() - 0.5);
     draftItems = pool.slice(0, 3).map(id => ITEM_DEFS[id]);
 
-    // Transition: type out loading lines before showing cards
+   
+   // Brief end-of-BIOS lines, then flash into cards
     draftTransitionLines = [];
     draftTransitionDone = false;
     const transLines = [
-        { text: 'Scanning memory for cached items...', color: '#aaaaaa', delay: 0 },
-        { text: '', delay: 180 },
-        { text: '    Sector 0x00A4 .............. OK', color: '#555555', delay: 120 },
-        { text: '    Sector 0x00A5 .............. OK', color: '#555555', delay: 90 },
-        { text: '    Sector 0x00A6 .............. FLAGGED', color: '#ff4444', delay: 90 },
-        { text: '', delay: 200 },
-        { text: 'WARNING: Item cache integrity compromised.', color: '#ff4444', delay: 0 },
-        { text: '         Description fields unreadable.', color: '#ff4444', delay: 0 },
-        { text: '', delay: 300 },
-        { text: '>>> CHOOSE AN ITEM TO LOAD INTO MEMORY <<<', color: '#ffffff', delay: 400 },
+        { text: '', delay: 0 },
+        { text: 'Scanning item cache...', color: '#aaaaaa', delay: 200 },
+        { text: 'WARNING: Description fields unreadable.', color: '#ff4444', delay: 400 },
     ];
     let acc = 300;
     transLines.forEach((ln, i) => {
@@ -615,38 +609,52 @@ function startItemDraft() {
             if (stage !== 'ITEM_DRAFT') return;
             draftTransitionLines.push({ text: ln.text, color: ln.color });
             if (i === transLines.length - 1) {
+                // Flash transition into cards
                 setTimeout(() => {
                     if (stage !== 'ITEM_DRAFT') return;
-                    draftPhase = 'choosing';
-                  let pickedCount = 0;
-                    attachKeys((e) => {
-                        if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
-                        
-                        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-                            playSound('switch');
-                            setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
-                        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-                            playSound('switch');
-                            setTimeout(() => { draftSelected = (draftSelected + 1) % 3; }, 30);
-                        } else if (e.key === 'Enter') {
-                            playSound('confirm');
-                            const chosen = draftItems[draftSelected];
-                            if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
-                            chosen.effect(gs);
-                            pickedCount++;
-                            if (pickedCount >= draftCount) {
-                                draftPhase = 'done';
-                                setTimeout(() => startDesktopLoad(), 500);
-                            } else {
-                                const pool2 = [];
-                                for (let j = 0; j < 3; j++) pool2.push(BASE_ITEM_IDS[j % BASE_ITEM_IDS.length]);
-                                pool2.sort(() => Math.random() - 0.5);
-                                draftItems = pool2.map(id => ITEM_DEFS[id]);
-                                draftSelected = 0;
-                            }
+                    let flashes = 0;
+                    const flashInterval = setInterval(() => {
+                        flashes++;
+                        const c = getCtx();
+                        if (c) {
+                            c.fillStyle = flashes % 2 === 0 ? '#000000' : '#ffffff';
+                            c.globalAlpha = 0.9;
+                            c.fillRect(0, 0, 960, 600);
+                            c.globalAlpha = 1;
                         }
-                    });
-                }, 500);
+                        if (flashes >= 5) {
+                            clearInterval(flashInterval);
+                            draftPhase = 'choosing';
+                            let pickedCount = 0;
+                            attachKeys((e) => {
+                                if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
+                                if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                                    playSound('switch');
+                                    setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
+                                } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                                    playSound('switch');
+                                    setTimeout(() => { draftSelected = (draftSelected + 1) % 3; }, 30);
+                                } else if (e.key === 'Enter') {
+                                    playSound('confirm');
+                                    const chosen = draftItems[draftSelected];
+                                    if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
+                                    chosen.effect(gs);
+                                    pickedCount++;
+                                    if (pickedCount >= draftCount) {
+                                        draftPhase = 'done';
+                                        setTimeout(() => startDesktopLoad(), 500);
+                                    } else {
+                                        const pool2 = [];
+                                        for (let j = 0; j < 3; j++) pool2.push(BASE_ITEM_IDS[j % BASE_ITEM_IDS.length]);
+                                        pool2.sort(() => Math.random() - 0.5);
+                                        draftItems = pool2.map(id => ITEM_DEFS[id]);
+                                        draftSelected = 0;
+                                    }
+                                }
+                            });
+                        }
+                    }, 60);
+                }, 300);
             }
         }, acc);
     });
