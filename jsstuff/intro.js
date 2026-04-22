@@ -20,12 +20,18 @@ typing3: 'sounds/soundeffects/opening/typing3.mp3',
   };
 
   const SPR = {
-    clippyNotice:   'sprites/clippy/Clippy_notice.png',
-     clippyEngineer1: 'sprites/clippy/engineer/Clippy_engineer1.png',
-  clippyEngineer2: 'sprites/clippy/engineer/Clippy_engineer2.png',
-  clippyEngineer3: 'sprites/clippy/engineer/Clippy_engineer3.png',
-  clippyEngineer4: 'sprites/clippy/engineer/Clippy_engineer4.png',
-    clippyJump:     'sprites/clippy/Clippy_jump.png',
+// In SPR object, replace clippy entries with:
+clippyNotice1:   'sprites/clippy/Clippysurprisedleft.png',
+clippyNotice2:   'sprites/clippy/Clippyworriedright1.png',
+clippyNormal1:   'sprites/clippy/Clippyforward.png',
+clippyNormal2:   'sprites/clippy/Clippyupleft.png',
+clippyNormal3:   'sprites/clippy/Clippyworriedright2.png',
+clippyWatching1: 'sprites/clippy/Clippyupright.png',
+clippyWatching2: 'sprites/clippy/Clippyupleft.png',
+clippyStressed1: 'sprites/clippy/Clippysweatingleft.png',
+clippyStressed2: 'sprites/clippy/Clippyfocused.png',
+clippyJump1:     'sprites/clippy/Clippyupright.png',
+clippyJump2:     'sprites/clippy/Clippycrouchingleft.png',
     clippyNormal:   'sprites/Clippy.png',
     folder:         'sprites/ui/folder.png',
     appGeneric:   'sprites/ui/app_generic.png',
@@ -37,13 +43,14 @@ typing3: 'sounds/soundeffects/opening/typing3.mp3',
     drawalogo:      'sprites/ui/drawalogo.png',
   };
 
-  const CLIPPY_FRAME_COUNTS = {
-  notice:    1,
-  engineer:  4,
-  jump:      1,
-  normal:    1,
+ const CLIPPY_FRAME_COUNTS = {
+  notice:          2,
+  engineer:        4,
+  jump:            2,
+  normal:          3,
+  watching:        2,
+  bluescreen_idle: 2,
 };
-
   const imgs = {};
   function loadImg(key, src) {
     imgs[key] = new Image();
@@ -853,16 +860,17 @@ function stopSound(key) {
     bluescreenTimer = 0; clippyVisible = false; clippySlideY = 300; clippyDialogVisible = false; clippyAnim = 'notice';
 
     setTimeout(() => {
-      clippyVisible = true; clippyAnim = 'notice';
-      setTimeout(() => showClippyDialog(
-        "It looks like you're having\ntechnical difficulties!\nWould you like help?",
-        ['Yes, please!', 'No thanks'],
-        (choice) => {
-          if (choice === 0) startTerminal();
-          else showClippyDialog("Are you sure? Things look\npretty bad...", ['OK fine, help me', 'I am fine'],
-            (c2) => { if (c2 === 0) startTerminal(); });
-        }
-      ), 800);
+      clippyVisible = true; clippyAnim = 'notice'; clippyAnimFrame = 0;
+setTimeout(() => showClippyDialog(
+  "It looks like you're having\ntechnical difficulties!\nNeed help?",
+  ['Yes, please!', 'No thanks'],
+  (choice) => {
+    clippyAnim = 'bluescreen_idle';
+    if (choice === 0) startTerminal();
+    else showClippyDialog("Are you sure? Things look\npretty bad...", ['OK fine, help me', 'Bug off'],
+      (c2) => { if (c2 === 0) startTerminal(); });
+  }
+), 800);
     }, 3000);
 
     attachKeys((e) => {
@@ -1047,7 +1055,7 @@ if (clippyAnimTimer <= 0) {
   function startGameWindow() {
     stage = 'GAME_WINDOW';
     gameWindowPhase = 'opening'; gameWindowTimer = 0; gameWindowOpacity = 0;
-    clippyAnim = 'normal'; clippyDialogVisible = false;
+   clippyAnim = 'watching'; clippyAnimFrame = 0; clippyDialogVisible = false;
     introEnemyX = 480; introEnemyY = 300; introEnemyVx = 0.6; introEnemyVy = 0.4;
     clippyJumpProgress = -1;
 
@@ -1079,6 +1087,7 @@ if (clippyAnimTimer <= 0) {
     if (gameWindowPhase === 'clippy_jump') {
       introEnemyX += (480 - introEnemyX) * 0.08; introEnemyY += (300 - introEnemyY) * 0.08;
       clippyJumpProgress += 0.04;
+       clippyAnimFrame = clippyJumpProgress > 0.8 ? 1 : 0; 
       if (clippyJumpProgress > 1) { gameWindowPhase = 'done'; setTimeout(() => finishIntro(), 800); }
     }
 
@@ -1097,6 +1106,7 @@ if (clippyAnimTimer <= 0) {
     if (gameWindowPhase === 'opening' && gameWindowTimer === 80) gameWindowPhase = 'enemy_spawn';
     if (gameWindowPhase === 'enemy_spawn' && gameWindowTimer === 160) {
       gameWindowPhase = 'clippy_ask';
+        clippyAnim = 'normal'; clippyAnimFrame = 0;
       showClippyDialog(
         "It looks like viruses are\ndefending the data file.\nIt is dangerous to fight\nthem alone. Want my help?",
         ['Yes!', 'I got this'],
@@ -1167,24 +1177,36 @@ if (clippyAnimTimer <= 0) {
   // ================================================================
 function drawClippyAt(c, x, y, anim, frame) {
   const W = 80, H = 80;
-  let img;
+  let img = null;
+  let flipX = false;
 
   if (anim === 'engineer') {
-    // frame is 0-3, maps to engineer1-4
-    const key = 'clippyEngineer' + (frame + 1);
-    img = imgs[key] || imgs.clippyEngineer1;
+    img = imgs['clippyEngineer' + (frame + 1)] || imgs.clippyEngineer1;
   } else if (anim === 'notice') {
-    img = imgs.clippyNotice;
+    img = frame === 0 ? imgs.clippyNotice1 : imgs.clippyNotice2;
+  } else if (anim === 'normal') {
+    img = [imgs.clippyNormal1, imgs.clippyNormal2, imgs.clippyNormal3][frame % 3];
+  } else if (anim === 'watching') {
+    // watching1 = upright, watching2 = upleft (mirrored to face right)
+    img = frame === 0 ? imgs.clippyWatching1 : imgs.clippyWatching2;
+    if (frame === 1) flipX = true;
+  } else if (anim === 'bluescreen_idle') {
+    img = frame === 0 ? imgs.clippyStressed1 : imgs.clippyStressed2;
   } else if (anim === 'jump') {
-    img = imgs.clippyJump;
+    img = frame === 0 ? imgs.clippyJump1 : imgs.clippyJump2;
+    // jump1 (upright) needs to face left, jump2 (crouching) needs to face right
+    if (frame === 0) flipX = true;
   } else {
-    img = imgs.clippyNormal;
+    img = imgs.clippyNormal1;
   }
 
   if (img && img.complete && img.naturalWidth > 0) {
-    c.drawImage(img, x - W/2, y - H/2, W, H);
+    c.save();
+    c.translate(x, y);
+    if (flipX) c.scale(-1, 1);
+    c.drawImage(img, -W/2, -H/2, W, H);
+    c.restore();
   } else {
-    // fallback shape if image hasn't loaded
     c.save(); c.translate(x, y);
     c.fillStyle = '#ffcc88'; c.beginPath(); c.arc(0, -10, 18, 0, Math.PI*2); c.fill();
     c.fillStyle = '#4488ff'; c.fillRect(-14, 6, 28, 20);
