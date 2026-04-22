@@ -92,11 +92,13 @@ function playStartup2Loop() {
   if (!startup2Buffer) return;
   stopStartup2Loop();
   const ctx = getAudioCtx();
+  
   startup2Source = ctx.createBufferSource();
   startup2Source.buffer = startup2Buffer;
+
   startup2Source.loop = true;
-  startup2Source.loopStart = 0;
-  startup2Source.loopEnd = startup2Buffer.duration;
+  startup2Source.loopStart = 0.2; // skip ~200ms attack click
+startup2Source.loopEnd = startup2Buffer.duration;
   startup2Source.connect(ctx.destination);
   startup2Source.start(0);
 }
@@ -608,7 +610,7 @@ function startItemDraft() {
     function runScanlineFlash(onComplete) {
       const c = getCtx();
       const W = 960, H = 600;
-      const TOTAL_FRAMES = 28;
+      const TOTAL_FRAMES = 10;
       let frame = 0;
       function tick() {
         if (frame >= TOTAL_FRAMES) { onComplete(); return; }
@@ -616,7 +618,7 @@ function startItemDraft() {
         const progress = frame / TOTAL_FRAMES;
         c.fillStyle = '#000000';
         c.fillRect(0, 0, W, H);
-        const BAND_COUNT = 14;
+        const BAND_COUNT = 4;
         const BAND_W = 55;
         const TILT = 0.22;
         const sweepX = -BAND_W * 2 + progress * (W + BAND_W * BAND_COUNT * 1.5);
@@ -643,38 +645,47 @@ function startItemDraft() {
       requestAnimationFrame(tick);
     }
 
-    runScanlineFlash(() => {
-      if (stage !== 'ITEM_DRAFT') return;
-      draftPhase = 'choosing';
-      requestAnimationFrame(draftLoop);
-      let pickedCount = 0;
-      attachKeys((e) => {
-        if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
-        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-          playSound('switch');
-          setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
-        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-          playSound('switch');
-          setTimeout(() => { draftSelected = (draftSelected + 1) % 3; }, 30);
-        } else if (e.key === 'Enter') {
-          playSound('confirm');
-          const chosen = draftItems[draftSelected];
-          if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
-          chosen.effect(gs);
-          pickedCount++;
-          if (pickedCount >= draftCount) {
-            draftPhase = 'done';
-            setTimeout(() => startDesktopLoad(), 500);
-          } else {
-            const pool2 = [];
-            for (let j = 0; j < 3; j++) pool2.push(BASE_ITEM_IDS[j % BASE_ITEM_IDS.length]);
-            pool2.sort(() => Math.random() - 0.5);
-            draftItems = pool2.map(id => ITEM_DEFS[id]);
-            draftSelected = 0;
-          }
+   runScanlineFlash(() => {
+  if (stage !== 'ITEM_DRAFT') return;
+  draftPhase = 'choosing';
+  requestAnimationFrame(draftLoop);
+  let pickedCount = 0;
+  let picking = false;
+
+  function setupDraftKeys() {
+    attachKeys((e) => {
+      if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing' || picking) return;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        playSound('switch');
+        draftSelected = (draftSelected + 2) % 3;
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        playSound('switch');
+        draftSelected = (draftSelected + 1) % 3;
+      } else if (e.key === 'Enter') {
+        picking = true;
+        playSound('confirm');
+        detachKeys();
+        const chosen = draftItems[draftSelected];
+        if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
+        chosen.effect(gs);
+        pickedCount++;
+        if (pickedCount >= draftCount) {
+          draftPhase = 'done';
+          setTimeout(() => startDesktopLoad(), 400);
+        } else {
+          const pool2 = [];
+          for (let j = 0; j < 3; j++) pool2.push(BASE_ITEM_IDS[j % BASE_ITEM_IDS.length]);
+          pool2.sort(() => Math.random() - 0.5);
+          draftItems = pool2.map(id => ITEM_DEFS[id]);
+          draftSelected = 0;
+          picking = false;
+          setupDraftKeys();
         }
-      });
+      }
     });
+  }
+  setupDraftKeys();
+});
 
     
   }
