@@ -310,7 +310,7 @@ function stopSound(key) {
     document.body.appendChild(overlayEl);
     const c = document.createElement('canvas');
     c.id = 'intro-canvas';
-    c.style.cssText = 'display:block; width:100%; height:100%;';
+c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixelated; image-rendering: crisp-edges;';
     c.width = 960; c.height = 600;
     overlayEl.appendChild(c);
     container = c;
@@ -935,9 +935,9 @@ if (clippyAnimTimer <= 0) {
       'troubleshooting Stop errors.',
     ].forEach((ln, i) => c.fillText(ln, 40, 60 + i * 22));
     if (clippyVisible) {
-      const cx = W - 140, cy = H - 180 + clippySlideY;
+      const cx = W - 110, cy = H - 160 + clippySlideY;
+      if (clippyDialogVisible) drawClippyDialogBox(c, cx - 310, cy - 80);
       drawClippyAt(c, cx, cy, clippyAnim, clippyAnimFrame);
-      if (clippyDialogVisible) drawClippyDialogBox(c, cx - 200, cy - 60);
     }
   }
 
@@ -1048,9 +1048,9 @@ if (clippyAnimTimer <= 0) {
       c.fillStyle = '#00ff66';
       c.fillText('\u2588', 20 + c.measureText(last.text).width, 40 + (Math.min(termLines.length, maxLines) - 1) * lineH);
     }
-    const cx = W - 130, cy = H - 160;
+ const cx = W - 110, cy = H - 160;
+    if (clippyDialogVisible) drawClippyDialogBox(c, cx - 310, cy - 80);
     drawClippyAt(c, cx, cy, clippyAnim, clippyAnimFrame);
-    if (clippyDialogVisible) drawClippyDialogBox(c, cx - 220, cy - 80);
   }
 
   // ================================================================
@@ -1163,7 +1163,7 @@ if (clippyAnimTimer <= 0) {
     } else if (gameWindowPhase !== 'clippy_jump') {
       drawClippyAt(c, clippyBaseX, clippyBaseY, clippyAnim, clippyAnimFrame);
     }
-    if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 230, clippyBaseY - 100);
+    if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 330, clippyBaseY - 100);
   }
 
   function drawIntroEnemy(c, x, y) {
@@ -1180,7 +1180,7 @@ if (clippyAnimTimer <= 0) {
   // CLIPPY HELPERS
   // ================================================================
 function drawClippyAt(c, x, y, anim, frame) {
-  const W = 80, H = 80;
+  const W = 180, H = 180;
   let img = null;
   let flipX = false;
 
@@ -1218,33 +1218,114 @@ function drawClippyAt(c, x, y, anim, frame) {
   }
 }
 
-  function drawClippyDialogBox(c, bx, by) {
-    const bw = 220, lh = 16;
-    const lines = clippyDialogText.split('\n');
-    const optionH = clippyDialogOptions.length * 22 + 10;
-    const bh = lines.length * lh + optionH + 36;
-    c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(bx+3, by+3, bw, bh);
-    c.fillStyle = '#ffffcc'; c.fillRect(bx, by, bw, bh);
-    c.strokeStyle = '#000000'; c.lineWidth = 1; c.strokeRect(bx, by, bw, bh);
-    c.fillStyle = '#000000'; c.font = '11px "MS Sans Serif", Arial, sans-serif';
-    lines.forEach((ln, i) => c.fillText(ln, bx+10, by+18+i*lh));
-    const sepY = by + lines.length * lh + 22;
-    c.strokeStyle = '#cccc88'; c.beginPath(); c.moveTo(bx+6, sepY); c.lineTo(bx+bw-6, sepY); c.stroke();
-    clippyDialogOptions.forEach((opt, i) => {
-      const sel = i === clippyDialogSelected;
-      const ox = bx+10, oy = sepY+8+i*22;
-      if (sel) { c.fillStyle = '#000080'; c.fillRect(ox-4, oy-13, bw-12, 18); c.fillStyle = '#ffffff'; }
-      else c.fillStyle = '#000000';
-      c.font = '11px "MS Sans Serif", Arial, sans-serif';
-      c.fillText((sel ? '\u25ba ' : '  ') + opt, ox, oy);
-    });
-    c.font = '9px "MS Sans Serif", Arial, sans-serif'; c.fillStyle = '#888888';
-    c.fillText('Arrow keys + Enter', bx+10, by+bh-6);
-    const midY = by + bh/2;
-    c.fillStyle = '#ffffcc'; c.strokeStyle = '#000000'; c.lineWidth = 1;
-    c.beginPath(); c.moveTo(bx+bw, midY-8); c.lineTo(bx+bw+12, midY); c.lineTo(bx+bw, midY+8); c.fill();
-    c.beginPath(); c.moveTo(bx+bw, midY-8); c.lineTo(bx+bw+12, midY); c.lineTo(bx+bw, midY+8); c.stroke();
-  }
+ function drawClippyDialogBox(c, bx, by) {
+  const bw = 260, lh = 18;
+  const lines = clippyDialogText.split('\n');
+  const optionH = clippyDialogOptions.length * 26 + 16;
+  const bh = lines.length * lh + optionH + 48;
+  const r = 10;
+
+  // Drop shadow
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.28)';
+  c.shadowBlur = 7;
+  c.shadowOffsetX = 2; c.shadowOffsetY = 2;
+
+  // Bubble body
+  c.fillStyle = '#ffffcc';
+  c.beginPath();
+  c.moveTo(bx + r, by);
+  c.lineTo(bx + bw - r, by);
+  c.arcTo(bx + bw, by, bx + bw, by + r, r);
+  c.lineTo(bx + bw, by + bh - r);
+  c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
+  c.lineTo(bx + r, by + bh);
+  c.arcTo(bx, by + bh, bx, by + bh - r, r);
+  c.lineTo(bx, by + r);
+  c.arcTo(bx, by, bx + r, by, r);
+  c.closePath();
+  c.fill();
+  c.restore();
+
+  // Border
+  c.strokeStyle = '#aaaaaa';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.moveTo(bx + r, by);
+  c.lineTo(bx + bw - r, by);
+  c.arcTo(bx + bw, by, bx + bw, by + r, r);
+  c.lineTo(bx + bw, by + bh - r);
+  c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
+  c.lineTo(bx + r, by + bh);
+  c.arcTo(bx, by + bh, bx, by + bh - r, r);
+  c.lineTo(bx, by + r);
+  c.arcTo(bx, by, bx + r, by, r);
+  c.closePath();
+  c.stroke();
+
+  // Tail pointing RIGHT toward Clippy
+  const tailY = by + Math.floor(bh * 0.28);
+  const tailTipX = bx + bw + 32;
+  const tailTipY = tailY + 12;
+
+  c.fillStyle = '#ffffcc';
+  c.beginPath();
+  c.moveTo(bx + bw - 1, tailY - 11);
+  c.lineTo(tailTipX, tailTipY);
+  c.lineTo(bx + bw - 1, tailY + 16);
+  c.closePath();
+  c.fill();
+
+  c.strokeStyle = '#aaaaaa';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.moveTo(bx + bw - 1, tailY - 11);
+  c.lineTo(tailTipX, tailTipY);
+  c.lineTo(bx + bw - 1, tailY + 16);
+  c.stroke();
+
+  // Cover seam on right edge of bubble
+  c.fillStyle = '#ffffcc';
+  c.fillRect(bx + bw - 2, tailY - 10, 4, 27);
+
+  // Text
+  c.fillStyle = '#000000';
+  c.font = '13px "MS Sans Serif", Arial, sans-serif';
+  lines.forEach((ln, i) => c.fillText(ln, bx + 14, by + 22 + i * lh));
+
+  // Separator line
+  const sepY = by + lines.length * lh + 28;
+  c.strokeStyle = '#cccc99';
+  c.lineWidth = 1;
+  c.beginPath(); c.moveTo(bx + 8, sepY); c.lineTo(bx + bw - 8, sepY); c.stroke();
+
+  // Options
+  clippyDialogOptions.forEach((opt, i) => {
+    const sel = i === clippyDialogSelected;
+    const oy = sepY + 16 + i * 26;
+    if (sel) {
+      c.fillStyle = '#000080';
+      c.fillRect(bx + 6, oy - 15, bw - 12, 20);
+      c.fillStyle = '#ffffff';
+      c.font = 'bold 13px "MS Sans Serif", Arial, sans-serif';
+      c.fillText('\u25ba ' + opt, bx + 12, oy);
+    } else {
+      // Classic Clippy blue circle bullet
+      c.fillStyle = '#1a5cc8';
+      c.beginPath();
+      c.arc(bx + 18, oy - 5, 5, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = '#000000';
+      c.font = '13px "MS Sans Serif", Arial, sans-serif';
+      c.fillText(opt, bx + 30, oy);
+    }
+  });
+
+  // Hint
+  c.font = '10px "MS Sans Serif", Arial, sans-serif';
+  c.fillStyle = '#999977';
+  c.fillText('Arrow keys + Enter', bx + 10, by + bh - 7);
+}
 
   // ================================================================
   // DIFFICULTY
