@@ -810,7 +810,7 @@ desktopErrorAnimActive = true;
     }
   }, 55);
 }, 2200);
-  }
+  
 
   function drawDesktop() {
     const c = getCtx(); if (!c) return;
