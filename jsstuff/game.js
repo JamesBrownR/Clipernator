@@ -284,7 +284,8 @@ if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 
     });
   }
   drawClippyBubble();
-
+// Rotate idle tip each time pause menu opens
+clippyIdleTip();
 }
 
 const CLIPPY_ITEM_TIPS = {
