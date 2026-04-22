@@ -104,6 +104,11 @@ function stopStartup2Loop() {
     try { startup2Source.stop(); } catch(e) {}
     startup2Source = null;
   }
+  // Also stop HTMLAudio fallback if it was used
+  if (audioCache['startup2']) {
+    audioCache['startup2'].pause();
+    audioCache['startup2'].currentTime = 0;
+  }
 }
 
 function playSound(key, loop = false) {
@@ -573,46 +578,74 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
   // ================================================================
   const BASE_ITEM_IDS = ['paperCuts', 'extraClips'];
 
-  function startItemDraft() {
+function startItemDraft() {
     stage = 'ITEM_DRAFT';
     detachKeys();
     draftSelected = 0;
-    draftPhase = 'choosing';
+    draftPhase = 'transition';
 
     if (draftCount === 0) { setTimeout(() => startDesktopLoad(), 400); return; }
 
-    const pool = [];
+   const pool = [];
     for (let i = 0; i < 3; i++) pool.push(BASE_ITEM_IDS[i % BASE_ITEM_IDS.length]);
     pool.sort(() => Math.random() - 0.5);
     draftItems = pool.slice(0, 3).map(id => ITEM_DEFS[id]);
 
-    let pickedCount = 0;
-
-    attachKeys((e) => {
-      if (stage !== 'ITEM_DRAFT') return;
-      if (draftPhase !== 'choosing') return;
-      // ── FIX: play switch sound BEFORE updating selection ──
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-        playSound('switch');
-        setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
-      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-        playSound('switch');
-        setTimeout(() => { draftSelected = (draftSelected + 1) % 3; }, 30);
-      } else if (e.key === 'Enter') {
-        playSound('confirm');
-        const chosen = draftItems[draftSelected];
-        if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
-        chosen.effect(gs);
-        pickedCount++;
-        if (pickedCount >= draftCount) { draftPhase = 'done'; setTimeout(() => startDesktopLoad(), 500); }
-        else {
-          const pool2 = [];
-          for (let i = 0; i < 3; i++) pool2.push(BASE_ITEM_IDS[i % BASE_ITEM_IDS.length]);
-          pool2.sort(() => Math.random() - 0.5);
-          draftItems = pool2.map(id => ITEM_DEFS[id]);
-          draftSelected = 0;
-        }
-      }
+    // Transition: type out loading lines before showing cards
+    draftTransitionLines = [];
+    draftTransitionDone = false;
+    const transLines = [
+        { text: 'Scanning memory for cached items...', color: '#aaaaaa', delay: 0 },
+        { text: '', delay: 180 },
+        { text: '    Sector 0x00A4 .............. OK', color: '#555555', delay: 120 },
+        { text: '    Sector 0x00A5 .............. OK', color: '#555555', delay: 90 },
+        { text: '    Sector 0x00A6 .............. FLAGGED', color: '#ff4444', delay: 90 },
+        { text: '', delay: 200 },
+        { text: 'WARNING: Item cache integrity compromised.', color: '#ff4444', delay: 0 },
+        { text: '         Description fields unreadable.', color: '#ff4444', delay: 0 },
+        { text: '', delay: 300 },
+        { text: '>>> CHOOSE AN ITEM TO LOAD INTO MEMORY <<<', color: '#ffffff', delay: 400 },
+    ];
+    let acc = 300;
+    transLines.forEach((ln, i) => {
+        acc += (ln.delay || 0) + 80;
+        setTimeout(() => {
+            if (stage !== 'ITEM_DRAFT') return;
+            draftTransitionLines.push({ text: ln.text, color: ln.color });
+            if (i === transLines.length - 1) {
+                setTimeout(() => {
+                    if (stage !== 'ITEM_DRAFT') return;
+                    draftPhase = 'choosing';
+                    attachKeys((e) => {
+                        if (stage !== 'ITEM_DRAFT' || draftPhase !== 'choosing') return;
+                        let pickedCount = 0;
+                        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                            playSound('switch');
+                            setTimeout(() => { draftSelected = (draftSelected + 2) % 3; }, 30);
+                        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                            playSound('switch');
+                            setTimeout(() => { draftSelected = (draftSelected + 1) % 3; }, 30);
+                        } else if (e.key === 'Enter') {
+                            playSound('confirm');
+                            const chosen = draftItems[draftSelected];
+                            if (!gs.unlockedItems.includes(chosen.id)) gs.unlockedItems.push(chosen.id);
+                            chosen.effect(gs);
+                            pickedCount++;
+                            if (pickedCount >= draftCount) {
+                                draftPhase = 'done';
+                                setTimeout(() => startDesktopLoad(), 500);
+                            } else {
+                                const pool2 = [];
+                                for (let j = 0; j < 3; j++) pool2.push(BASE_ITEM_IDS[j % BASE_ITEM_IDS.length]);
+                                pool2.sort(() => Math.random() - 0.5);
+                                draftItems = pool2.map(id => ITEM_DEFS[id]);
+                                draftSelected = 0;
+                            }
+                        }
+                    });
+                }, 500);
+            }
+        }, acc);
     });
 
     requestAnimationFrame(draftLoop);
@@ -624,32 +657,50 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
     requestAnimationFrame(draftLoop);
   }
 
-  function drawDraft() {
+  function draftLoop() {
+    if (stage !== 'ITEM_DRAFT') return;
+    drawDraft();
+    requestAnimationFrame(draftLoop);
+}
+
+function drawDraft() {
     const c = getCtx(); if (!c) return;
     c.fillStyle = '#000000'; c.fillRect(0, 0, 960, 600);
     c.font = '13px "Fixedsys", "Courier New", monospace';
+
+    if (draftPhase === 'transition') {
+        // Draw scanline wipe effect over black
+        const lineH = 18;
+        draftTransitionLines.forEach((ln, i) => {
+            c.fillStyle = ln.color || '#00ff66';
+            c.fillText(ln.text, 40, 60 + i * lineH);
+        });
+        return;
+    }
+
+    // Cards phase
     c.fillStyle = '#00ff66';
     c.fillText('BIOS item cache detected. Select one to load into memory:', 40, 50);
-    c.fillStyle = '#555555';
-    c.fillText('(DESCRIPTION DATA: UNAVAILABLE)', 40, 72); // this should be in red
+    c.fillStyle = '#ff4444';
+    c.fillText('(DESCRIPTION DATA: UNAVAILABLE)', 40, 72);
 
     const cardW = 200, cardH = 110, startX = 100, cardY = 140, gap = 60;
     draftItems.forEach((item, i) => {
-      const x = startX + i * (cardW + gap);
-      const sel = i === draftSelected && draftPhase === 'choosing';
-      c.fillStyle = sel ? '#003300' : '#111111'; c.fillRect(x, cardY, cardW, cardH);
-      c.strokeStyle = sel ? '#00ff66' : '#333333'; c.lineWidth = sel ? 2 : 1; c.strokeRect(x, cardY, cardW, cardH);
-      if (sel) { c.fillStyle = '#00ff66'; c.fillText('>', x - 18, cardY + 58); }
-      c.fillStyle = sel ? '#00ff66' : '#888888';
-      c.font = 'bold 13px "Fixedsys", "Courier New", monospace';
-      const label = item.label.replace(/\n/g, ' ');
-      const words = label.split(' ');
-      let l1 = '', l2 = '';
-      words.forEach(w => { if (c.measureText(l1 + w).width < cardW - 20) l1 += (l1 ? ' ' : '') + w; else l2 += (l2 ? ' ' : '') + w; });
-      c.fillText(l1, x + 10, cardY + 50);
-      if (l2) c.fillText(l2, x + 10, cardY + 68);
-      c.font = '11px "Fixedsys", "Courier New", monospace';
-      c.fillStyle = '#555555'; c.fillText('[?????]', x + 10, cardY + 88);
+        const x = startX + i * (cardW + gap);
+        const sel = i === draftSelected && draftPhase === 'choosing';
+        c.fillStyle = sel ? '#003300' : '#111111'; c.fillRect(x, cardY, cardW, cardH);
+        c.strokeStyle = sel ? '#00ff66' : '#333333'; c.lineWidth = sel ? 2 : 1; c.strokeRect(x, cardY, cardW, cardH);
+        if (sel) { c.fillStyle = '#00ff66'; c.fillText('>', x - 18, cardY + 58); }
+        c.fillStyle = sel ? '#00ff66' : '#888888';
+        c.font = 'bold 13px "Fixedsys", "Courier New", monospace';
+        const label = item.label.replace(/\n/g, ' ');
+        const words = label.split(' ');
+        let l1 = '', l2 = '';
+        words.forEach(w => { if (c.measureText(l1 + w).width < cardW - 20) l1 += (l1 ? ' ' : '') + w; else l2 += (l2 ? ' ' : '') + w; });
+        c.fillText(l1, x + 10, cardY + 50);
+        if (l2) c.fillText(l2, x + 10, cardY + 68);
+        c.font = '11px "Fixedsys", "Courier New", monospace';
+        c.fillStyle = '#555555'; c.fillText('[?????]', x + 10, cardY + 88);
     });
 
     c.font = '11px "Fixedsys", "Courier New", monospace';
@@ -657,10 +708,10 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
     c.fillText('Arrow keys: navigate   |   Enter: select', 320, 310);
 
     if (draftPhase === 'done') {
-      c.fillStyle = '#00ff66'; c.font = '14px "Fixedsys", "Courier New", monospace';
-      c.fillText('Loading selected item... OK', 40, 380);
+        c.fillStyle = '#00ff66'; c.font = '14px "Fixedsys", "Courier New", monospace';
+        c.fillText('Loading selected item... OK', 40, 380);
     }
-  }
+}
 
   // ================================================================
   // STAGE: DESKTOP LOAD
