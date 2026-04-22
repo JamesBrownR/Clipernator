@@ -4,6 +4,9 @@
 
 const INTRO = (() => {
 
+  let desktopErrorAnimT = 0;    // 0 → 1 growth progress
+let desktopErrorAnimActive = false;
+  
   const SND = {
     startup1:   'sounds/soundeffects/opening/startup1.mp3',
     startup2:   'sounds/soundeffects/opening/startup2.ogg',
@@ -17,6 +20,8 @@ const INTRO = (() => {
     typing1: 'sounds/soundeffects/opening/typing1.mp3',
 typing2: 'sounds/soundeffects/opening/typing2.mp3',
 typing3: 'sounds/soundeffects/opening/typing3.mp3',
+
+    
   };
 
   const SPR = {
@@ -724,13 +729,25 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
     }
     drawDesktop();
     requestAnimationFrame(desktopLoop);
+
+    if (desktopErrorAnimActive) {
+  desktopErrorAnimT = Math.min(1, desktopErrorAnimT + 0.09);
+  if (desktopErrorAnimT >= 1) desktopErrorAnimActive = false;
+}
   }
 
   function handleDesktopClick(mx, my) {
     if (desktopPhase === 'loading_data') return;
 
     if (desktopErrorVisible) {
-      const bw = 340, bh = 210, bx = 960/2 - bw/2, by = 300 - bh/2;
+const BW = 340, BH = 210;
+const ease = desktopErrorAnimT < 0.5
+  ? 2 * desktopErrorAnimT * desktopErrorAnimT
+  : -1 + (4 - 2 * desktopErrorAnimT) * desktopErrorAnimT;
+const bw = Math.round(BW * ease);
+const bh = Math.round(BH * ease);
+const bx = 960/2 - bw/2;
+const by = 300 - bh/2;
       const okX = bx + bw/2 - 30, okY = by + bh - 34;
       if (mx > okX && mx < okX + 60 && my > okY && my < okY + 22) {
         desktopErrorVisible = false;
@@ -747,10 +764,14 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
           handleDataClick();
         } else if (app.sprite === 'folder') {
           desktopErrorVisible = true;
+desktopErrorAnimT = 0;
+desktopErrorAnimActive = true;
           desktopErrorApp = app.label;
           desktopErrorMsg = ERROR_MESSAGES[app.id] || 'This folder is empty.';
         } else {
           desktopErrorVisible = true;
+desktopErrorAnimT = 0;
+desktopErrorAnimActive = true;
           desktopErrorApp = app.label.replace('\n', ' ');
           desktopErrorMsg = ERROR_MESSAGES[app.id] || 'This application cannot be opened.';
         }
@@ -766,11 +787,29 @@ c.style.cssText = 'display:block; width:100%; height:100%; image-rendering: pixe
     desktopLoadingData = true;
     desktopLoadDots = 0; desktopLoadDotsTimer = 0;
     setTimeout(() => {
-      desktopLoadingData = false;
-      stopSound('startup3');
-      playSound('bluescreen');
+      setTimeout(() => {
+  desktopLoadingData = false;
+  stopSound('startup3');
+  playSound('bluescreen');
+  // Screen flicker before bluescreen
+  let flickers = 0;
+  const totalFlickers = 6;
+  const flickerInterval = setInterval(() => {
+    flickers++;
+    // Draw alternating black/white flashes over the desktop canvas
+    const c = getCtx();
+    if (c) {
+      c.fillStyle = flickers % 2 === 0 ? '#000000' : '#ffffff';
+      c.globalAlpha = 0.85;
+      c.fillRect(0, 0, 960, 600);
+      c.globalAlpha = 1;
+    }
+    if (flickers >= totalFlickers) {
+      clearInterval(flickerInterval);
       startBluescreen();
-    }, 2200);
+    }
+  }, 55);
+}, 2200);
   }
 
   function drawDesktop() {
@@ -936,7 +975,7 @@ if (clippyAnimTimer <= 0) {
     ].forEach((ln, i) => c.fillText(ln, 40, 60 + i * 22));
     if (clippyVisible) {
       const cx = W - 110, cy = H - 160 + clippySlideY;
-      if (clippyDialogVisible) drawClippyDialogBox(c, cx - 310, cy - 80);
+      if (clippyDialogVisible) drawClippyDialogBox(c, cx - 310, cy - 80, cx, cy);
       drawClippyAt(c, cx, cy, clippyAnim, clippyAnimFrame);
     }
   }
@@ -989,13 +1028,12 @@ if (clippyAnimTimer <= 0) {
     }, step.delay || 0);
   }
 
-  function playTypeSound() {
+ function playTypeSound() {
   const key = 'typing' + (1 + Math.floor(Math.random() * 3));
-  // Can't use audioCache for this — need a fresh Audio each time
-  // so multiple overlapping clicks can play simultaneously
   try {
     const a = new Audio(SND[key]);
-    a.volume = 0.4;
+    a.volume = 0.25 + Math.random() * 0.3;        // 0.25 – 0.55
+    a.playbackRate = 0.88 + Math.random() * 0.28;  // 0.88 – 1.16
     a.play().catch(() => {});
   } catch(e) {}
 }
@@ -1049,7 +1087,7 @@ if (clippyAnimTimer <= 0) {
       c.fillText('\u2588', 20 + c.measureText(last.text).width, 40 + (Math.min(termLines.length, maxLines) - 1) * lineH);
     }
  const cx = W - 110, cy = H - 160;
-    if (clippyDialogVisible) drawClippyDialogBox(c, cx - 310, cy - 80);
+    if (clippyDialogVisible) drawClippyDialogBox(c, cx - 310, cy - 80, cx, cy);
     drawClippyAt(c, cx, cy, clippyAnim, clippyAnimFrame);
   }
 
@@ -1163,7 +1201,7 @@ if (clippyAnimTimer <= 0) {
     } else if (gameWindowPhase !== 'clippy_jump') {
       drawClippyAt(c, clippyBaseX, clippyBaseY, clippyAnim, clippyAnimFrame);
     }
-    if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 330, clippyBaseY - 100);
+    if (clippyDialogVisible) drawClippyDialogBox(c, clippyBaseX - 330, clippyBaseY - 100, cx, cy);
   }
 
  function drawIntroEnemy(c, x, y) {
@@ -1224,7 +1262,7 @@ function drawClippyAt(c, x, y, anim, frame) {
   }
 }
 
- function drawClippyDialogBox(c, bx, by) {
+function drawClippyDialogBox(c, bx, by, clippyX, clippyY) {
   const bw = 260, lh = 18;
   const lines = clippyDialogText.split('\n');
   const optionH = clippyDialogOptions.length * 26 + 16;
@@ -1269,26 +1307,55 @@ function drawClippyAt(c, x, y, anim, frame) {
   c.closePath();
   c.stroke();
 
-  // Tail pointing RIGHT toward Clippy
-  const tailY = by + Math.floor(bh * 0.28);
-  const tailTipX = bx + bw + 32;
-  const tailTipY = tailY + 12;
+ // Dynamic tail — points from bubble edge toward Clippy center
+const bubbleCenterY = by + bh / 2;
+const clippyIsRight = (clippyX || 0) > bx + bw;
+const clippyIsBelow = (clippyY || 0) > by + bh;
+const clippyIsAbove = (clippyY || 0) < by;
 
-  c.fillStyle = '#ffffcc';
-  c.beginPath();
-  c.moveTo(bx + bw - 1, tailY - 11);
-  c.lineTo(tailTipX, tailTipY);
-  c.lineTo(bx + bw - 1, tailY + 16);
-  c.closePath();
-  c.fill();
+let tailAttachX, tailAttachY, tailTipX, tailTipY, tailA, tailB;
 
-  c.strokeStyle = '#aaaaaa';
-  c.lineWidth = 1.5;
-  c.beginPath();
-  c.moveTo(bx + bw - 1, tailY - 11);
-  c.lineTo(tailTipX, tailTipY);
-  c.lineTo(bx + bw - 1, tailY + 16);
-  c.stroke();
+if (clippyIsRight) {
+  // Tail exits right edge
+  const clampedY = Math.max(by + 20, Math.min(by + bh - 20, clippyY || bubbleCenterY));
+  tailAttachX = bx + bw - 1;
+  tailA = { x: tailAttachX, y: clampedY - 11 };
+  tailB = { x: tailAttachX, y: clampedY + 16 };
+  tailTipX = clippyX - 40;
+  tailTipY = clippyY || bubbleCenterY;
+} else {
+  // Tail exits left edge
+  const clampedY = Math.max(by + 20, Math.min(by + bh - 20, clippyY || bubbleCenterY));
+  tailAttachX = bx + 1;
+  tailA = { x: tailAttachX, y: clampedY - 11 };
+  tailB = { x: tailAttachX, y: clampedY + 16 };
+  tailTipX = (clippyX || 0) + 40;
+  tailTipY = clippyY || bubbleCenterY;
+}
+
+c.fillStyle = '#ffffcc';
+c.beginPath();
+c.moveTo(tailA.x, tailA.y);
+c.lineTo(tailTipX, tailTipY);
+c.lineTo(tailB.x, tailB.y);
+c.closePath();
+c.fill();
+
+c.strokeStyle = '#aaaaaa';
+c.lineWidth = 1.5;
+c.beginPath();
+c.moveTo(tailA.x, tailA.y);
+c.lineTo(tailTipX, tailTipY);
+c.lineTo(tailB.x, tailB.y);
+c.stroke();
+
+// Cover the seam on whichever edge the tail attaches to
+c.fillStyle = '#ffffcc';
+if (clippyIsRight) {
+  c.fillRect(bx + bw - 2, tailA.y, 4, tailB.y - tailA.y);
+} else {
+  c.fillRect(bx - 2, tailA.y, 4, tailB.y - tailA.y);
+}
 
   // Cover seam on right edge of bubble
   c.fillStyle = '#ffffcc';
