@@ -97,7 +97,8 @@ clippyIntroLines: [
   "Good luck... you'll need it.",
 ], 
 clippyIntroTimer: 0, clippyIntroLine: 0, clippyIntroDone: false,
-
+clippyPickupMsg: '',
+clippyPickupTimer: 0,
     // Item flags
     bouncyHouse: false,
     hasDoubleCake: false, hasTripleCake: false, hasQuadCake: false,
@@ -703,6 +704,36 @@ function startKeybindListen(action) {
 
   document.addEventListener('keydown', _keybindKeyHandler, { capture: true });
 }
+
+// UI button click sounds
+(function() {
+  const _clickAudio = new Audio('sounds/soundeffects/opening/click.mp3');
+  function playUIClick() {
+    try {
+      const a = _clickAudio.cloneNode();
+      a.volume = 0.5;
+      a.play().catch(() => {});
+    } catch(e) {}
+  }
+  // Attach to all Win2k-style buttons in the HUD and wrapper
+  document.addEventListener('click', function(e) {
+    const el = e.target;
+    // HUD titlebar buttons, w2k-btn class, pause menu buttons, keybind buttons
+    if (
+      el.closest('#hud-controls') ||
+      el.classList.contains('w2k-btn') ||
+      el.closest('#pause-menu button') ||
+      el.closest('#keybind-screen button') ||
+      el.id === 'startBtn' ||
+      el.id === 'skip-btn' ||
+      el.id === 'floor-btn' ||
+      el.id === 'keybind-back-btn' ||
+      el.id === 'keybind-reset-btn'
+    ) {
+      playUIClick();
+    }
+  }, true); // capture phase so it fires before game click handlers
+})();
 
 function cancelKeybindListen() {
   if (_keybindKeyHandler) {
