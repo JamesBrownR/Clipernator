@@ -333,8 +333,7 @@ function _drawPauseBubbleOnCanvas(c, W, H) {
   c.lineTo(bx + bw - r, by);
   c.arcTo(bx + bw, by, bx + bw, by + r, r);
   c.lineTo(bx + bw, tailMidY - 9);
-  c.lineTo(bx + bw + 16, tailMidY);  // tail points RIGHT toward Clippy
-  c.lineTo(bx + bw, tailMidY + 9);
+c.lineTo(bx + bw, tailMidY + 9);
   c.lineTo(bx + bw, by + bh - r);
   c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
   c.lineTo(bx + r, by + bh);
