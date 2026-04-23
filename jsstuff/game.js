@@ -258,7 +258,7 @@ function _createPauseClippyCanvas() {
   _pauseBubbleCanvas.width = 220;
   _pauseBubbleCanvas.height = 100;
 _pauseBubbleCanvas.style.cssText = `
-    position: absolute; right: 108px; top: 18px;
+    position: absolute; left: 8px; top: 18px;
     width: 230px; height: 110px;
     pointer-events: none; z-index: 9; background: transparent;
 `;
@@ -328,12 +328,15 @@ function _drawPauseBubbleOnCanvas(c, W, H) {
   const tailMidY = by + bh * 0.42;
   c.clearRect(0, 0, W, H);
   c.save();
+  // Bubble body with tail on RIGHT side pointing toward Clippy
   c.beginPath();
   c.moveTo(bx + r, by);
   c.lineTo(bx + bw - r, by);
   c.arcTo(bx + bw, by, bx + bw, by + r, r);
-  c.lineTo(bx + bw, tailMidY - 9);
-c.lineTo(bx + bw, tailMidY + 9);
+  // Right side: leave gap for tail
+  c.lineTo(bx + bw, tailMidY - 10);
+  c.lineTo(bx + bw + 14, tailMidY);   // tail tip points right toward Clippy
+  c.lineTo(bx + bw, tailMidY + 10);
   c.lineTo(bx + bw, by + bh - r);
   c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
   c.lineTo(bx + r, by + bh);
@@ -910,18 +913,23 @@ function offerItemChoice() {
       <div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned ? '<br><i>(owned)</i>' : ''}</div>
     `;
 
-    if (!isOwned) {
-      card.addEventListener('click', () => {
-        gs.unlockedItems.push(id);
-        def.effect(gs);
-        choiceEl.style.display = 'none';
-        gs.pendingChoice = false;
-        gameRunning = true;
-        trySpawnFieldItems();
-        updateHUD();
-        loop();
-      });
+ if (!isOwned) {
+  card.addEventListener('click', () => {
+    gs.unlockedItems.push(id);
+    def.effect(gs);
+    choiceEl.style.display = 'none';
+    gs.pendingChoice = false;
+    gameRunning = true;
+    trySpawnFieldItems();
+    updateHUD();
+    // Clippy pickup tip
+    if (typeof CLIPPY_PICKUP_TIPS !== 'undefined' && CLIPPY_PICKUP_TIPS[id]) {
+      gs.clippyPickupMsg = CLIPPY_PICKUP_TIPS[id];
+      gs.clippyPickupTimer = 300;
     }
+    loop();
+  });
+}
     cardsEl.appendChild(card);
   }
 
