@@ -135,8 +135,9 @@ bullet4xImg.src = '/Clipernator/sprites/bullets/bullet4x.png';
 
 
 const clownNoseImg = new Image();
-clownNoseImg.src = '/Clipernator/sprites/items/clownNose.png'; // adjust path to your sprite
-
+clownNoseImg.src = '/Clipernator/sprites/clownish/items/clownNose.png'; // adjust path to your sprite
+const clownWaveImg = new Image();
+clownWaveImg.src = '/Clipernator/sprites/clownish/items/clownWave.png'; // adjust path
 
 // At the top of draw.js, add this with the other image loaders (near playerImg/shotgunImg)
 
