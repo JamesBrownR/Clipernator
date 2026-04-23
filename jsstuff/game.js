@@ -258,7 +258,7 @@ function _createPauseClippyCanvas() {
   _pauseBubbleCanvas.width = 220;
   _pauseBubbleCanvas.height = 100;
 _pauseBubbleCanvas.style.cssText = `
-    position: absolute; left: 8px; top: 18px;
+    position: absolute; left: 215px; top: 18px;
     width: 230px; height: 110px;
     pointer-events: none; z-index: 9; background: transparent;
 `;
@@ -267,8 +267,8 @@ _pauseBubbleCanvas.style.cssText = `
   _pauseClippyCanvas.width = 100;
   _pauseClippyCanvas.height = 120;
  _pauseClippyCanvas.style.cssText = `
-    position: absolute; right: 10px; top: 18px;
-    width: 100px; height: 120px;
+    position: absolute; right: 160px; top: 10px;
+    width: 120px; height: 120px;
     image-rendering: pixelated; pointer-events: none; z-index: 10; background: transparent;
 `;
   _pauseClippyCtx = _pauseClippyCanvas.getContext('2d');
