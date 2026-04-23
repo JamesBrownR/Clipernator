@@ -1448,22 +1448,20 @@ if (gs.clippyPickupTimer > 0) {
 }
 
   // ── Clownish sound waves (two expanding rings after nose blast) ──
-  if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
-    const ppos2 = ECS.get(gs.playerId, 'pos');
-    for (const w of gs.clownSoundWaves) {
-      const progress = w.r / w.maxR;
-      ctx.save();
-      ctx.globalAlpha = (1 - progress) * 0.7;
-      ctx.strokeStyle = '#4488ff';
-      ctx.lineWidth = 18 - progress * 10;
-      ctx.shadowColor = '#4488ff';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
+  for (const w of gs.clownSoundWaves) {
+    const progress = w.r / w.maxR;
+    const alpha = (1 - progress) * 0.85;
+    const diameter = w.r * 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(w.x, w.y);
+    if (clownWaveImg.complete && clownWaveImg.naturalWidth > 0) {
+      ctx.drawImage(clownWaveImg, -diameter / 2, -diameter / 2, diameter, diameter);
     }
+    ctx.restore();
   }
+}
 
 
 
