@@ -195,6 +195,218 @@ function showMsg(txt) {
 }
 
 // ================================================================
+// PAUSE CLIPPY RENDERING
+// ================================================================
+
+// Track pause mouse position for Clippy eye tracking
+let _pauseMouseX = 0, _pauseMouseY = 0;
+
+// Clippy sprite images for pause menu eye tracking
+const _clippyPauseImgs = {
+  forward:   null,
+  upleft:    null,
+  upright:   null,
+  downleft:  null,
+  downright: null,
+  left:      null,
+  right:     null,
+};
+
+// Load directional Clippy sprites
+(function loadClippyPauseSprites() {
+  const defs = {
+    forward:   'sprites/Clippy.png',
+    upleft:    'sprites/clippy/Clippyupleft.png',
+    upright:   'sprites/clippy/Clippyupright.png',
+    downleft:  'sprites/clippy/Clippyworriedright1.png',
+    downright: 'sprites/clippy/Clippyworriedright2.png',
+    left:      'sprites/clippy/Clippysweatingleft.png',
+    right:     'sprites/clippy/Clippyfocused.png',
+  };
+  for (const [k, src] of Object.entries(defs)) {
+    const img = new Image();
+    img.src = src;
+    _clippyPauseImgs[k] = img;
+  }
+})();
+
+// Decide which Clippy sprite to use based on angle from Clippy to cursor
+function _getClippyDirectionSprite(clippyCanvasX, clippyCanvasY, mouseX, mouseY) {
+  const dx = mouseX - clippyCanvasX;
+  const dy = mouseY - clippyCanvasY;
+  const angle = Math.atan2(dy, dx); // -PI to PI, right = 0
+  const deg = (angle * 180 / Math.PI + 360) % 360;
+
+  // 8-directional lookup: right=0, down-right=45, down=90, down-left=135,
+  //                       left=180, up-left=225, up=270, up-right=315
+  if (deg >= 337.5 || deg < 22.5)   return _clippyPauseImgs.right;     // right
+  if (deg >= 22.5  && deg < 67.5)   return _clippyPauseImgs.downright;  // down-right
+  if (deg >= 67.5  && deg < 112.5)  return _clippyPauseImgs.forward;    // down (use forward)
+  if (deg >= 112.5 && deg < 157.5)  return _clippyPauseImgs.downleft;   // down-left
+  if (deg >= 157.5 && deg < 202.5)  return _clippyPauseImgs.left;       // left
+  if (deg >= 202.5 && deg < 247.5)  return _clippyPauseImgs.upleft;     // up-left
+  if (deg >= 247.5 && deg < 292.5)  return _clippyPauseImgs.upright;    // up (use upright)
+  return _clippyPauseImgs.upright;                                       // up-right
+}
+
+// The Clippy canvas for the pause menu — drawn onto a separate canvas
+// positioned absolutely over the pause dialog, next to stats
+let _pauseClippyCanvas = null;
+let _pauseClippyCtx = null;
+let _pauseClippyAnimId = null;
+
+function _createPauseClippyCanvas() {
+  if (_pauseClippyCanvas) return;
+  _pauseClippyCanvas = document.createElement('canvas');
+  _pauseClippyCanvas.width = 200;
+  _pauseClippyCanvas.height = 260;
+  _pauseClippyCanvas.style.cssText = `
+    position: absolute;
+    right: 14px;
+    top: 70px;
+    width: 100px;
+    height: 130px;
+    image-rendering: pixelated;
+    pointer-events: none;
+    z-index: 10;
+  `;
+  _pauseClippyCtx = _pauseClippyCanvas.getContext('2d');
+
+  // Insert into pause dialog body
+  const dialog = document.querySelector('#pause-menu > div');
+  if (dialog) {
+    dialog.style.position = 'relative';
+    dialog.appendChild(_pauseClippyCanvas);
+  }
+}
+
+function _removePauseClippyCanvas() {
+  if (_pauseClippyCanvas && _pauseClippyCanvas.parentNode) {
+    _pauseClippyCanvas.parentNode.removeChild(_pauseClippyCanvas);
+  }
+  _pauseClippyCanvas = null;
+  _pauseClippyCtx = null;
+  if (_pauseClippyAnimId) { cancelAnimationFrame(_pauseClippyAnimId); _pauseClippyAnimId = null; }
+}
+
+function _drawPauseClippy() {
+  if (!_pauseClippyCtx || !_pauseClippyCanvas) return;
+  const c = _pauseClippyCtx;
+  const W = _pauseClippyCanvas.width;
+  const H = _pauseClippyCanvas.height;
+  c.clearRect(0, 0, W, H);
+
+  // Figure out where on screen this canvas is to compute eye direction
+  const rect = _pauseClippyCanvas.getBoundingClientRect();
+  const canvasCX = rect.left + rect.width / 2;
+  const canvasCY = rect.top + rect.height * 0.35; // Clippy's eye region
+
+  const sprite = _getClippyDirectionSprite(canvasCX, canvasCY, _pauseMouseX, _pauseMouseY);
+  const imgToDraw = (sprite && sprite.complete && sprite.naturalWidth > 0) ? sprite : _clippyPauseImgs.forward;
+
+  if (imgToDraw && imgToDraw.complete && imgToDraw.naturalWidth > 0) {
+    c.drawImage(imgToDraw, 0, 0, W, H);
+  }
+
+  // Draw clownish nose if player has it
+  if (typeof gs !== 'undefined' && gs.hasClownish) {
+    const noseSize = gs.clownNoseSize || 0;
+    const nosePx = 100 + noseSize * 10; // canvas coords, roughly where nose is
+    const nosePy = 90;
+    const noseR = 4 + noseSize * 8;
+    c.save();
+    c.shadowColor = '#4488ff';
+    c.shadowBlur = 8 + noseSize * 12;
+    c.fillStyle = noseSize > 0.85 ? '#aaccff' : '#4488ff';
+    c.globalAlpha = 0.65 + noseSize * 0.35;
+    c.beginPath();
+    c.arc(nosePx, nosePy, noseR, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
+  // Speech bubble
+  _drawPauseClippyBubble(c, W, H);
+}
+
+function _drawPauseClippyBubble(c, W, H) {
+  if (!_clippyBubbleText) return;
+
+  const bubbleW = W + 80;
+  const bubbleH = 90;
+  const bubbleX = -90; // to the left of Clippy
+  const bubbleY = 0;
+  const tailX = W * 0.3;
+  const tailY = bubbleH;
+  const r = 8;
+
+  c.save();
+
+  // Draw bubble
+  c.fillStyle = '#ffffcc';
+  c.strokeStyle = '#000000';
+  c.lineWidth = 1.5;
+
+  c.beginPath();
+  c.moveTo(bubbleX + r, bubbleY);
+  c.lineTo(bubbleX + bubbleW - r, bubbleY);
+  c.arcTo(bubbleX + bubbleW, bubbleY, bubbleX + bubbleW, bubbleY + r, r);
+  c.lineTo(bubbleX + bubbleW, bubbleY + bubbleH - r);
+  c.arcTo(bubbleX + bubbleW, bubbleY + bubbleH, bubbleX + bubbleW - r, bubbleY + bubbleH, r);
+  // bottom right before tail
+  c.lineTo(tailX + 14, bubbleY + bubbleH);
+  // tail pointing down-right toward Clippy body
+  c.lineTo(tailX + 7, bubbleY + bubbleH + 14);
+  c.lineTo(tailX - 2, bubbleY + bubbleH);
+  // rest of bottom
+  c.lineTo(bubbleX + r, bubbleY + bubbleH);
+  c.arcTo(bubbleX, bubbleY + bubbleH, bubbleX, bubbleY + bubbleH - r, r);
+  c.lineTo(bubbleX, bubbleY + r);
+  c.arcTo(bubbleX, bubbleY, bubbleX + r, bubbleY, r);
+  c.closePath();
+
+  c.fillStyle = '#ffffcc';
+  c.fill();
+  c.strokeStyle = '#000000';
+  c.lineWidth = 1.5;
+  c.stroke();
+
+  // Text
+  c.fillStyle = '#000000';
+  c.font = '10px "MS Sans Serif", Arial, sans-serif';
+  c.textBaseline = 'top';
+  const padX = 8, padY = 8;
+  const maxTextW = bubbleW - padX * 2 - 4;
+  const words = _clippyBubbleText.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur ? cur + ' ' + w : w;
+    if (c.measureText(test).width > maxTextW && cur) { lines.push(cur); cur = w; }
+    else cur = test;
+  }
+  if (cur) lines.push(cur);
+  const lineH = 14;
+  const totalH = lines.length * lineH;
+  const startY = bubbleY + padY + Math.max(0, (bubbleH - totalH) / 2 - padY);
+  for (let i = 0; i < lines.length; i++) {
+    c.fillText(lines[i], bubbleX + padX, startY + i * lineH);
+  }
+
+  c.restore();
+}
+
+function _startPauseClippyLoop() {
+  if (_pauseClippyAnimId) cancelAnimationFrame(_pauseClippyAnimId);
+  function tick() {
+    if (!isPaused) { _pauseClippyAnimId = null; return; }
+    _drawPauseClippy();
+    _pauseClippyAnimId = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ================================================================
 // GAME OVER / PAUSE
 // ================================================================
 function gameOver() {
@@ -219,7 +431,11 @@ function togglePause() {
     cancelAnimationFrame(animId);
     document.getElementById('pause-menu').style.display = 'flex';
     renderPauseMenu();
+    _createPauseClippyCanvas();
+    _startPauseClippyLoop();
+    clippyIdleTip();
   } else {
+    _removePauseClippyCanvas();
     document.getElementById('pause-menu').style.display = 'none';
     gameRunning = true;
     lastTime = performance.now();
@@ -246,8 +462,8 @@ function renderPauseMenu() {
     `Bullets/Shot .... ${bulletsPerShot}`,
   ];
   if (gs.hasCursedCandles)  lines.push(`Candles ......... ${gs.candlesLit}/5 lit`);
-if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 'YES [ok]' : 'NO [x]'}`);
- if (gs.hasDash)           lines.push(`Dash Charges .... ${gs.dashCharges}/${gs.dashMaxCharges}`);
+  if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 'YES [ok]' : 'NO [x]'}`);
+  if (gs.hasDash)           lines.push(`Dash Charges .... ${gs.dashCharges}/${gs.dashMaxCharges}`);
   if (gs.hasShakeFizzlePop) lines.push(`SFP Meter ....... ${gs.sfpFull ? 'FULL ⚡' : Math.round((gs.sfpMeter/gs.sfpMax)*100)+'%'}`);
 
   statsEl.textContent = lines.join('\n');
@@ -279,13 +495,9 @@ if (gs.hasFlawlessBaking) lines.push(`Flawless Wave ... ${gs.flawlessThisWave ? 
 
       card.addEventListener('click', () => clippyExplain(id));
 
-
       container.appendChild(card);
     });
   }
-  drawClippyBubble();
-// Rotate idle tip each time pause menu opens
-clippyIdleTip();
 }
 
 const CLIPPY_ITEM_TIPS = {
@@ -311,110 +523,17 @@ const CLIPPY_ITEM_TIPS = {
   popcornUpgrade:  "It looks like you want bigger frenzies! MEGA POPCORN only needs 3 kernels and lasts 6 seconds.",
 };
 
-let _clippyBubbleText = "It looks like you discovered how to PAUSE! Click an item above to learn what it does.";
+let _clippyBubbleText = "It looks like you discovered how to PAUSE! Click an item to learn what it does.";
 
+// Legacy canvas kept for compatibility (hidden)
 function drawClippyBubble() {
-  const canvas = document.getElementById('clippy-bubble-canvas');
-  if (!canvas) return;
-  const c = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-
-  c.clearRect(0, 0, W, H);
-
-  const tailW = 10;
-  const bubbleW = W - tailW - 2;
-  const bubbleH = H - 2;
-  const bx = 1, by = 1;
-  const radius = 6;
-
-  // Drop shadow
-  c.save();
-  c.shadowColor = 'rgba(0,0,0,0.25)';
-  c.shadowBlur = 4;
-  c.shadowOffsetX = 1;
-  c.shadowOffsetY = 1;
-  c.fillStyle = '#ffffcc';
-  c.beginPath();
-  c.roundRect(bx, by, bubbleW, bubbleH, radius);
-  c.fill();
-  c.restore();
-
-  // Fill
-  c.fillStyle = '#ffffcc';
-  c.beginPath();
-  c.roundRect(bx, by, bubbleW, bubbleH, radius);
-  c.fill();
-
-  // Border
-  c.strokeStyle = '#000000';
-  c.lineWidth = 1;
-  c.beginPath();
-  c.roundRect(bx, by, bubbleW, bubbleH, radius);
-  c.stroke();
-
- // Combined bubble + tail as one path
-const midY = Math.floor(H / 2);
-const tailX = bx + bubbleW;
-
-c.beginPath();
-// Start at top-left, go clockwise
-c.moveTo(bx + radius, by);
-c.lineTo(tailX - radius, by);
-c.arcTo(tailX, by, tailX, by + radius, radius);
-// top side of tail gap
-c.lineTo(tailX, midY - 7);
-c.lineTo(tailX + tailW, midY);
-c.lineTo(tailX, midY + 7);
-// bottom side of tail gap
-c.lineTo(tailX, H - by - radius);
-c.arcTo(tailX, H - by, tailX - radius, H - by, radius);
-c.lineTo(bx + radius, H - by);
-c.arcTo(bx, H - by, bx, H - by - radius, radius);
-c.lineTo(bx, by + radius);
-c.arcTo(bx, by, bx + radius, by, radius);
-c.closePath();
-
-c.fillStyle = '#ffffcc'; // or 'transparent' / rgba with 0 alpha
-c.fill();
-c.strokeStyle = '#000000';
-c.lineWidth = 1;
-c.stroke();
-
-  // Text
-  c.fillStyle = '#000000';
-  c.font = '11px "MS Sans Serif", Arial, sans-serif';
-  c.textBaseline = 'top';
-  const padX = 8, padY = 7;
-  const maxW = bubbleW - padX * 2;
-  const words = _clippyBubbleText.split(' ');
-  const lines = [];
-  let cur = '';
-  for (const w of words) {
-    const test = cur ? cur + ' ' + w : w;
-    if (c.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
-    else cur = test;
-  }
-  if (cur) lines.push(cur);
-  const lineH = 15;
-  const totalH = lines.length * lineH;
-  const startY = Math.max(padY, Math.floor((H - totalH) / 2));
-  for (let i = 0; i < lines.length; i++) {
-    c.fillText(lines[i], padX, startY + i * lineH);
-  }
+  // No-op — bubble is now drawn on the Clippy canvas directly
 }
 
 function clippyExplain(itemId) {
   const tip = CLIPPY_ITEM_TIPS[itemId];
   if (tip) {
     _clippyBubbleText = tip;
-    drawClippyBubble();
-    const img = document.getElementById('clippy-pause-img');
-    if (img) {
-      img.style.transition = 'transform 0.1s';
-      img.style.transform = 'rotate(-12deg) scale(1.12)';
-      setTimeout(() => { img.style.transform = 'rotate(4deg) scale(1.05)'; }, 100);
-      setTimeout(() => { img.style.transform = 'rotate(0deg) scale(1)'; }, 220);
-    }
   }
 }
 
@@ -436,7 +555,6 @@ let _clippyIdleIdx = 0;
 function clippyIdleTip() {
   _clippyBubbleText = CLIPPY_IDLE_TIPS[_clippyIdleIdx % CLIPPY_IDLE_TIPS.length];
   _clippyIdleIdx++;
-  drawClippyBubble();
 }
 
 // ================================================================
@@ -557,7 +675,7 @@ function loop(timestamp = 0) {
 function startGame() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('item-choice').style.display = 'none';
-  _doStartGame(); // intro already played on first load; this is a retry
+  _doStartGame();
 }
 
    function _doStartGame() {
@@ -629,6 +747,7 @@ document.addEventListener('keydown', e => {
 
   if (isPaused) {
     if (e.key === 'Escape') {
+      _removePauseClippyCanvas();
       document.getElementById('pause-menu').style.display = 'none';
       isPaused = false;
       gameRunning = false;
@@ -650,6 +769,12 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => { keys[e.key] = false; });
 
 canvas.addEventListener('click', () => { if (gameRunning) shoot(); });
+
+// Track mouse globally for pause Clippy eye direction
+document.addEventListener('mousemove', e => {
+  _pauseMouseX = e.clientX;
+  _pauseMouseY = e.clientY;
+});
 
 // ================================================================
 // BUTTON LISTENERS
