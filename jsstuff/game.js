@@ -262,16 +262,16 @@ function _createPauseClippyCanvas() {
   _pauseBubbleCanvas = document.createElement('canvas');
   _pauseBubbleCanvas.width = 220;
   _pauseBubbleCanvas.height = 100;
-  _pauseBubbleCanvas.style.cssText = `
+_pauseBubbleCanvas.style.cssText = `
     position: absolute;
     right: 108px;
-    top: 28px;
+    top: 8px;       /* was 28px */
     width: 220px;
     height: 100px;
     pointer-events: none;
     z-index: 9;
     background: transparent;
-  `;
+`;
 
   _pauseClippyCanvas = document.createElement('canvas');
   _pauseClippyCanvas.width = 100;
@@ -279,14 +279,14 @@ function _createPauseClippyCanvas() {
   _pauseClippyCanvas.style.cssText = `
     position: absolute;
     right: 6px;
-    top: 28px;
+    top: 0px;       /* was 28px */
     width: 100px;
     height: 120px;
     image-rendering: pixelated;
     pointer-events: none;
     z-index: 10;
     background: transparent;
-  `;
+`;
   _pauseClippyCtx = _pauseClippyCanvas.getContext('2d');
 
   const statsFieldset = document.querySelector('#pause-menu fieldset');
@@ -340,8 +340,9 @@ function _drawPauseClippy() {
 function _drawPauseBubbleOnCanvas(c, W, H) {
   if (!_clippyBubbleText) return;
   const pad = 8, r = 6;
-  const bw = W - 18, bh = H - 14, bx = 4, by = 4;
-  const tailX = bx + bw; // right edge
+  // Leave space on the RIGHT side for the tail
+  const bw = W - 30, bh = H - 14, bx = 4, by = 4;
+  const tailX = bx + bw;           // right edge of box
   const tailMidY = by + bh * 0.45;
 
   c.clearRect(0, 0, W, H);
@@ -350,9 +351,10 @@ function _drawPauseBubbleOnCanvas(c, W, H) {
   c.moveTo(bx + r, by);
   c.lineTo(bx + bw - r, by);
   c.arcTo(bx + bw, by, bx + bw, by + r, r);
-  c.lineTo(tailX, tailMidY - 8);
-  c.lineTo(tailX + 12, tailMidY);
-  c.lineTo(tailX, tailMidY + 8);
+  // Draw right-side tail pointing RIGHT toward Clippy
+  c.lineTo(bx + bw, tailMidY - 8);
+  c.lineTo(bx + bw + 14, tailMidY);
+  c.lineTo(bx + bw, tailMidY + 8);
   c.lineTo(bx + bw, by + bh - r);
   c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
   c.lineTo(bx + r, by + bh);
