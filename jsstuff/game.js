@@ -324,23 +324,23 @@ function _drawPauseClippy() {
 function _drawPauseBubbleOnCanvas(c, W, H) {
   if (!_clippyBubbleText) return;
   const pad = 9, r = 7;
-  const bw = W - 28, bh = H - 14, bx = 4, by = 4;
+  const bw = W - 28, bh = H - 14, bx = 18, by = 4;
   const tailMidY = by + bh * 0.42;
   c.clearRect(0, 0, W, H);
   c.save();
-  // Bubble body with tail on RIGHT side pointing toward Clippy
+  // Bubble body with tail on LEFT side pointing toward Clippy
   c.beginPath();
   c.moveTo(bx + r, by);
   c.lineTo(bx + bw - r, by);
   c.arcTo(bx + bw, by, bx + bw, by + r, r);
-  // Right side: leave gap for tail
-  c.lineTo(bx + bw, tailMidY - 10);
-  c.lineTo(bx + bw + 14, tailMidY);   // tail tip points right toward Clippy
-  c.lineTo(bx + bw, tailMidY + 10);
   c.lineTo(bx + bw, by + bh - r);
   c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
   c.lineTo(bx + r, by + bh);
   c.arcTo(bx, by + bh, bx, by + bh - r, r);
+  // Left side: leave gap for tail
+  c.lineTo(bx, tailMidY + 10);
+  c.lineTo(bx - 14, tailMidY);   // tail tip points left toward Clippy
+  c.lineTo(bx, tailMidY - 10);
   c.lineTo(bx, by + r);
   c.arcTo(bx, by, bx + r, by, r);
   c.closePath();
