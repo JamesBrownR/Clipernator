@@ -374,7 +374,20 @@ function detachKeys() {
     ideLineIdx = 0; ideAnimTimer = 0; ideAnimStarted = false; ideLines = [];
     biosCursor = true; biosCursorTimer = 0;
 
-    playSound('startup1');
+   // Try to autoplay startup1; queue for first interaction if browser blocks it
+(function() {
+  const a = new Audio('sounds/soundeffects/opening/startup1.mp3');
+  const tryPlay = () => a.play().catch(() => {});
+  const p = a.play();
+  if (p && typeof p.catch === 'function') {
+    p.catch(() => {
+      const unlock = () => { tryPlay(); document.removeEventListener('keydown', unlock, true); document.removeEventListener('click', unlock, true); document.removeEventListener('touchstart', unlock, true); };
+      document.addEventListener('keydown', unlock, { once: true, capture: true });
+      document.addEventListener('click', unlock, { once: true, capture: true });
+      document.addEventListener('touchstart', unlock, { once: true, capture: true });
+    });
+  }
+})();
    function waitAndPlayStartup2() {
     if (startup2Buffer) {
         playStartup2Loop();
