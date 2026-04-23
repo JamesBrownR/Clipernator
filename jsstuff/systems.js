@@ -1,7 +1,30 @@
 // ============================================================
 // CLIPBLAST: PARTY HUNTER — Systems    
 // ============================================================
- 
+
+const CLIPPY_PICKUP_TIPS = {
+  birthday:        "It looks like everyone stopped moving! Enjoy the party while it lasts.",
+  cookie:          "7 times the speed AND reload? I calculated that. It took me 0.3 seconds.",
+  doubledCake:     "40% of your bullets are now completely useless. Statistically speaking, I'm helping.",
+  tripleCake:      "3x damage! The bad news is 45% of your shots are duds. The good news is I'm not a dud.",
+  quadCake:        "Coin flip. Every bullet. For the rest of your life. Good luck with that.",
+  bouncy:          "Boing! Everything bounces now. Including the consequences of your decisions.",
+  dash:            "It looks like you're in a hurry! SHIFT to dash. You'll thank me when there are 12 enemies.",
+  shakeFizzlePop:  "Don't. Get. Hit. I have never been hit in my life. I am a paperclip.",
+  flawlessBaking:  "It looks like you want more ammo! Simply don't take damage. Simple.",
+  cursedCandles:   "Draining your HP to add more bullets. Totally normal. Totally fine. I'm fine.",
+  mirrorMaze:      "Shoot the diamond thing. It will redirect bullets. Yes, at enemies. Hopefully.",
+  popcornBucket:   "Collect popcorn. From corpses. For a frenzy. This is a normal Tuesday.",
+  ragingRings:     "It looks like your bullets keep missing! Now they orbit you instead. Problem solved.",
+  tightropeBoots:  "200% speed boost. Try not to run into a wall. Or do. I'm a paperclip, not a cop.",
+  clownish:        "It looks like you grew a nose! It honks. Enemies find this deeply upsetting.",
+  bowlingBall:     "STRIKE! The next shot is a giant bowling ball. It pierces. It bounces. It judges.",
+  paperCuts:       "Damaged enemies now bleed 1 HP per second. Every paper cut counts.",
+  extraClips:      "It looks like you needed more HP AND ammo! Full heal included. You're welcome.",
+  clownishUpgrade: "Bigger honk. Wider waves. More confusion. I have no further comment.",
+  popcornUpgrade:  "3 kernels instead of 5, and the frenzy lasts longer. Now THAT'S a deal.",
+};
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) { 
@@ -1370,6 +1393,11 @@ function sysFieldItemPickup() {
     const fi=gs.fieldItems[i];
     if (Math.hypot(ppos.x-fi.x,ppos.y-fi.y)<34) {
       const def=ITEM_DEFS[fi.id]; gs.itemCooldowns[fi.id]=Date.now(); gs.fieldItems.splice(i,1); def.effect(gs);
+      // Show Clippy pickup tip
+      if (CLIPPY_PICKUP_TIPS[fi.id]) {
+        gs.clippyPickupMsg = CLIPPY_PICKUP_TIPS[fi.id];
+        gs.clippyPickupTimer = 240; // 4 seconds
+      }
       const permanent=new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks','paperCuts','extraClips','clownishUpgrade','popcornUpgrade']);
       if (!permanent.has(fi.id)) setTimeout(()=>{if(gameRunning)trySpawnFieldItems();},def.spawnCooldown);
     }
