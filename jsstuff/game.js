@@ -204,50 +204,44 @@ let _pauseMouseX = 0, _pauseMouseY = 0;
 
 // Clippy sprite images for pause menu eye tracking
 const _clippyPauseImgs = {
-  forward:   null,
-  upleft:    null,
-  upright:   null,
-  downleft:  null,
-  downright: null,
-  left:      null,
-  right:     null,
+  forward: null, upleft: null, upright: null,
+  worriedleft1: null, worriedleft2: null,
+  worriedright1: null, worriedright2: null,
+  sweatingleft: null, focusedleft: null,
+  crouchingleft: null, crouchingright: null,
 };
 
-// Load directional Clippy sprites
 (function loadClippyPauseSprites() {
   const defs = {
-    forward:   'sprites/Clippy.png',
-    upleft:    'sprites/clippy/Clippyupleft.png',
-    upright:   'sprites/clippy/Clippyupright.png',
-    downleft:  'sprites/clippy/Clippyworriedright1.png',
-    downright: 'sprites/clippy/Clippyworriedright2.png',
-    left:      'sprites/clippy/Clippysweatingleft.png',
-    right:     'sprites/clippy/Clippyfocused.png',
+    forward:        'sprites/clippy/Clippyforward.png',
+    upleft:         'sprites/clippy/Clippyupleft.png',
+    upright:        'sprites/clippy/Clippyupright.png',
+    worriedleft1:   'sprites/clippy/Clippyworriedleft1.png',
+    worriedleft2:   'sprites/clippy/Clippyworriedleft2.png',
+    worriedright1:  'sprites/clippy/Clippyworriedright1.png',
+    worriedright2:  'sprites/clippy/Clippyworriedright2.png',
+    sweatingleft:   'sprites/clippy/Clippysweatingleft.png',
+    focusedleft:    'sprites/clippy/Clippyfocusedleft.png',
+    crouchingleft:  'sprites/clippy/Clippycrouchingleft.png',
+    crouchingright: 'sprites/clippy/Clippycrouchingright.png',
   };
   for (const [k, src] of Object.entries(defs)) {
-    const img = new Image();
-    img.src = src;
-    _clippyPauseImgs[k] = img;
+    const img = new Image(); img.src = src; _clippyPauseImgs[k] = img;
   }
 })();
 
-// Decide which Clippy sprite to use based on angle from Clippy to cursor
 function _getClippyDirectionSprite(clippyCanvasX, clippyCanvasY, mouseX, mouseY) {
-  const dx = mouseX - clippyCanvasX;
-  const dy = mouseY - clippyCanvasY;
-  const angle = Math.atan2(dy, dx); // -PI to PI, right = 0
-  const deg = (angle * 180 / Math.PI + 360) % 360;
-
-  // 8-directional lookup: right=0, down-right=45, down=90, down-left=135,
-  //                       left=180, up-left=225, up=270, up-right=315
-  if (deg >= 337.5 || deg < 22.5)   return _clippyPauseImgs.right;     // right
-  if (deg >= 22.5  && deg < 67.5)   return _clippyPauseImgs.downright;  // down-right
-  if (deg >= 67.5  && deg < 112.5)  return _clippyPauseImgs.forward;    // down (use forward)
-  if (deg >= 112.5 && deg < 157.5)  return _clippyPauseImgs.downleft;   // down-left
-  if (deg >= 157.5 && deg < 202.5)  return _clippyPauseImgs.left;       // left
-  if (deg >= 202.5 && deg < 247.5)  return _clippyPauseImgs.upleft;     // up-left
-  if (deg >= 247.5 && deg < 292.5)  return _clippyPauseImgs.upright;    // up (use upright)
-  return _clippyPauseImgs.upright;                                       // up-right
+  const dx = mouseX - clippyCanvasX, dy = mouseY - clippyCanvasY;
+  const deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  // 0=right 90=down 180=left 270=up
+  if (deg >= 337.5 || deg < 22.5)   return _clippyPauseImgs.worriedright2;
+  if (deg < 67.5)                    return _clippyPauseImgs.crouchingright;
+  if (deg < 112.5)                   return _clippyPauseImgs.forward;
+  if (deg < 157.5)                   return _clippyPauseImgs.focusedleft;
+  if (deg < 202.5)                   return _clippyPauseImgs.crouchingleft;
+  if (deg < 247.5)                   return _clippyPauseImgs.upleft;
+  if (deg < 292.5)                   return _clippyPauseImgs.worriedleft1;
+  return _clippyPauseImgs.upright;
 }
 
 // The Clippy canvas for the pause menu — drawn onto a separate canvas
@@ -264,29 +258,18 @@ function _createPauseClippyCanvas() {
   _pauseBubbleCanvas.width = 220;
   _pauseBubbleCanvas.height = 100;
 _pauseBubbleCanvas.style.cssText = `
-    position: absolute;
-    right: 108px;
-    top: 8px;       /* was 28px */
-    width: 220px;
-    height: 100px;
-    pointer-events: none;
-    z-index: 9;
-    background: transparent;
+    position: absolute; right: 108px; top: 18px;
+    width: 230px; height: 110px;
+    pointer-events: none; z-index: 9; background: transparent;
 `;
 
   _pauseClippyCanvas = document.createElement('canvas');
   _pauseClippyCanvas.width = 100;
   _pauseClippyCanvas.height = 120;
-  _pauseClippyCanvas.style.cssText = `
-    position: absolute;
-    right: 6px;
-    top: 0px;       /* was 28px */
-    width: 100px;
-    height: 120px;
-    image-rendering: pixelated;
-    pointer-events: none;
-    z-index: 10;
-    background: transparent;
+ _pauseClippyCanvas.style.cssText = `
+    position: absolute; right: 10px; top: 18px;
+    width: 100px; height: 120px;
+    image-rendering: pixelated; pointer-events: none; z-index: 10; background: transparent;
 `;
   _pauseClippyCtx = _pauseClippyCanvas.getContext('2d');
 
@@ -340,22 +323,18 @@ function _drawPauseClippy() {
 
 function _drawPauseBubbleOnCanvas(c, W, H) {
   if (!_clippyBubbleText) return;
-  const pad = 8, r = 6;
-  // Leave space on the RIGHT side for the tail
-  const bw = W - 30, bh = H - 14, bx = 4, by = 4;
-  const tailX = bx + bw;           // right edge of box
-  const tailMidY = by + bh * 0.45;
-
+  const pad = 9, r = 7;
+  const bw = W - 28, bh = H - 14, bx = 4, by = 4;
+  const tailMidY = by + bh * 0.42;
   c.clearRect(0, 0, W, H);
   c.save();
   c.beginPath();
   c.moveTo(bx + r, by);
   c.lineTo(bx + bw - r, by);
   c.arcTo(bx + bw, by, bx + bw, by + r, r);
-  // Draw right-side tail pointing RIGHT toward Clippy
-  c.lineTo(bx + bw, tailMidY - 8);
-  c.lineTo(bx + bw + 14, tailMidY);
-  c.lineTo(bx + bw, tailMidY + 8);
+  c.lineTo(bx + bw, tailMidY - 9);
+  c.lineTo(bx + bw + 16, tailMidY);  // tail points RIGHT toward Clippy
+  c.lineTo(bx + bw, tailMidY + 9);
   c.lineTo(bx + bw, by + bh - r);
   c.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
   c.lineTo(bx + r, by + bh);
@@ -364,31 +343,27 @@ function _drawPauseBubbleOnCanvas(c, W, H) {
   c.arcTo(bx, by, bx + r, by, r);
   c.closePath();
   c.fillStyle = '#ffffcc';
+  c.shadowColor = 'rgba(0,0,0,0.15)'; c.shadowBlur = 4;
+  c.shadowOffsetX = 1; c.shadowOffsetY = 1;
   c.fill();
-  c.strokeStyle = '#888';
-  c.lineWidth = 1;
-  c.stroke();
+  c.shadowColor = 'transparent'; c.shadowBlur = 0;
+  c.strokeStyle = '#999977'; c.lineWidth = 1.2; c.stroke();
   c.restore();
-
   c.fillStyle = '#000';
   c.font = '10px "MS Sans Serif", Arial, sans-serif';
   c.textBaseline = 'top';
-  const maxW = bw - pad * 2;
+  const maxW = bw - pad * 2 - 4;
   const words = _clippyBubbleText.split(' ');
-  const lines = [];
-  let cur = '';
+  const lines = []; let cur = '';
   for (const w of words) {
     const test = cur ? cur + ' ' + w : w;
     if (c.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
     else cur = test;
   }
   if (cur) lines.push(cur);
-  const lineH = 13;
-  const totalH = lines.length * lineH;
-  const startY = by + pad + Math.max(0, (bh - totalH - pad * 2) / 2);
-  for (let i = 0; i < lines.length; i++) {
-    c.fillText(lines[i], bx + pad, startY + i * lineH);
-  }
+  const lineH = 14, totalH = lines.length * lineH;
+  const startY = by + pad + Math.max(0, (bh - totalH - pad) / 2);
+  for (let i = 0; i < lines.length; i++) c.fillText(lines[i], bx + pad, startY + i * lineH);
 }
 
 function _drawPauseClippyBubble(c, W, H) {
