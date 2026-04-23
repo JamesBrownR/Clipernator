@@ -955,30 +955,35 @@ ctx.restore();
   }
   
  // ── Clownish nose — grows as timer fills, honks (squishes) on blast ──
-  if (gs.hasClownish) {
-    const honking = gs.clownNoseHonkTimer > 0;
-    const honkProgress = honking ? gs.clownNoseHonkTimer / 14 : 0;
-    // Nose is only visible while growing OR briefly during honk
-    const visible = gs.clownNoseSize > 0 || honking;
-    if (visible) {
-      const baseR = 2.5 + gs.clownNoseSize * 5; // max ~7.5px — smaller than before
-      ctx.save();
-      ctx.translate(ppos.x, ppos.y - 10);
-      if (honking) {
-        // Squish: wide and flat immediately after blast, then spring back
-        const squishX = 1 + honkProgress * 0.9;  // stretches wide
-        const squishY = 1 - honkProgress * 0.55; // flattens vertically
-        ctx.scale(squishX, squishY);
-      }
-      ctx.shadowColor = '#4488ff';
-      ctx.shadowBlur = honking ? 20 : 6 + gs.clownNoseSize * 10;
-      ctx.fillStyle = honking ? '#ffffff' : (gs.clownNoseSize > 0.85 ? '#aaccff' : '#4488ff');
-      ctx.globalAlpha = honking ? 1.0 : 0.65 + gs.clownNoseSize * 0.35;
-      const drawR = honking ? Math.max(baseR, 4) : baseR;
-      ctx.beginPath(); ctx.arc(0, 0, drawR, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
+ // ── Clownish nose — sprite version ──
+if (gs.hasClownish) {
+  const honking = gs.clownNoseHonkTimer > 0;
+  const honkProgress = honking ? gs.clownNoseHonkTimer / 14 : 0;
+  const visible = gs.clownNoseSize > 0 || honking;
+  if (visible) {
+    const baseSize = 10 + gs.clownNoseSize * 24; // grows from 10 to 34px
+    ctx.save();
+    ctx.translate(ppos.x, ppos.y - 10);
+    if (honking) {
+      const squishX = 1 + honkProgress * 0.9;
+      const squishY = 1 - honkProgress * 0.55;
+      ctx.scale(squishX, squishY);
     }
+    ctx.globalAlpha = honking ? 1.0 : 0.65 + gs.clownNoseSize * 0.35;
+    ctx.shadowColor = '#4488ff';
+    ctx.shadowBlur = honking ? 20 : 6 + gs.clownNoseSize * 10;
+    if (clownNoseImg.complete && clownNoseImg.naturalWidth > 0) {
+      ctx.drawImage(clownNoseImg, -baseSize / 2, -baseSize / 2, baseSize, baseSize);
+    } else {
+      // Fallback circle if sprite not loaded
+      ctx.fillStyle = honking ? '#ffffff' : (gs.clownNoseSize > 0.85 ? '#aaccff' : '#4488ff');
+      ctx.beginPath();
+      ctx.arc(0, 0, baseSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
+}
 
   ctx.globalAlpha = 1;
 
@@ -1393,6 +1398,54 @@ if (isCritMass) {
   }
 
   drawPlayer();
+
+ // Clippy item pickup speech bubble
+if (gs.clippyPickupTimer > 0) {
+  gs.clippyPickupTimer--;
+  const ppos2 = ECS.get(gs.playerId, 'pos');
+  const alpha = Math.min(1, gs.clippyPickupTimer / 30); // fade out last 30 frames
+  const bx = ppos2.x + 18;
+  const by = ppos2.y - 110;
+  const bw = 210;
+  const bh = 48;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#ffffcc';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 6);
+  ctx.fill();
+  ctx.stroke();
+  // Tail
+  ctx.beginPath();
+  ctx.moveTo(bx + 10, by + bh);
+  ctx.lineTo(bx, by + bh + 13);
+  ctx.lineTo(bx + 22, by + bh);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(bx + 8, by + bh - 1);
+  ctx.lineTo(bx, by + bh + 12);
+  ctx.lineTo(bx + 24, by + bh - 1);
+  ctx.fillStyle = '#ffffcc';
+  ctx.fill();
+  ctx.fillRect(bx + 7, by + bh - 2, 18, 3);
+  // Text
+  ctx.fillStyle = '#000000';
+  ctx.font = '7px "MS Sans Serif", Arial, sans-serif';
+  ctx.textAlign = 'left';
+  const words = (gs.clippyPickupMsg || '').split(' ');
+  let l1 = '', l2 = '', measuring = '';
+  for (const w of words) {
+    const test = measuring ? measuring + ' ' + w : w;
+    if (ctx.measureText(test).width < bw - 16) { measuring = test; }
+    else { l1 = measuring; measuring = w; }
+  }
+  if (!l1) { l1 = measuring; } else { l2 = measuring; }
+  ctx.fillText(l1, bx + 8, by + 16);
+  if (l2) ctx.fillText(l2, bx + 8, by + 28);
+  ctx.restore();
+}
 
   // ── Clownish sound waves (two expanding rings after nose blast) ──
   if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
