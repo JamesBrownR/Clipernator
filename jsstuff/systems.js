@@ -109,6 +109,7 @@ function detonateExplosiveBullet(b, hitX, hitY) {
 
 function triggerSFPHit() {
   if (!gs.hasShakeFizzlePop) return;
+  
   if (gs.sfpFull) {
     const ppos = ECS.get(gs.playerId,'pos');
     const shockDmg = baseBulletDamage()*5;
@@ -1026,6 +1027,8 @@ if (b.isBowlingBall) {
     return false;
   }
   return true;
+  SFX.playAt('bowlingBallBounce', b.x, b.y, 0.45);
+
 }
     if (gs.bouncyHouse) {
       let bounced=false;
@@ -1066,6 +1069,8 @@ function sysBulletEnemyCollision() {
             b.hitEnemies.add(id);
             const dmg = b.damageMult || 1;
             ehp.hp -= dmg; ehp.hitFlash = 14;
+            SFX.playAt('bowlingBallHit', epos.x, epos.y, 0.5);
+
             spawnParticles(epos.x, epos.y, '#aaaaaa', 8);
             spawnParticles(epos.x, epos.y, '#333344', 5);
             if (ehp.hp <= 0) {
@@ -1095,6 +1100,8 @@ if (bbType === 'clownCar') {
 
         const dmg=b.damageMult||1;
         ehp.hp-=dmg; ehp.hitFlash=12; b.life=0;
+        const hitKey = b.damageMult >= 4 ? 'hit4x' : b.damageMult >= 3 ? 'hit3x' : b.damageMult >= 2 ? 'hit2x' : 'normalHit' + (Math.random()<0.5?'1':'2');
+SFX.playAt(hitKey, epos.x, epos.y, 0.45);
         spawnParticles(b.x,b.y,dmg>1?'#ff44ff':'#ff6644',6);
 
         if (gs.popcornFrenzyTimer > 0) {
@@ -1253,6 +1260,8 @@ for (const cid of ECS.query('enemy','pos')) {
   }
 }
 gs.health -= Math.round(20 * contactMult);
+      SFX.play('playerDamage', 0.65);
+
       gs.invincible=CFG.INVINCIBLE_FRAMES;
       gs.shakeX=16;gs.shakeY=16; gs.flawlessThisWave=false;
       triggerSFPHit(); spawnParticles(ppos.x,ppos.y,'#ff3333',14); updateHUD();
@@ -1388,6 +1397,8 @@ if (eb.isFrosting && eb.spawnGiftBox) {
     }
 
     if (!eb.friendlyFire&&gs.invincible<=0&&Math.hypot(eb.x-ppos.x,eb.y-ppos.y)<20) {
+        SFX.play('playerDamage', 0.65);
+
       const bulletDmg = Math.round(15 * (eb.rmDmgMult || 1));
       gs.health -= bulletDmg;
       gs.invincible=CFG.INVINCIBLE_FRAMES; gs.shakeX=10;gs.shakeY=10;
@@ -1484,6 +1495,7 @@ if (Math.abs(gs.shakeY) < 0.1) gs.shakeY = 0;
     const reloadSpeed=gs.speedBoostTimer>0?Math.max(1,Math.round(gs.speedBoostMult||1)):1;
     gs.reloadTimer-=reloadSpeed;
     if (gs.reloadTimer<=0){gs.reloading=false;gs.ammo=gs.maxAmmo;updateHUD();showMsg('RELOADED!');}
+     SFX.play('reloadFinish', 0.5); 
   }
   if (gs.ammo===0&&!gs.reloading) startReload();
 
@@ -1761,6 +1773,8 @@ function spawnBoss() {
 function shoot() {
   if (gs.ammo<=0||gs.reloading) return;
   gs.ammo--; muzzleFlash=10; updateHUD(); gunRecoil=1.0;
+    SFX.playRandom(['shoot1','shoot2','shoot3','shoot4'], 0.55);
+
   gs.shakeX=(Math.random()-.5)*13; gs.shakeY=(Math.random()-.5)*13;
   const muzzle=gunMuzzlePos();
 
@@ -1810,6 +1824,8 @@ function shoot() {
 function startReload() {
   if (gs.reloading||gs.ammo===gs.maxAmmo) return;
   gs.reloading=true; gs.reloadTimer=CFG.RELOAD_FRAMES; showMsg('RELOADING...');
+    SFX.playRandom(['reloadStart1','reloadStart2','reloadStart3'], 0.5);
+
 }
 
 function tryDash() {
