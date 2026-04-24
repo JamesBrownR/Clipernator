@@ -1,6 +1,6 @@
 // ============================================================
 // CLIPBLAST: PARTY HUNTER — Systems    
-// ============================================================
+// ============================================================ 
 
 const CLIPPY_PICKUP_TIPS = {
   birthday:        "It looks like everyone stopped moving! Enjoy the party while it lasts.",
