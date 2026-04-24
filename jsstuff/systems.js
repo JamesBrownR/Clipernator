@@ -1092,8 +1092,8 @@ if (bbType === 'clownCar') {
         if (gs.popcornFrenzyTimer > 0) {
   spawnParticles(b.x, b.y, '#ffdd00', 16);
   spawnParticles(b.x, b.y, '#ff8800', 8);
-  const frenzyRadius = gs.hasPopcornUpgrade ? 330 : 165;
-  const frenzyDmg    = gs.hasPopcornUpgrade ? dmg * 2.0 : dmg;
+  const frenzyRadius = gs.hasPopcornBowl ? 330 : 165;
+  const frenzyDmg    = gs.hasPopcornBowl ? dmg * 2.0 : dmg;
   for (const aoeId of ECS.query('enemy', 'pos', 'hp')) {
     if (aoeId === id) continue;
     const ap = ECS.get(aoeId, 'pos');
@@ -1398,7 +1398,7 @@ function sysFieldItemPickup() {
         gs.clippyPickupMsg = CLIPPY_PICKUP_TIPS[fi.id];
         gs.clippyPickupTimer = 240; // 4 seconds
       }
-      const permanent=new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks','paperCuts','extraClips','clownishUpgrade','popcornUpgrade']);
+      const permanent=new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks','paperCuts','extraClips','clownishUpgrade','popcornBowl']);
       if (!permanent.has(fi.id)) setTimeout(()=>{if(gameRunning)trySpawnFieldItems();},def.spawnCooldown);
     }
   }
@@ -1407,15 +1407,15 @@ function sysFieldItemPickup() {
 function sysPopcorn() {
   if (!gs.hasPopcornBucket||!gs.popcornKernels) return;
   const ppos=ECS.get(gs.playerId,'pos');
-  const kernelGoal=gs.hasPopcornUpgrade?3:5;
+  const kernelGoal=gs.hasPopcornBowl?3:5;
   gs.popcornKernels=gs.popcornKernels.filter(k=>{
     if (Math.hypot(k.x-ppos.x,k.y-ppos.y)<22) {
       spawnParticles(k.x,k.y,'#ffdd00',4);
       gs._kernelsCollected=(gs._kernelsCollected||0)+1;
       if (gs._kernelsCollected>=kernelGoal) {
         gs._kernelsCollected=0;
-        gs.popcornFrenzyTimer=gs.hasPopcornUpgrade?360:240;
-        showMsg(gs.hasPopcornUpgrade?'🍿 MEGA FRENZY! MASSIVE EXPLOSION RADIUS!':'🍿 POPCORN FRENZY! BULLETS EXPLODE!');
+        gs.popcornFrenzyTimer=gs.hasPopcornBowl?360:240;
+        showMsg(gs.hasPopcornBowl?'🍿 MEGA FRENZY! MASSIVE EXPLOSION RADIUS!':'🍿 POPCORN FRENZY! BULLETS EXPLODE!');
         spawnPartyParticles(ppos.x,ppos.y);
       }
       return false;
@@ -1890,7 +1890,7 @@ if (gs.floor === 2 && gs.wave === CFG.BOSS2_WAVE) {
 
 function trySpawnFieldItems() {
   const now=Date.now();
-  const permanent=new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks','paperCuts','extraClips','clownishUpgrade','popcornUpgrade']);
+  const permanent=new Set(['bouncy','dash','doubledCake','tripleCake','quadCake','shakeFizzlePop','flawlessBaking','cursedCandles','glowsticks','paperCuts','extraClips','clownishUpgrade','popcornBowl']);
   for (const id of gs.unlockedItems) {
     if (gs.fieldItems.some(fi=>fi.id===id)) continue;
     if (id==='bouncy'&&gs.bouncyHouse) continue;
@@ -1905,7 +1905,7 @@ function trySpawnFieldItems() {
     if (id==='paperCuts'&&gs.hasPaperCuts) continue;
     if (id==='extraClips'&&gs.hasExtraClips) continue;
     if (id==='clownishUpgrade'&&gs.hasClownishUpgrade) continue;
-    if (id==='popcornUpgrade'&&gs.hasPopcornUpgrade) continue;
+    if (id==='popcornBowl'&&gs.hasPopcornBowl) continue;
     const def=ITEM_DEFS[id],last=gs.itemCooldowns[id]||0;
     if (now-last>=def.spawnCooldown||last===0)
       gs.fieldItems.push({id,x:80+Math.random()*(worldW-160),y:80+Math.random()*(worldH-160),phase:Math.random()*Math.PI*2});
@@ -1927,7 +1927,7 @@ let floorAvailable=floorPool.filter(id=>{
   });
   const upgradePool=[];
   if(gs.hasClownish&&!gs.hasClownishUpgrade) upgradePool.push('clownishUpgrade');
-  if(gs.hasPopcornBucket&&!gs.hasPopcornUpgrade) upgradePool.push('popcornUpgrade');
+  if(gs.hasPopcornBucket&&!gs.hasPopcornBowl) upgradePool.push('popcornBowl');
   floorAvailable=[...floorAvailable,...upgradePool];
   const generalAvailable=GENERAL_ITEM_IDS.filter(id=>!gs.unlockedItems.includes(id));
   let offered=[],fi=0,gi=0;
@@ -1949,7 +1949,7 @@ offered=[...new Set(offered)].slice(0, gs.floor === 2 ? 4 : 3);
     else if(id==='paperCuts'){card.style.background='#001a1a';card.style.borderColor='#00ffcc';}
     else if(id==='extraClips'){card.style.background='#1a1a00';card.style.borderColor='#ffdd00';}
     else if(id==='clownishUpgrade'){card.style.background='#001133';card.style.borderColor='#4488ff';}
-    else if(id==='popcornUpgrade'){card.style.background='#1a0a00';card.style.borderColor='#ffaa00';}
+    else if(id==='popcornBowl'){card.style.background='#1a0a00';card.style.borderColor='#ffaa00';}
    card.innerHTML = `
   <div class="ic-icon">${
     def.img
