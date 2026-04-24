@@ -20,41 +20,76 @@ const ECS = {
   _nextId: 0,
   entities: new Set(),
   _comps: {},
+  _queryCache: new Map(),
 
   createEntity() {
     const id = this._nextId++;
     this.entities.add(id);
     return id;
   },
+
   destroyEntity(id) {
     this.entities.delete(id);
     for (const k in this._comps) this._comps[k].delete(id);
+    // Remove this entity from all cached query results
+    for (const [key, set] of this._queryCache) {
+      set.delete(id);
+    }
   },
+
   add(id, type, data) {
     if (!this._comps[type]) this._comps[type] = new Map();
     this._comps[type].set(id, data);
+    // Add this entity to any cached queries it now satisfies
+    for (const [key, set] of this._queryCache) {
+      const types = key.split(',');
+      if (types.includes(type)) {
+        // Check if it satisfies all types in that query
+        if (types.every(t => this.has(id, t))) {
+          set.add(id);
+        }
+      }
+    }
     return data;
   },
+
   get(id, type) {
     return this._comps[type] ? this._comps[type].get(id) : undefined;
   },
+
   has(id, type) {
     return !!(this._comps[type] && this._comps[type].has(id));
   },
+
   remove(id, type) {
     if (this._comps[type]) this._comps[type].delete(id);
-  },
-  query(...types) {
-    const result = [];
-    for (const id of this.entities) {
-      if (types.every(t => this.has(id, t))) result.push(id);
+    // Remove from any cached queries that required this type
+    for (const [key, set] of this._queryCache) {
+      const types = key.split(',');
+      if (types.includes(type)) {
+        set.delete(id);
+      }
     }
-    return result;
   },
+
+  query(...types) {
+    const key = types.join(',');
+    if (!this._queryCache.has(key)) {
+      // Build this query result fresh and cache it
+      const result = new Set();
+      for (const id of this.entities) {
+        if (types.every(t => this.has(id, t))) result.add(id);
+      }
+      this._queryCache.set(key, result);
+    }
+    return this._queryCache.get(key);
+  },
+
   clear() {
     this._nextId = 0;
     this.entities.clear();
     this._comps = {};
+    this._queryCache.clear();
   }
 };
 
