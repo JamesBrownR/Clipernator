@@ -30,6 +30,28 @@ const SFX = {
   },
 };
 
+// Add this method to the SFX object, after the playRandom method:
+playAt(key, sourceX, sourceY, volumeOverride) {
+  if (this._muted) return;
+  const src = this._cache[key];
+  if (!src) return;
+  if (typeof gs === 'undefined' || !gs.playerId) { this.play(key, volumeOverride); return; }
+  const ppos = ECS.get(gs.playerId, 'pos');
+  if (!ppos) { this.play(key, volumeOverride); return; }
+  const FALLOFF_START = 180; // full volume within this radius
+  const FALLOFF_END   = 520; // silent beyond this radius
+  const dist = Math.hypot(sourceX - ppos.x, sourceY - ppos.y);
+  if (dist > FALLOFF_END) return;
+  const spatial = dist <= FALLOFF_START ? 1.0
+    : 1.0 - ((dist - FALLOFF_START) / (FALLOFF_END - FALLOFF_START));
+  const base = volumeOverride !== undefined ? volumeOverride : 0.6;
+  try {
+    const clone = src.cloneNode();
+    clone.volume = Math.max(0, Math.min(1, base * spatial));
+    clone.play().catch(() => {});
+  } catch(e) {}
+},
+
 // ── Load all SFX ──
 SFX.load('shoot1',          'sounds/soundeffects/bullets/Shoot1.mp3');
 SFX.load('shoot2',          'sounds/soundeffects/bullets/Shoot2.mp3');
