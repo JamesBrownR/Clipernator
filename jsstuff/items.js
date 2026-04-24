@@ -5,7 +5,7 @@
 const ITEM_DEFS = {
   birthday: {
     id: 'birthday', label: 'BIRTHDAY\nPARTY', icon: '🎂',
-    img: 'sprites/items/birthday/BirthdayParty.png',
+    img: 'sprites/items/birthdayparty/BirthdayParty.png',
     desc: 'ALL ENEMIES\nLOSE MOVMENT CONTROL\nFOR 3 SECONDS',
     color: '#ff69b4', shadowColor: '#ff69b4', spawnCooldown: 18000,
     effect(gs) {
@@ -47,7 +47,7 @@ const ITEM_DEFS = {
 
   cookie: {
     id: 'cookie', label: 'GOLDEN\nCOOKIE', icon: '🍪',
-     img: 'sprites/items/cookie/GoldenCookie.png',
+     img: 'sprites/items/goldencookie/GoldenCookie.png',
     desc: '7x SPEED\n+ 7x FASTER RELOAD\nFOR 7 SECONDS',
     color: '#ffdd00', shadowColor: '#ffaa00', spawnCooldown: 17000,
     effect(gs) {
@@ -74,7 +74,7 @@ const ITEM_DEFS = {
 
   doubledCake: {
     id: 'doubledCake', label: 'DOUBLE\nLAYERED\nCAKE', icon: '🍰🍰',
-     img: 'sprites/items/cake/DoubleCake.png',
+     img: 'sprites/items/doublecake/DoubleCake.png',
     desc: 'EVERY BULLET:\n40% CHANCE DO NOTHING\n60% CHANCE 2X DAMAGE',
     color: '#ff44aa', shadowColor: '#ff88dd', spawnCooldown: 999999999,
     effect(gs) { gs.hasDoubleCake = true; showMsg('DOUBLE LAYERED CAKE ACQUIRED!'); },
@@ -96,7 +96,7 @@ const ITEM_DEFS = {
 
   tripleCake: {
     id: 'tripleCake', label: 'TRIPLE\nLAYERED\nCAKE', icon: '🍰🍰🍰',
-     img: 'sprites/items/cake/TripleCake.png',
+     img: 'sprites/items/doublecake/TripleCake.png',
     desc: 'EVERY BULLET:\n45% CHANCE DO NOTHING\n55% CHANCE 3X DAMAGE',
     color: '#ff22ff', shadowColor: '#cc00cc', spawnCooldown: 999999999,
     effect(gs) {
@@ -124,7 +124,7 @@ const ITEM_DEFS = {
 
   quadCake: {
     id: 'quadCake', label: 'QUADRUPLE\nLAYERED\nCAKE', icon: '🍰🍰🍰🍰',
-    img: 'sprites/items/cake/QuadCake.png',
+    img: 'sprites/items/doublecake/QuadCake.png',
     desc: 'EVERY BULLET:\n50% CHANCE DO NOTHING\n50% CHANCE 4X DAMAGE',
     color: '#aa00ff', shadowColor: '#8800cc', spawnCooldown: 999999999,
     effect(gs) {
@@ -152,7 +152,7 @@ const ITEM_DEFS = {
 
   bouncy: {
     id: 'bouncy', label: 'BOUNCY\nHOUSE', icon: '🏠',
-     img: 'sprites/items/bouncy/BouncyHouse.png',
+     img: 'sprites/items/bouncyhouse/BouncyHouse.png',
     desc: 'PERMANENT:\nBULLETS + ENEMIES\n+ YOU BOUNCE\nOFF WALLS',
     color: '#88ffdd', shadowColor: '#00ffcc', spawnCooldown: 999999999,
     effect(gs) { gs.bouncyHouse = true; showMsg('BOING!!! EVERYTHING BOUNCES NOW!!!'); },
@@ -233,7 +233,7 @@ const ITEM_DEFS = {
 
   flawlessBaking: {
     id: 'flawlessBaking', label: 'FLAWLESS\nBAKING', icon: '🧁',
-    img: 'sprites/items/flawless/FlawlessBaking.png',
+    img: 'sprites/items/flawlessbaking/FlawlessBaking.png',
     desc: 'COMPLETE A WAVE\nWITHOUT DAMAGE:\n+2 MAX AMMO\n',
     color: '#ffaaff', shadowColor: '#ff88ff', spawnCooldown: 999999999,
     effect(gs) {
@@ -264,7 +264,7 @@ const ITEM_DEFS = {
 
   cursedCandles: {
     id: 'cursedCandles', label: 'CURSED\nCANDLES', icon: '🕯️',
-    img: 'sprites/items/candles/CursedCandles.png',
+    img: 'sprites/items/cursedcandles/CursedCandles.png',
     desc: 'PERMANENT:\n5 CANDLES ORBIT YOU\nDRAIN 5 HP/SEC\nEACH LIT CANDLE\n+2 BULLETS',
     color: '#ff8800', shadowColor: '#ffaa44', spawnCooldown: 999999999,
     effect(gs) {
@@ -362,7 +362,7 @@ const ITEM_DEFS = {
 
  mirrorMaze: {
   id: 'mirrorMaze', label: 'MIRROR\nMAZE', icon: '🪞',
-    img: 'sprites/items/mirror/MirrorMaze.png',
+    img: 'sprites/items/mirrormaze/MirrorMaze.png',
   desc: 'SHOOT THE SHARD\nTO REDIRECT BULLETS\nKILLS SPAWN NEW SHARDS',
   color: '#ccddff', shadowColor: '#8899ff', spawnCooldown: 999999999,
   effect(gs) {
@@ -393,7 +393,7 @@ const ITEM_DEFS = {
 
   popcornBucket: {
     id: 'popcornBucket', label: 'POPCORN\nBUCKET', icon: '🍿',
-     img: 'sprites/items/popcorn/PopcornBucket.png',
+     img: 'sprites/items/popcornbucket/PopcornBucket.png',
     desc: 'COLLECT POPCORN FROM KILLS FOR A 4-SEC BULLET EXPLOSION FRENZY',
     color: '#ffcc44', shadowColor: '#ffaa00', spawnCooldown: 999999999,
     effect(gs) { gs.hasPopcornBucket = true; gs.popcornKernels = []; showMsg('POPCORN BUCKET! COLLECT KERNELS FOR FRENZY!'); },
@@ -479,8 +479,9 @@ const ITEM_DEFS = {
 
  ragingRings: {
   id: 'ragingRings', label: 'RAGING\nRINGS', icon: '💫',
+     img: 'sprites/items/ragingrings/RagingRings.png',
   desc: 'BULLETS THAT TOUCH YOU\nORBIT FOREVER\n3X DAMAGE WHILE ORBITING\nMAX 8 RINGS',
-   img: 'sprites/items/ragingrings/RagingRings.png',
+ 
   color: '#ffffff', shadowColor: '#aaaaff', spawnCooldown: 999999999,
   effect(gs) {
     gs.hasRagingRings = true;
@@ -507,7 +508,7 @@ const ITEM_DEFS = {
 
  bowlingBall: {
     id: 'bowlingBall', label: 'BOWLING\nBALL', icon: '🎳',
-   img: 'sprites/items/bowling/BowlingBall.png',
+   img: 'sprites/items/bowlingball/BowlingBall.png',
     desc: 'NEXT SHOT:\nA GIANT BOWLING BALL\nPIERCES + BOUNCES\nEXPLODES ON EXPIRY\nHITS MIRROR SHARDS',
     color: '#aaaaaa', shadowColor: '#888888', spawnCooldown: 14000,
     effect(gs) {
@@ -541,7 +542,7 @@ const ITEM_DEFS = {
 
   tightropeBoots: {
     id: 'tightropeBoots', label: 'TIGHTROPE\nBOOTS', icon: '👢',
-    img: 'sprites/items/tightrope/TightropeBoots.png',
+    img: 'sprites/items/tightropeboots/TightropeBoots.png',
     desc: '+200% MOVE SPEED\nDASH = INTANGIBLE',
     color: '#00ccff', shadowColor: '#0088aa', spawnCooldown: 999999999,
     effect(gs) { gs.hasTightropeBoots = true; showMsg('TIGHTROPE BOOTS! +SPEED'); },
