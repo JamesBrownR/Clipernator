@@ -704,7 +704,7 @@ if (gs.knockingPinsActive) {
 }
 
 function sysConfusedEnemyCollision() {
-  const confusedIds = ECS.query('enemy', 'pos', 'hp', 'ai').filter(id => {
+const confusedIds = [...ECS.query('enemy', 'pos', 'hp', 'ai')].filter(id => {
     const ai = ECS.get(id, 'ai');
     return ai && ai.confused;
   });
@@ -1665,7 +1665,7 @@ function update() {
 
 function spawnEnemy() {
   if (gs.bossActive) return;
-  const total=ECS.query('enemy').length;
+const total = [...ECS.query('enemy')].length;
   if (gs.waveKills+total>=gs.waveEnemiesLeft) return;
   let x,y,attempts=0;
   const ppos=ECS.get(gs.playerId,'pos');
