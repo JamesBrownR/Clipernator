@@ -1,7 +1,16 @@
  // ============================================================
 // CLIPBLAST: PARTY HUNTER — Draw Functions 
 // ============================================================
-
+// Cheap glow substitute — just a soft circle drawn under the sprite
+function drawCheapGlow(x, y, radius, color, alpha = 0.3) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
 
 function _drawUtensilShape(ctx, type, color, scale = 1) {
   ctx.strokeStyle = color;
@@ -202,7 +211,7 @@ function drawWaterBalloon(epos, ehp, ai, frozen) {
   ctx.translate(x, y);
   ctx.rotate(orientAngle + Math.PI / 2);
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
-  else { ctx.shadowColor = hasHat ? '#ff4444' : '#44aaff'; ctx.shadowBlur = 14; }
+  else { drawCheapGlow(0, 0, 28, hasHat ? '#ff4444' : '#44aaff', 0.22); }
 
  const idleSheet  = hasHat ? waterBalloonIdleSheetRed  : waterBalloonIdleSheet;
   const turnSheet  = hasHat ? waterBalloonTurnSheetRed  : waterBalloonTurnSheet;
@@ -305,8 +314,8 @@ ctx.translate(x, y);
 ctx.rotate(angle);
   if (frozen) { ctx.globalAlpha = 0.7; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 16; }
   else {
-    ctx.shadowColor = drawState === 'DIVE' ? '#ff2200' : '#ffdd00';
-    ctx.shadowBlur  = drawState === 'DIVE' ? 22 : 14 + Math.sin(Date.now() / 80) * 4;
+   drawCheapGlow(0, 0, 22, drawState === 'DIVE' ? '#ff2200' : '#ffdd00', 0.25);
+
   }
 
   if (sheet && sheet.complete && sheet.naturalWidth > 0) {
@@ -1466,11 +1475,15 @@ if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
 
 
   // Particles
-  for(const p of gs.particles) {
-    ctx.save(); ctx.globalAlpha=p.life/p.maxLife;
-    ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=5;
-    ctx.fillRect(p.x-p.size/2, p.y-p.size/2, p.size, p.size); ctx.restore();
-  }
+  // Draw all particles in one batch — no shadow, no save/restore per particle
+ctx.save();
+for(const p of gs.particles) {
+  ctx.globalAlpha = p.life / p.maxLife;
+  ctx.fillStyle = p.color;
+  ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+}
+ctx.globalAlpha = 1;
+ctx.restore();
 
   // Reload bar
   if (gs.reloading) {
