@@ -660,11 +660,12 @@ canvas {
   });
 
   // ── Fixed mouse handler that accounts for CSS transform ──
-  canvas.addEventListener('mousemove', function(e) {
+ canvas.addEventListener('mousemove', function(e) {
+    if (typeof mouse === 'undefined') return;
     const rect = canvas.getBoundingClientRect();
     mouse.x = (e.clientX - rect.left) / (rect.width  / canvas.width)  / renderScale;
     mouse.y = (e.clientY - rect.top)  / (rect.height / canvas.height) / renderScale;
-  });
+});
 
   // ── Minimize: collapse wrapper to just titlebar ──
   const MINIMIZE_W = '220px';
