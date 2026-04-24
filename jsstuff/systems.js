@@ -7,22 +7,22 @@ const CLIPPY_PICKUP_TIPS = {
   cookie:          "7 times the speed AND reload? I calculated that. It took me 0.3 seconds.",
   doubledCake:     "40% of your bullets are now completely useless. Statistically speaking, I'm helping.",
   tripleCake:      "3x damage! The bad news is 45% of your shots are duds. The good news is I'm not a dud.",
-  quadCake:        "Coin flip. Every bullet. For the rest of your life. Good luck with that.",
+  quadCake:        "Coin flip. I hope you know what you're doing.",
   bouncy:          "Boing! Everything bounces now. Including the consequences of your decisions.",
   dash:            "It looks like you're in a hurry! SHIFT to dash. You'll thank me when there are 12 enemies.",
   shakeFizzlePop:  "Don't. Get. Hit. I have never been hit in my life. I am a paperclip.",
   flawlessBaking:  "It looks like you want more ammo! Simply don't take damage. Simple.",
-  cursedCandles:   "Draining your HP to add more bullets. Totally normal. Totally fine. I'm fine.",
-  mirrorMaze:      "Shoot the diamond thing. It will redirect bullets. Yes, at enemies. Hopefully.",
-  popcornBucket:   "Collect popcorn. From corpses. For a frenzy. This is a normal Tuesday.",
+  cursedCandles:   "You're killing me to get more bullets. Totally fine. I'm fine.",
+  mirrorMaze:      "Shoot the diamond thing. It will redirect bullets at enemies... hopefully.",
+  popcornBucket:   "Collect popcorn... from corpses... for a frenzy. This is normal.",
   ragingRings:     "It looks like your bullets keep missing! Now they orbit you instead. Problem solved.",
-  tightropeBoots:  "200% speed boost. Try not to run into a wall. Or do. I'm a paperclip, not a cop.",
-  clownish:        "It looks like you grew a nose! It honks. Enemies find this deeply upsetting.",
+  tightropeBoots:  "200% speed boost. Try not to run into a wall... it hurts.",
+  clownish:        "It looks like you grew a nose! It honks. Enemies (and me) find this deeply unsettling.",
   bowlingBall:     "STRIKE! The next shot is a giant bowling ball. It pierces. It bounces. It judges.",
-  paperCuts:       "Damaged enemies now bleed 1 HP per second. Every paper cut counts.",
+  paperCuts:       "Damaged enemies now bleed 1 HP per second. Every cut counts.",
   extraClips:      "It looks like you needed more HP AND ammo! Full heal included. You're welcome.",
   clownishUpgrade: "Bigger honk. Wider waves. More confusion. I have no further comment.",
-  popcornUpgrade:  "3 kernels instead of 5, and the frenzy lasts longer. Now THAT'S a deal.",
+  popcornBowl:  "3 kernels instead of 5, and the frenzy lasts longer. Now THAT'S a deal.",
 };
 
 function shuffle(arr) {
@@ -1950,7 +1950,12 @@ offered=[...new Set(offered)].slice(0, gs.floor === 2 ? 4 : 3);
     else if(id==='extraClips'){card.style.background='#1a1a00';card.style.borderColor='#ffdd00';}
     else if(id==='clownishUpgrade'){card.style.background='#001133';card.style.borderColor='#4488ff';}
     else if(id==='popcornUpgrade'){card.style.background='#1a0a00';card.style.borderColor='#ffaa00';}
-    card.innerHTML=`<div class="ic-icon">${def.icon}</div><div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div><div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned?'<br><br>[OWNED]':''}</div>`;
+   card.innerHTML = `
+  <div class="ic-icon">${
+    def.img
+      ? `<img src="${def.img}" style="width:32px;height:32px;image-rendering:pixelated;">`
+      : def.icon
+  }</div><div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div><div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned?'<br><br>[OWNED]':''}</div>`;
     if (!isOwned) card.addEventListener('click',()=>{gs.unlockedItems.push(id);def.effect(gs);choiceEl.style.display='none';gs.pendingChoice=false;gameRunning=true;trySpawnFieldItems();updateHUD();loop();});
     cardsEl.appendChild(card);
   }
