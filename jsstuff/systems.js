@@ -958,8 +958,7 @@ if (ai2&&ai2.reflectedByGlowstick&&ECS.has(id,'enemy')&&ECS.get(id,'enemy').type
     // Only reset if this entity is not a miniClown itself (clowns don't have riders).
     if (ECS.get(id, 'enemy').type !== 'miniClown') ai2.clownRiders = 0;
     }
-    // Reset rider count each tick — BT_MINI_CLOWN re-increments it each frame for attached clowns
-    ai2.clownRiders = 0;
+   
       if (ai2.ringmasterBuffed) {
         ai2.ringmasterBuffTimer=(ai2.ringmasterBuffTimer||0)-1;
         phy2._baseSpeed=phy2._baseSpeed||phy2.speed;
@@ -1016,6 +1015,8 @@ if (b.isBowlingBall) {
   if (b.y >= worldH - 18){ b.y = worldH - 18;  b.vy = -Math.abs(b.vy); bounced = true; }
   if (bounced) {
     b.bounces = (b.bounces || 0) + 1;
+      SFX.playAt('bowlingBallBounce', b.x, b.y, 0.45);
+
     spawnParticles(b.x, b.y, '#aaaaaa', 6);
     if (b.bounces >= 6) {
       detonateExplosiveBullet(b, b.x, b.y);
@@ -1027,7 +1028,6 @@ if (b.isBowlingBall) {
     return false;
   }
   return true;
-  SFX.playAt('bowlingBallBounce', b.x, b.y, 0.45);
 
 }
     if (gs.bouncyHouse) {
@@ -1943,57 +1943,7 @@ function trySpawnFieldItems() {
 
 const GENERAL_ITEM_IDS=['paperCuts','extraClips'];
 
-function offerItemChoice() {
-  gs.pendingChoice=true; gameRunning=false; cancelAnimationFrame(animId); draw();
-  const choiceEl=document.getElementById('item-choice'),cardsEl=document.getElementById('item-cards');
-  cardsEl.innerHTML='';
-  const floorPool=gs.floor===2?FLOOR2_ITEM_IDS:ALL_ITEM_IDS;
-let floorAvailable=floorPool.filter(id=>{
-    if(id==='doubledCake'&&(gs.hasTripleCake||gs.hasQuadCake))return false;
-    if(id==='tripleCake'&&(!gs.hasDoubleCake||(gs.hasTripleCake||gs.hasQuadCake)))return false;
-    if(id==='quadCake'&&(!gs.hasTripleCake||gs.hasQuadCake))return false;
-    return !gs.unlockedItems.includes(id);
-  });
-  const upgradePool=[];
-  if(gs.hasClownish&&!gs.hasClownishUpgrade) upgradePool.push('clownishUpgrade');
-  if(gs.hasPopcornBucket&&!gs.hasPopcornBowl) upgradePool.push('popcornBowl');
-  floorAvailable=[...floorAvailable,...upgradePool];
-  const generalAvailable=GENERAL_ITEM_IDS.filter(id=>!gs.unlockedItems.includes(id));
-  let offered=[],fi=0,gi=0;
-  const shuffledFloor=shuffle(floorAvailable),shuffledGeneral=shuffle(generalAvailable);
-const slotCount = gs.floor === 2 ? 4 : 3;
-for (let slot=0;slot<slotCount;slot++) {    const useGeneral=generalAvailable.length>0&&gi<shuffledGeneral.length&&Math.random()<0.20;
-    if(useGeneral)offered.push(shuffledGeneral[gi++]);
-    else if(fi<shuffledFloor.length)offered.push(shuffledFloor[fi++]);
-    else if(gi<shuffledGeneral.length)offered.push(shuffledGeneral[gi++]);
-  }
-offered=[...new Set(offered)].slice(0, gs.floor === 2 ? 4 : 3);
-  for (const id of offered) {
-    const def=ITEM_DEFS[id],isOwned=gs.unlockedItems.includes(id);
-    const card=document.createElement('div');
-    card.className=`item-card${isOwned?' already-owned':''}`;
-    if(id==='doubledCake'){card.style.background='#001133';card.style.borderColor='#4488ff';}
-    else if(id==='tripleCake'){card.style.background='#220022';card.style.borderColor='#cc44ff';}
-    else if(id==='quadCake'){card.style.background='#220000';card.style.borderColor='#ff3333';}
-    else if(id==='paperCuts'){card.style.background='#001a1a';card.style.borderColor='#00ffcc';}
-    else if(id==='extraClips'){card.style.background='#1a1a00';card.style.borderColor='#ffdd00';}
-    else if(id==='clownishUpgrade'){card.style.background='#001133';card.style.borderColor='#4488ff';}
-    else if(id==='popcornBowl'){card.style.background='#1a0a00';card.style.borderColor='#ffaa00';}
-   card.innerHTML = `
-  <div class="ic-icon">${
-    def.img
-      ? `<img src="${def.img}" style="width:100px;height:100px;image-rendering:pixelated;">`
-      : def.icon
-  }</div><div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div><div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned?'<br><br>[OWNED]':''}</div>`;
-    if (!isOwned) card.addEventListener('click',()=>{gs.unlockedItems.push(id);def.effect(gs);choiceEl.style.display='none';gs.pendingChoice=false;gameRunning=true;trySpawnFieldItems();updateHUD();loop();});
-    cardsEl.appendChild(card);
-  }
-  choiceEl.style.display='flex';
-  const skipBtn=document.getElementById('skip-btn');
-  const allOwned=offered.length===0||offered.every(id=>gs.unlockedItems.includes(id));
-  skipBtn.style.display=allOwned?'block':'none';
-  skipBtn.onclick=()=>{choiceEl.style.display='none';gs.pendingChoice=false;gameRunning=true;trySpawnFieldItems();updateHUD();loop();};
-}
+
 
 function tryDropTicket() {
   if (gs.floor!==2) return;
