@@ -525,8 +525,14 @@ function renderPauseMenu() {
 
       const card = document.createElement('div');
       card.className = 'pause-item-card';
-      card.textContent = def.icon;
-
+if (def.img) {
+  const img = document.createElement('img');
+  img.src = def.img;
+  img.style.cssText = 'width:20px;height:20px;image-rendering:pixelated;';
+  card.appendChild(img);
+} else {
+  card.textContent = def.icon;
+}
       const tip = document.createElement('div');
       tip.className = 'tip';
       tip.textContent = def.label.replace(/\n/g,' ');
@@ -559,7 +565,7 @@ const CLIPPY_ITEM_TIPS = {
   paperCuts:       "PAPER CUTS makes any damaged enemy bleed 1 HP per second.",
   extraClips:      "EXTRA CLIPS gives +15% max HP and ammo, and fully heals you... it stacks!",
   clownishUpgrade: "Placeholder! LOL...",
-  popcornUpgrade:  "It looks like you want bigger frenzies! MEGA POPCORN only needs 3 kernels and lasts 6 seconds.",
+  popcornbowl:  "It looks like you want bigger frenzies! MEGA POPCORN only needs 3 kernels and lasts 6 seconds.",
 };
 
 let _clippyBubbleText = "It looks like you discovered how to PAUSE! Click an item to learn what it does.";
@@ -884,7 +890,7 @@ function offerItemChoice() {
   });
   const upgradePool = [];
   if (gs.hasClownish && !gs.hasClownishUpgrade)   upgradePool.push('clownishUpgrade');
-  if (gs.hasPopcornBucket && !gs.hasPopcornUpgrade) upgradePool.push('popcornUpgrade');
+  if (gs.hasPopcornBucket && !gs.hasPopcornBowl) upgradePool.push('popcornBowl');
   floorAvailable = [...floorAvailable, ...upgradePool];
   const generalAvailable = GENERAL_ITEM_IDS.filter(id => !gs.unlockedItems.includes(id));
 
@@ -907,8 +913,12 @@ function offerItemChoice() {
     const card    = document.createElement('div');
     card.className = `item-card${isOwned ? ' already-owned' : ''}`;
 
-    card.innerHTML = `
-      <div class="ic-icon">${def.icon}</div>
+   card.innerHTML = `
+  <div class="ic-icon">${
+    def.img
+      ? `<img src="${def.img}" style="width:32px;height:32px;image-rendering:pixelated;">`
+      : def.icon
+  }</div>
       <div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div>
       <div class="ic-desc">${def.desc.replace(/\n/g,'<br>')}${isOwned ? '<br><i>(owned)</i>' : ''}</div>
     `;
