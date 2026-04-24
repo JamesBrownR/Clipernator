@@ -35,6 +35,10 @@ function shuffle(arr) {
 }
 
 function spawnParticles(x, y, color, n = 8) {
+  const MAX_PARTICLES = 250;
+  const available = MAX_PARTICLES - gs.particles.length;
+  if (available <= 0) return;
+  n = Math.min(n, available);
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 4;
     gs.particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 28, maxLife: 28, color, size: 3 + Math.random()*4 });
@@ -42,8 +46,12 @@ function spawnParticles(x, y, color, n = 8) {
 }
 
 function spawnPartyParticles(x, y) {
+  const MAX_PARTICLES = 250;
+  const available = MAX_PARTICLES - gs.particles.length;
+  if (available <= 0) return;
   const colors = ['#ff69b4','#ffdd00','#00ff66','#ff4444','#88aaff','#ffffff','#ffaa00','#ff88cc'];
-  for (let i = 0; i < 60; i++) {
+  const n = Math.min(60, available);
+  for (let i = 0; i < n; i++) {
     const a = Math.random()*Math.PI*2, sp = 2 + Math.random()*9;
     gs.particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 90, maxLife: 90, color: colors[i%colors.length], size: 4+Math.random()*7 });
   }
@@ -1254,8 +1262,10 @@ gs.health -= Math.round(20 * contactMult);
 }
 
 function sysEnemyBullets() {
-  const ppos=ECS.get(gs.playerId,'pos');
-  gs.enemyBullets=gs.enemyBullets.filter(eb=>{
+  const ppos = ECS.get(gs.playerId,'pos');
+  const bulletsToAdd = []; // deferred — added after filter completes
+  
+  gs.enemyBullets = gs.enemyBullets.filter(eb => {
     if (!gs.frozen){eb.x+=eb.vx;eb.y+=eb.vy;eb.life--;}
 if (eb.isTear) {
   if (eb.gravX !== undefined) { eb.vx += eb.gravX; eb.vy += eb.gravY; }
@@ -1361,15 +1371,17 @@ if (eb.isFrosting && eb.spawnGiftBox) {
       if (eb.x>=worldW-4){eb.x=worldW-4;eb.vx=-Math.abs(eb.vx);bounced=true;}
       if (eb.y<=4){eb.y=4;eb.vy=Math.abs(eb.vy);bounced=true;}
       if (eb.y>=worldH-4){eb.y=worldH-4;eb.vy=-Math.abs(eb.vy);bounced=true;}
-      if (bounced&&!eb.friendlyFire) {
-        eb.bounces=(eb.bounces||0)+1;
-        spawnParticles(eb.x,eb.y,'#88ffdd',3);
-        gs.bullets.push({
-          x:eb.x,y:eb.y,vx:eb.vx,vy:eb.vy,
-          angle:Math.atan2(eb.vy,eb.vx),life:80,maxLife:80,damageMult:1,isDud:false,bounces:eb.bounces
-        });
-        return false;
-      }
+    // FIND the bouncy house bullet push and change it to:
+    if (bounced && !eb.friendlyFire) {
+      eb.bounces = (eb.bounces||0) + 1;
+      spawnParticles(eb.x, eb.y, '#88ffdd', 3);
+      bulletsToAdd.push({
+        x:eb.x, y:eb.y, vx:eb.vx, vy:eb.vy,
+        angle:Math.atan2(eb.vy,eb.vx), life:80, maxLife:80,
+        damageMult:1, isDud:false, bounces:eb.bounces
+      });
+      return false;
+    }
       if (eb.life<=0||eb.bounces>8) return false;
     } else {
       if (eb.life<=0||eb.x<-10||eb.x>worldW+10||eb.y<-10||eb.y>worldH+10) return false;
@@ -1385,6 +1397,7 @@ if (eb.isFrosting && eb.spawnGiftBox) {
     }
     return true;
   });
+   for (const b of bulletsToAdd) gs.bullets.push(b);
 }
 
 function sysFieldItemPickup() {
