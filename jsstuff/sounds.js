@@ -53,23 +53,36 @@ playAt(key, sourceX, sourceY, volumeOverride) {
 },
 
 // ── Load all SFX ──
-SFX.load('shoot1',          'sounds/soundeffects/bullets/Shoot1.mp3');
-SFX.load('shoot2',          'sounds/soundeffects/bullets/Shoot2.mp3');
-SFX.load('shoot3',          'sounds/soundeffects/bullets/Shoot3.mp3');
-SFX.load('shoot4',          'sounds/soundeffects/bullets/Shoot4.mp3');
+
 SFX.load('normalHit1',      'sounds/soundeffects/bullets/NormalHit1.mp3');
 SFX.load('normalHit2',      'sounds/soundeffects/bullets/NormalHit2.mp3');
 SFX.load('hit2x',           'sounds/soundeffects/bullets/2xHit.mp3');
 SFX.load('hit3x',           'sounds/soundeffects/bullets/3xHit.mp3');
 SFX.load('hit4x',           'sounds/soundeffects/bullets/4xHit.mp3');
-SFX.load('dudHit',          'sounds/soundeffects/bullets/DudbHit.mp3');
+SFX.load('dudHit',          'sounds/soundeffects/bullets/DudHit.mp3');
 SFX.load('tearHit',         'sounds/soundeffects/bullets/TearHit.mp3');
-SFX.load('bouncyBullet',    'sounds/soundeffects/bullets/Bouncy_bulletBouncy.mp3');
 SFX.load('bouncyHit',       'sounds/soundeffects/bullets/BouncyHit.mp3');
 SFX.load('bowlingBallBounce','sounds/soundeffects/bullets/BowlingBallBounce.mp3');
 SFX.load('bowlingBallHit',  'sounds/soundeffects/bullets/BowlingBallHit.mp3');
+
+
+SFX.load('shoot1',          'sounds/soundeffects/player/Shoot1.mp3');
+SFX.load('shoot2',          'sounds/soundeffects/player/Shoot2.mp3');
+SFX.load('shoot3',          'sounds/soundeffects/player/Shoot3.mp3');
+SFX.load('shoot4',          'sounds/soundeffects/player/Shoot4.mp3');
 SFX.load('reloadStart1',    'sounds/soundeffects/player/ReloadStart1.mp3');
 SFX.load('reloadStart2',    'sounds/soundeffects/player/ReloadStart2.mp3');
 SFX.load('reloadStart3',    'sounds/soundeffects/player/ReloadStart3.mp3');
 SFX.load('reloadFinish',    'sounds/soundeffects/player/ReloadFinish.mp3');
 SFX.load('playerDamage',    'sounds/soundeffects/player/PlayerDamage.mp3');
+SFX.load('playerDamage',    'sounds/soundeffects/player/ClippySpeak.mp3');
+
+SFX.load('partyhatRide',    'sounds/soundeffects/enemies/PartyHat/PartyHatRide.mp3');
+
+SFX.load('forkGrab',    'sounds/soundeffects/enemies/Utensil/ForkGrab.mp3');
+SFX.load('spoonDamage',    'sounds/soundeffects/enemies/Utensil/SpoonDamage.mp3'); // spoon hits something
+
+SFX.load('frostingLaunch',    'sounds/soundeffects/enemies/CakeBoss/FrostingLaunch.mp3');
+SFX.load('frostingHit',    'sounds/soundeffects/enemies/CakeBoss/FrostingHit.mp3');
+
+
