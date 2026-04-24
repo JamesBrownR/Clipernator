@@ -916,7 +916,7 @@ function offerItemChoice() {
    card.innerHTML = `
   <div class="ic-icon">${
     def.img
-      ? `<img src="${def.img}" style="width:32px;height:32px;image-rendering:pixelated;">`
+      ? `<img src="${def.img}" style="width:100px;height:100px;image-rendering:pixelated;">`
       : def.icon
   }</div>
       <div class="ic-name">${def.label.replace(/\n/g,'<br>')}</div>
