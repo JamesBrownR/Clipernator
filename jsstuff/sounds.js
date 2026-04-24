@@ -73,8 +73,8 @@ SFX.load('reloadFinish',     'sounds/soundeffects/player/ReloadFinish.mp3');
 SFX.load('playerDamage',     'sounds/soundeffects/player/PlayerDamage.mp3');
 SFX.load('clippySpeak',      'sounds/soundeffects/player/ClippySpeak.mp3');
 
-SFX.load('forkGrab',    'sounds/soundeffects/enemies/Utensil/ForkGrab.mp3');
-SFX.load('spoonDamage',    'sounds/soundeffects/enemies/Utensil/SpoonDamage.mp3'); // spoon hits something
+SFX.load('forkGrab',    'sounds/soundeffects/enemies/Utensil/Fork/ForkGrab.mp3');
+SFX.load('spoonDamage',    'sounds/soundeffects/enemies/Utensil/Spoon/SpoonDamage.mp3'); // spoon hits something
 
 SFX.load('frostingLaunch',    'sounds/soundeffects/enemies/CakeBoss/FrostingLaunch.mp3');
 SFX.load('frostingHit',    'sounds/soundeffects/enemies/CakeBoss/FrostingHit.mp3');
