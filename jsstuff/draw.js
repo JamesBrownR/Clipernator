@@ -1099,9 +1099,10 @@ function drawBullet(b) {
 }
 
 function draw() {
-  ctx.save();
+ ctx.save();
+// Clear the FULL canvas in screen pixels before scaling
+ctx.clearRect(0, 0, canvas.width, canvas.height);
 ctx.scale(renderScale, renderScale);
-ctx.clearRect(0, 0, worldW, worldH);
 const clampedShakeX = Math.max(-12, Math.min(12, gs.shakeX));
 const clampedShakeY = Math.max(-12, Math.min(12, gs.shakeY));
 ctx.translate(Math.round(clampedShakeX*.4), Math.round(clampedShakeY*.4));
@@ -1396,13 +1397,60 @@ if (isCritMass) {
 }
 
   // Muzzle flash
-  if (muzzleFlash > 0) {
+ if (muzzleFlash > 0) {
     const tipDist = 90 * 0.68;
     const mx = gunX + Math.cos(gunAngle) * tipDist;
     const my = gunY + Math.sin(gunAngle) * tipDist;
-    ctx.save(); ctx.globalAlpha=muzzleFlash/10;
-    ctx.fillStyle='#ffcc44'; ctx.shadowColor='#ffaa00'; ctx.shadowBlur=40;
-    ctx.beginPath(); ctx.arc(mx, my, 22, 0, Math.PI*2); ctx.fill();
+    const progress = muzzleFlash / 10; // 1.0 → 0.0
+
+    ctx.save();
+
+    // Outer bloom — wide soft glow
+    ctx.globalAlpha = progress * 0.55;
+    ctx.fillStyle = '#ffcc44';
+    ctx.shadowColor = '#ffaa00';
+    ctx.shadowBlur = 60;
+    ctx.beginPath(); ctx.arc(mx, my, 38, 0, Math.PI * 2); ctx.fill();
+
+    // Inner hot core — bright white
+    ctx.globalAlpha = progress * 0.9;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 30;
+    ctx.beginPath(); ctx.arc(mx, my, 14, 0, Math.PI * 2); ctx.fill();
+
+    // Star burst lines radiating from tip
+    ctx.globalAlpha = progress * 0.7;
+    ctx.strokeStyle = '#ffee88';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = '#ffcc44';
+    ctx.shadowBlur = 12;
+    const starLines = 8;
+    for (let i = 0; i < starLines; i++) {
+      const a = gunAngle + (i / starLines) * Math.PI * 2;
+      const innerR = 10 + (1 - progress) * 6;
+      const outerR = 28 + Math.random() * 18;
+      ctx.beginPath();
+      ctx.moveTo(mx + Math.cos(a) * innerR, my + Math.sin(a) * innerR);
+      ctx.lineTo(mx + Math.cos(a) * outerR, my + Math.sin(a) * outerR);
+      ctx.stroke();
+    }
+
+    // Forward cone flash — elongated in the direction of fire
+    ctx.globalAlpha = progress * 0.5;
+    ctx.fillStyle = '#ffdd66';
+    ctx.shadowColor = '#ffaa00';
+    ctx.shadowBlur = 20;
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate(gunAngle);
+    ctx.scale(1, 0.35);
+    ctx.beginPath();
+    ctx.arc(18 * progress, 0, 22 + progress * 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     ctx.restore();
   }
 
