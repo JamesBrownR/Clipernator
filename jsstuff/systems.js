@@ -1494,8 +1494,8 @@ if (Math.abs(gs.shakeY) < 0.1) gs.shakeY = 0;
   if (gs.reloading) {
     const reloadSpeed=gs.speedBoostTimer>0?Math.max(1,Math.round(gs.speedBoostMult||1)):1;
     gs.reloadTimer-=reloadSpeed;
-    if (gs.reloadTimer<=0){gs.reloading=false;gs.ammo=gs.maxAmmo;updateHUD();showMsg('RELOADED!');}
-     SFX.play('reloadFinish', 0.5); 
+    if (gs.reloadTimer<=0){gs.reloading=false;gs.ammo=gs.maxAmmo;updateHUD();showMsg('RELOADED!');     SFX.play('reloadFinish', 0.5); 
+}
   }
   if (gs.ammo===0&&!gs.reloading) startReload();
 
@@ -1603,7 +1603,7 @@ if (gs.popcornFrenzyTimer>0) gs.popcornFrenzyTimer--;
   if (gs.clownNoseTimer >= gs.clownNoseMax) {
     // Only blast if there's an enemy within 100px
     const ppos3 = ECS.get(gs.playerId, 'pos');
-    const nearbyEnemy = ECS.query('enemy', 'pos').some(eid => {
+const nearbyEnemy = [...ECS.query('enemy', 'pos')].some(eid => {
       const ep = ECS.get(eid, 'pos');
       return Math.hypot(ep.x - ppos3.x, ep.y - ppos3.y) < 100;
     });
