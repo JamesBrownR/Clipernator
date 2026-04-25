@@ -640,11 +640,11 @@ function sysPlayerMovement() {
   
   const pId=gs.playerId, pos=ECS.get(pId,'pos'), vel=ECS.get(pId,'vel');
   const dashing=gs.dashTimer>0, slowed=gs.confettiSlowTimer>0;
-  let speedMult=1;
-  if (gs.speedBoostTimer>0) speedMult=gs.speedBoostMult||CFG.SPEED_BOOST_MULT;
-  if (gs.sfpFull) speedMult=Math.max(speedMult,1.3);
-  if (gs.hasTightropeBoots) speedMult=Math.max(speedMult,3.00);
-  const topSpd=slowed?CFG.PLAYER_SPEED*0.45:(gs.speedBoostTimer>0?CFG.PLAYER_SPEED*speedMult:CFG.PLAYER_SPEED);
+ let speedMult = 1;
+if (gs.speedBoostTimer > 0) speedMult = gs.speedBoostMult || CFG.SPEED_BOOST_MULT;
+if (gs.sfpFull) speedMult = Math.max(speedMult, 1.3);
+if (gs.hasTightropeBoots) speedMult = Math.max(speedMult, 3.00);
+const topSpd = slowed ? CFG.PLAYER_SPEED * 0.45 : CFG.PLAYER_SPEED * speedMult;
   if (dashing) {
     gs.dashTimer--; gs.dashTrail.push({x:pos.x,y:pos.y,life:12,angle:playerMoveAngle});
     vel.vx=gs.dashVx; vel.vy=gs.dashVy;
@@ -834,17 +834,36 @@ if (ai2 && ai2.confused) {
       }
       const newBullets = gs.enemyBullets.splice(prevCount);
 for (const nb of newBullets) {
-  if (nb.isArcBall) continue;
-  // If no other enemy to target, discard the bullet entirely
   if (!nearestPos) continue;
+  if (nb.isArcBall) {
+    // Re-aim arc ball toward nearest enemy
+    const GRAVITY = nb.gravity || 0.15;
+    const horizDist = Math.hypot(nearestPos.x - nb.x, nearestPos.y - nb.y);
+    const HANG_TIME = Math.max(40, Math.min(110, horizDist / 5));
+    gs.bullets.push({
+      x: nb.x, y: nb.y,
+      vx: (nearestPos.x - nb.x) / HANG_TIME,
+      vy: -HANG_TIME * GRAVITY * 0.5,
+      vyHoriz: (nearestPos.y - nb.y) / HANG_TIME,
+      gravity: GRAVITY,
+      angle: Math.atan2(nearestPos.y - nb.y, nearestPos.x - nb.x),
+      life: HANG_TIME + 30, maxLife: HANG_TIME + 30,
+      damageMult: 3, isDud: false,
+      isArcBall: true, isMirrorArc: false,
+      targetX: nearestPos.x, targetY: nearestPos.y,
+      startX: nb.x, startY: nb.y,
+      shadowX: nb.x, shadowY: nearestPos.y,
+      sizeScale: nb.sizeScale || 1.0,
+    });
+    continue;
+  }
   const dx = nearestPos.x - nb.x, dy = nearestPos.y - nb.y;
   const dist = Math.hypot(dx, dy) || 1;
   const spd = Math.hypot(nb.vx, nb.vy) || CFG.BULLET_SPEED * 0.7;
-  const vx = (dx / dist) * spd;
-  const vy = (dy / dist) * spd;
   gs.bullets.push({
-    x: nb.x, y: nb.y, vx, vy,
-    angle: Math.atan2(vy, vx),
+    x: nb.x, y: nb.y,
+    vx: (dx / dist) * spd, vy: (dy / dist) * spd,
+    angle: Math.atan2(dy, dx),
     life: nb.life || CFG.BULLET_LIFE + 10,
     maxLife: nb.maxLife || CFG.BULLET_LIFE + 10,
     damageMult: 3, isDud: false,
@@ -1840,6 +1859,7 @@ function tryDash() {
 }
 
 function checkWave() {
+  if (gs.bossActive) return; 
   if (gs.waveKills>=gs.waveEnemiesLeft&&ECS.query('enemy').length===0) {
     const completed=gs.wave;
     if (gs.hasFlawlessBaking && gs.flawlessThisWave) {
@@ -1851,15 +1871,14 @@ function checkWave() {
       spawnPartyParticles(CFG.W/2, CFG.H/2);
     }
 
-    if (gs.floor === 2) {
-      const f2wave = gs.wave - 11;
-      gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + Math.max(1, f2wave) * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
-      gs.spawnInterval = Math.max(75, CFG.SPAWN_INTERVAL_BASE - Math.max(1, f2wave) * CFG.WAVE_SPAWN_SPEEDUP);
-    } else {
-      const f2wave = gs.wave - 11;
-gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + Math.max(1, f2wave) * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
-gs.spawnInterval = Math.max(75, CFG.SPAWN_INTERVAL_BASE - Math.max(1, f2wave) * CFG.WAVE_SPAWN_SPEEDUP);
-    }
+   if (gs.floor === 2) {
+  const f2wave = gs.wave - 11;
+  gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_FLOOR2_BASE + Math.max(1, f2wave) * CFG.WAVE_ENEMIES_FLOOR2_GROWTH;
+  gs.spawnInterval = Math.max(75, CFG.SPAWN_INTERVAL_BASE - Math.max(1, f2wave) * CFG.WAVE_SPAWN_SPEEDUP);
+} else {
+  gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
+  gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
+}
 
     gs.waveKills=0; gs.flawlessThisWave=true;
     if (gs.hasCursedCandles&&gs.candlesLit>0) {
@@ -1872,7 +1891,6 @@ gs.spawnInterval = Math.max(75, CFG.SPAWN_INTERVAL_BASE - Math.max(1, f2wave) * 
 gs.wave++;
 
 if (completed === CFG.BOSS_WAVE) {
-  gs.wave--; // revert — stay on wave 10 until boss dies
   gs.bossActive = true;
   spawnBoss();
   gs.waveEnemiesLeft = 5;
