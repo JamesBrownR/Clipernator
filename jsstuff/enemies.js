@@ -1676,6 +1676,16 @@ if (targetMaxHp > ehp2.maxHp) {
       eai2.rmSizeScale = 2.0;
       eai2.rmDmgMult  = 3.0;
     }
+  } else {
+    // Outside aura — decay stacks slowly so leaving the ringmaster matters
+    if (eai2.rmStacks > 0) {
+      eai2.rmStacks = Math.max(0, eai2.rmStacks - 2);
+      if (!eai2.criticalMass) {
+        const CRIT_THRESHOLD = 600;
+        eai2.rmSizeScale = Math.min(2.0, 1.0 + (eai2.rmStacks / CRIT_THRESHOLD));
+        eai2.rmDmgMult = 1.0 + (eai2.rmStacks / CRIT_THRESHOLD) * 2.0;
+      }
+    }
   }
 }
 
