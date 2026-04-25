@@ -640,8 +640,8 @@ setTimeout(() => {
         ? [...ALL_ITEM_IDS, ...BASE_ITEM_IDS]
         : [...BASE_ITEM_IDS];
       // Remove already-unlocked items
-      const available = allIds.filter(id => !gs.unlockedItems.includes(id));
-      // Shuffle
+const owned = (typeof gs !== 'undefined' && gs && gs.unlockedItems) ? gs.unlockedItems : [];
+const available = allIds.filter(id => !owned.includes(id));      // Shuffle
       for (let i = available.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [available[i], available[j]] = [available[j], available[i]];
@@ -888,21 +888,7 @@ setTimeout(() => {
       stage = 'FLICKERING';
       stopSound('startup3');
       playSound('bluescreen');
-      let flickers = 0;
-      const totalFlickers = 6;
-      const flickerInterval = setInterval(() => {
-        flickers++;
-        const c = getCtx();
-        if (c) {
-          c.fillStyle = flickers % 2 === 0 ? '#000000' : '#ffffff';
-          c.globalAlpha = 0.85;
-          c.fillRect(0, 0, 960, 600);
-          c.globalAlpha = 1;
-        }
-        if (flickers >= totalFlickers) {
-          clearInterval(flickerInterval);
-          startBluescreen();
-        }
+    
       }, 55);
     }, 2200);
   }
