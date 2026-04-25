@@ -1633,9 +1633,9 @@ const BT_RINGMASTER = new BTSelector(
     const spd = Math.hypot(vel.vx,vel.vy);
     if (spd > phy.speed) { vel.vx=vel.vx/spd*phy.speed; vel.vy=vel.vy/spd*phy.speed; }
 
-    // Replace the enemy aura loop in BT_RINGMASTER (the for...of ECS.query block)
 for (const eid of ECS.query('enemy','pos','physics','ai')) {
   if (eid === id) continue;
+   if (!ECS.has(eid, 'pos') || !ECS.has(eid, 'hp')) continue;
   const epos2 = ECS.get(eid,'pos');
   const eai2  = ECS.get(eid,'ai');
   const ephy2 = ECS.get(eid,'physics');
