@@ -877,21 +877,20 @@ const available = allIds.filter(id => !owned.includes(id));      // Shuffle
   }
 
   function handleDataClick() {
-    if (desktopClickedData) return;
-    desktopClickedData = true;
-    desktopPhase = 'loading_data';
-    desktopLoadingData = true;
-    desktopLoadDots = 0; desktopLoadDotsTimer = 0;
-  
-    setTimeout(() => {
-      desktopLoadingData = false;
-      stage = 'FLICKERING';
-      stopSound('startup3');
-      playSound('bluescreen');
-    
-      }, 55);
-    }, 2200);
-  }
+  if (desktopClickedData) return;
+  desktopClickedData = true;
+  desktopPhase = 'loading_data';
+  desktopLoadingData = true;
+  desktopLoadDots = 0; desktopLoadDotsTimer = 0;
+
+  setTimeout(() => {
+    desktopLoadingData = false;
+    stage = 'FLICKERING';
+    stopSound('startup3');
+    playSound('bluescreen');
+    startBluescreen();
+  }, 2200);
+}
 
   function drawDesktop() {
     const c = getCtx(); if (!c) return;
