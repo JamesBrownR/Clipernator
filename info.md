@@ -26,22 +26,18 @@
 
 * replace all cake boss, items, bosses, etc with cartoon style
 
-* unsure which style items should have
 
  
   
 * the cake boss should not mindlessly go to the center all the time. it should just hover around the stage as a idle animation
 * i dont know if cutscenes are possible in html, but if so  I would like a animation of the cake boss falling from the sky
 * there should be a slightl delay between when the boss is defeated and when the stage expands. it should also expand slower
-* clippy should probably have a animation, rather than just being a single sprite
 
 - General item pool needs at least 5 more items
 - Clownish is still a bit iffy. wave radius should be expanded slightly. confused enemies should do 3x damage to other enemies (both from contact damage and bullets). confused enemies currently still dont do contact damage. cannonballs that are confused dont charge at enemies and explode. all enemeies when confused should attack other enenmies
-- Water Balloon enemies should shoot projectiles from slightly outside themselves, their bullets should not spawn on their hitbox
 - reflected cannon balls should not stop the charge until they hit something. current if you are at one side of that stage and reflect a cannonball to another, it stops before it explodes on a wall
 - cannon ball charge speed should be reduced by 20%
 - Clownish upgrade is placeholder
-- im not sure tightrope boots actually works
 
 - floor 2 boss doesnt work at all, and will be completely redesigned after floor one is finished
   
