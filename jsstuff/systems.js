@@ -1860,7 +1860,7 @@ function tryDash() {
 
 function checkWave() {
   if (gs.bossActive) return; 
-  if (gs.waveKills>=gs.waveEnemiesLeft&&ECS.query('enemy').length===0) {
+if (gs.waveKills + total >= gs.waveEnemiesLeft && ECS.query('enemy').size === 0)
     const completed=gs.wave;
     if (gs.hasFlawlessBaking && gs.flawlessThisWave) {
       gs.maxAmmo += 2;
