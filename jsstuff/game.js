@@ -964,6 +964,7 @@ function offerItemChoice() {
     def.effect(gs);
     choiceEl.style.display = 'none';
     gs.pendingChoice = false;
+    cancelAnimationFrame(animId);
     gameRunning = true;
     trySpawnFieldItems();
     updateHUD();
@@ -985,6 +986,7 @@ function offerItemChoice() {
   skipBtn.onclick = () => {
     choiceEl.style.display = 'none';
     gs.pendingChoice = false;
+    cancelAnimationFrame(animId); 
     gameRunning = true;
     trySpawnFieldItems();
     updateHUD();
