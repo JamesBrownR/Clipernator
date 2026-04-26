@@ -1507,8 +1507,8 @@ if (Math.abs(gs.shakeY) < 0.1) gs.shakeY = 0;
   if (gs.glowCooldown>0) gs.glowCooldown--;
   if (gs.spoonKnockbackTimer>0) gs.spoonKnockbackTimer--;
 
-  if (gs.explosionFreezeTimer>0){gs.explosionFreezeTimer--;return;}
-  if (gs.glowExplosionTimer>0) gs.glowExplosionTimer--;
+if (gs.explosionFreezeTimer > 0) { gs.explosionFreezeTimer--; }
+if (gs.glowExplosionTimer > 0) gs.glowExplosionTimer--;
 
   if (gs.reloading) {
     const reloadSpeed=gs.speedBoostTimer>0?Math.max(1,Math.round(gs.speedBoostMult||1)):1;
@@ -1859,9 +1859,10 @@ function tryDash() {
 }
 
 function checkWave() {
-  if (gs.bossActive) return; 
-if (gs.waveKills + total >= gs.waveEnemiesLeft && ECS.query('enemy').size === 0)
-    const completed=gs.wave;
+  if (gs.bossActive) return;
+  const total = ECS.query('enemy').size;
+  if (gs.waveKills + total < gs.waveEnemiesLeft || total > 0) return;
+  const completed = gs.wave;
     if (gs.hasFlawlessBaking && gs.flawlessThisWave) {
       gs.maxAmmo += 2;
       if (gs.hasExtraClips) gs.maxAmmo = Math.ceil(gs.maxAmmo * 1.25);
