@@ -28,30 +28,18 @@ const ECS = {
     return id;
   },
 
-  destroyEntity(id) {
-    this.entities.delete(id);
-    for (const k in this._comps) this._comps[k].delete(id);
-    // Remove this entity from all cached query results
-    for (const [key, set] of this._queryCache) {
-      set.delete(id);
-    }
-  },
+destroyEntity(id) {
+  this.entities.delete(id);
+  for (const k in this._comps) this._comps[k].delete(id);
+  this._queryCache.clear();  // replace the per-set loop
+},
 
-  add(id, type, data) {
-    if (!this._comps[type]) this._comps[type] = new Map();
-    this._comps[type].set(id, data);
-    // Add this entity to any cached queries it now satisfies
-    for (const [key, set] of this._queryCache) {
-      const types = key.split(',');
-      if (types.includes(type)) {
-        // Check if it satisfies all types in that query
-        if (types.every(t => this.has(id, t))) {
-          set.add(id);
-        }
-      }
-    }
-    return data;
-  },
+add(id, type, data) {
+  if (!this._comps[type]) this._comps[type] = new Map();
+  this._comps[type].set(id, data);
+  this._queryCache.clear();  // simpler and correct
+  return data;
+},
 
   get(id, type) {
     return this._comps[type] ? this._comps[type].get(id) : undefined;
@@ -61,16 +49,10 @@ const ECS = {
     return !!(this._comps[type] && this._comps[type].has(id));
   },
 
-  remove(id, type) {
-    if (this._comps[type]) this._comps[type].delete(id);
-    // Remove from any cached queries that required this type
-    for (const [key, set] of this._queryCache) {
-      const types = key.split(',');
-      if (types.includes(type)) {
-        set.delete(id);
-      }
-    }
-  },
+ remove(id, type) {
+  if (this._comps[type]) this._comps[type].delete(id);
+  this._queryCache.clear();  // was trying to patch individual sets
+},
 
   query(...types) {
     const key = types.join(',');
