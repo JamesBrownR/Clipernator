@@ -1278,8 +1278,8 @@ for (const cid of ECS.query('enemy','pos')) {
     break;
   }
 }
-gs.health -= Math.round(20 * contactMult);
-      SFX.play('playerDamage', 0.65);
+const diffMult = (gs._enemyDmgMult || 1.0);
+gs.health -= Math.round(20 * contactMult * diffMult);      SFX.play('playerDamage', 0.65);
 
       gs.invincible=CFG.INVINCIBLE_FRAMES;
       gs.shakeX=16;gs.shakeY=16; gs.flawlessThisWave=false;
@@ -1356,7 +1356,7 @@ if (eb.isFrosting && eb.spawnGiftBox) {
         spawnParticles(eb.x, eb.y, '#ff8800', Math.round(12 * scale));
         gs.shakeX = impactShake; gs.shakeY = impactShake;
         if (gs.invincible <= 0 && Math.hypot(eb.x - ppos.x, eb.y - ppos.y) < impactR) {
-          gs.health -= Math.round(18 * (eb.rmDmgMult || 1) * scale);
+gs.health -= Math.round(18 * (eb.rmDmgMult || 1) * scale * (gs._enemyDmgMult || 1.0));
           gs.invincible = CFG.INVINCIBLE_FRAMES;
           gs.shakeX = Math.round(16 * scale); gs.shakeY = Math.round(16 * scale);
           gs.flawlessThisWave = false;
@@ -1419,8 +1419,8 @@ if (eb.isFrosting && eb.spawnGiftBox) {
         SFX.play('playerDamage', 0.65);
 
       const bulletDmg = Math.round(15 * (eb.rmDmgMult || 1));
-      gs.health -= bulletDmg;
-      gs.invincible=CFG.INVINCIBLE_FRAMES; gs.shakeX=10;gs.shakeY=10;
+const diffMult = (gs._enemyDmgMult || 1.0);
+gs.health -= Math.round(bulletDmg * diffMult);      gs.invincible=CFG.INVINCIBLE_FRAMES; gs.shakeX=10;gs.shakeY=10;
       gs.flawlessThisWave=false; triggerSFPHit();
       spawnParticles(ppos.x,ppos.y,'#ff69b4',10); updateHUD();
       if (gs.health<=0){gameOver();return false;} return false;
@@ -1986,7 +1986,6 @@ function handleBossDeath(id) {
   if (gs.bossId !== id) return;
   gs.bossActive = false;
   gs.bossId = null;
-  gs.wave++;
   gs.waveKills = 0;
   gs.waveEnemiesLeft = CFG.WAVE_ENEMIES_BASE + gs.wave * CFG.WAVE_ENEMIES_GROWTH;
   gs.spawnInterval = Math.max(55, CFG.SPAWN_INTERVAL_BASE - gs.wave * CFG.WAVE_SPAWN_SPEEDUP);
