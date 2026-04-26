@@ -96,8 +96,8 @@ const ECS = {
 // ── Helper ──
 function playerPos(gs) {
   const ids = ECS.query('player', 'pos');
-  if (!ids.length) return null;
-  return ECS.get(ids[0], 'pos');
+  if (!ids.size) return null;
+  return ECS.get(ids.values().next().value, 'pos');
 }
 
 // ================================================================
