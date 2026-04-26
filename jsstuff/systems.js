@@ -1934,7 +1934,8 @@ if (gs.floor === 2 && gs.wave === CFG.BOSS2_WAVE) {
     }
     
   }
-}
+
+
 
 function trySpawnFieldItems() {
   const now=Date.now();
