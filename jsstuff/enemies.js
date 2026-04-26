@@ -1841,7 +1841,7 @@ const BT_MINI_CLOWN = new BTSelector(
     }
 
     // ── ROAM / FLEE logic ──
-    const enemies = ECS.query('enemy', 'pos', 'hp').filter(eid => eid !== id);
+const enemies = [...ECS.query('enemy', 'pos', 'hp')].filter(eid => eid !== id);
 
 if (enemies.length === 0) {
       // No enemies — flee until a safe distance away, then wander
