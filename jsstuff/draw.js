@@ -12,6 +12,11 @@ function drawCheapGlow(x, y, radius, color, alpha = 0.3) {
   ctx.restore();
 }
 
+function resetShadow() {
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+}
+
 function _drawUtensilShape(ctx, type, color, scale = 1) {
   ctx.strokeStyle = color;
   ctx.fillStyle   = color; 
@@ -1099,10 +1104,10 @@ function drawBullet(b) {
 }
 
 function draw() {
- ctx.save();
-// Clear the FULL canvas in screen pixels before scaling
-ctx.clearRect(0, 0, canvas.width, canvas.height);
-ctx.scale(renderScale, renderScale);
+  ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const dpr = window.devicePixelRatio || 1;
+  ctx.scale(dpr * renderScale, dpr * renderScale);  // combine dpr + renderScale
 const clampedShakeX = Math.max(-12, Math.min(12, gs.shakeX));
 const clampedShakeY = Math.max(-12, Math.min(12, gs.shakeY));
 ctx.translate(Math.round(clampedShakeX*.4), Math.round(clampedShakeY*.4));
@@ -1525,6 +1530,8 @@ if (gs.clownSoundWaves && gs.clownSoundWaves.length > 0) {
   // Particles
   // Draw all particles in one batch — no shadow, no save/restore per particle
 ctx.save();
+ ctx.shadowBlur = 0;  
+ctx.shadowColor = 'transparent';
 for(const p of gs.particles) {
   ctx.globalAlpha = p.life / p.maxLife;
   ctx.fillStyle = p.color;
