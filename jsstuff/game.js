@@ -545,7 +545,7 @@ function renderPauseMenu() {
 if (def.img) {
   const img = document.createElement('img');
   img.src = def.img;
-  img.style.cssText = 'width:20px;height:20px;image-rendering:pixelated;';
+  img.style.cssText = 'width:55px;height:55px;image-rendering:pixelated;';
   card.appendChild(img);
 } else {
   card.textContent = def.icon;
