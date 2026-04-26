@@ -276,5 +276,9 @@ function formatKey(k) {
   return k.toUpperCase();
 }
 
-canvas.width  = CFG.W;
-canvas.height = CFG.H;
+const dpr = window.devicePixelRatio || 1;
+canvas.width  = CFG.W * dpr;
+canvas.height = CFG.H * dpr;
+canvas.style.width  = CFG.W + 'px';
+canvas.style.height = CFG.H + 'px';
+ctx.scale(dpr, dpr);
